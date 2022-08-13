@@ -1,182 +1,259 @@
-import { spawnSync } from 'child_process'
-import fs from 'fs'
-import path from 'path'
+import { isNotUndefined, isObject } from './utils'
 
-const RE_BRANCH = /^ref: refs\/heads\/(.*)\n/
-
-const root = process.cwd()
-
-function fasterFileExists(filePath: string) {
-  return !!fs.statSync(filePath, { throwIfNoEntry: false })?.isFile()
+export type RcParseResult<T> = {
+  error: false | string
+  data: T
 }
 
-function _command(cmd: string, spawnProps: string[]) {
-  const result = spawnSync(cmd, spawnProps)
+type RcTypeOf<T extends RcType<any>> = T extends RcType<infer U> ? U : never
 
-  if (result.status !== 0) {
-    throw new Error(
-      '[git-rev-sync] failed to execute command: ' +
-        result.stderr +
-        '/' +
-        result.error,
-    )
-  }
+type NestedError = { path: string; error: string }
 
-  return result.stdout.toString().replace(/^\s+|\s+$/g, '')
+export type RcType<T, C = {}> = {
+  withFallback: (fallback: T) => RcType<T>
+
+  readonly _isValid: (input: unknown) => boolean
+  _fallback: T
+  readonly _kind: string
+  readonly _getErrorMsg: (input: unknown) => string | NestedError[]
+  _parent?: RcType<any>
+  _errorCollector?: NestedError[]
+  _usingCustomFallback?: boolean
+} & C
+
+function withFallback(this: RcType<any>, fallback: any): RcType<any> {
+  this._usingCustomFallback = true
+
+  return { ...this, _fallback: fallback }
 }
 
-function _getGitDirectory(start = root): string {
-  const testPath = path.resolve(start, '.git')
-
-  const pathStat = fs.statSync(testPath, { throwIfNoEntry: false })
-
-  if (pathStat?.isDirectory()) {
-    return testPath
-  }
-
-  const parent = path.resolve(start, '..')
-
-  if (parent === start) {
-    throw new Error('[git-rev-sync] failed to find .git directory')
-  }
-
-  return _getGitDirectory(parent)
+function _getErrorMsg(this: RcType<any>, input: unknown): string {
+  return `Type '${typeof input}' is not assignable to '${this._kind}'`
 }
 
-export function gitBranch(dir?: string): string {
-  const gitDir = _getGitDirectory(dir)
-
-  const head = fs.readFileSync(path.resolve(gitDir, 'HEAD'), 'utf8')
-  const b = head.match(RE_BRANCH)
-
-  if (b?.[1]) {
-    return b[1]
+export const rc_string: RcType<
+  string,
+  {
+    where: (conditions: {
+      has_lenght?: number
+      starts_with?: string
+      ends_with?: string
+    }) => RcType<string>
   }
+> = {
+  withFallback,
+  _getErrorMsg,
+  _isValid: (input) => typeof input === 'string',
+  _fallback: '',
+  _kind: 'string',
+  where(conditions): RcType<string> {
+    return {
+      ...this,
+      _isValid: (input) => {
+        if (typeof input !== 'string') return false
 
-  return 'Detached: ' + head.trim()
+        if (
+          isNotUndefined(conditions.has_lenght) &&
+          input.length !== conditions.has_lenght
+        ) {
+          return false
+        }
+
+        if (
+          isNotUndefined(conditions.starts_with) &&
+          !input.startsWith(conditions.starts_with)
+        ) {
+          return false
+        }
+
+        if (
+          isNotUndefined(conditions.ends_with) &&
+          !input.endsWith(conditions.ends_with)
+        ) {
+          return false
+        }
+
+        return true
+      },
+      _kind: `string_${Object.keys(conditions).join('_and_')}`,
+    }
+  },
 }
 
-function escapeRegex(string: string) {
-  return string.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')
+function isNumber(input: unknown): input is number {
+  return typeof input === 'number' && !Number.isNaN(input)
 }
 
-export function gitLong(dir?: string) {
-  const b = gitBranch(dir)
+export const rc_number: RcType<
+  number,
+  {
+    int: () => RcType<number>
+    where: (
+      conditions: Partial<
+        Record<
+          | 'greater_than'
+          | 'greater_than_or_equal'
+          | 'less_than'
+          | 'less_than_or_equal',
+          number
+        >
+      >,
+    ) => RcType<number>
+  }
+> = {
+  withFallback,
+  _getErrorMsg,
+  _isValid: isNumber,
+  _fallback: 0,
+  _kind: 'number',
+  int() {
+    return {
+      ...this,
+      _isValid: (input) => isNumber(input) && input % 1 === 0,
+      _kind: 'int_number',
+    }
+  },
+  where(conditions) {
+    return {
+      ...this,
+      _isValid: (input) => {
+        if (!isNumber(input)) return false
 
-  if (/Detached: /.test(b)) {
-    return b.substring(10)
+        if (
+          isNotUndefined(conditions['greater_than']) &&
+          input <= conditions['greater_than']
+        ) {
+          return false
+        }
+
+        if (
+          isNotUndefined(conditions['greater_than_or_equal']) &&
+          input < conditions['greater_than_or_equal']
+        ) {
+          return false
+        }
+
+        if (
+          isNotUndefined(conditions['less_than']) &&
+          input >= conditions['less_than']
+        ) {
+          return false
+        }
+
+        if (
+          isNotUndefined(conditions['less_than_or_equal']) &&
+          input > conditions['less_than_or_equal']
+        ) {
+          return false
+        }
+
+        return true
+      },
+      _kind: `number_${Object.keys(conditions).join('_and_')}`,
+    }
+  },
+}
+
+export function rc_union<T extends RcType<any>[]>(
+  ...types: T
+): RcType<RcTypeOf<T[number]>> {
+  if (types.length === 0) {
+    throw new Error('Unions should have at least one type')
   }
 
-  const gitDir = _getGitDirectory(dir)
-
-  const gitRootDir = gitDir.includes('.git/worktrees/')
-    ? gitDir.replace(/\.git\/worktrees\/.+$/, '.git')
-    : gitDir
-
-  const refsFilePath = path.resolve(gitRootDir, 'refs', 'heads', b)
-
-  let ref: string
-
-  if (fasterFileExists(refsFilePath)) {
-    ref = fs.readFileSync(refsFilePath, 'utf8')
-  } else {
-    // If there isn't an entry in /refs/heads for this branch, it may be that
-    // the ref is stored in the packfile (.git/packed-refs). Fall back to
-    // looking up the hash here.
-    const packedRefsPath = path.resolve(gitDir, 'packed-refs')
-
-    if (fasterFileExists(packedRefsPath)) {
-      const refToFind = ['refs', 'heads', b].join('/')
-      const packfileContents = fs.readFileSync(packedRefsPath, 'utf8')
-      const packfileRegex = new RegExp(`(.*) ${escapeRegex(refToFind)}`)
-
-      const match = packfileRegex.exec(packfileContents)?.[1]
-
-      if (!match) {
-        throw new Error(`[git-rev-sync] failed to find ref ${refToFind}`)
+  return {
+    withFallback,
+    _getErrorMsg,
+    _isValid: (input) => {
+      for (const type of types) {
+        if (type._isValid(input)) {
+          return true
+        }
       }
 
-      ref = match
-    } else {
-      throw new Error('[git-rev-sync] failed to find packed-refs')
-    }
+      return false
+    },
+    _fallback: types[0]!._fallback,
+    _kind: types.map((type) => type._kind).join(' | '),
+  }
+}
+
+export function rc_object<T extends Record<string, RcType<any>>>(
+  shape: T,
+): RcType<{ [K in keyof T]: RcTypeOf<T[K]> }> {
+  return {
+    withFallback,
+    _getErrorMsg(input) {
+      if (this._errorCollector!.length > 0) {
+        return this._parent
+          ? this._errorCollector!
+          : errorCollectorFormatter(this._errorCollector!)
+      }
+
+      return _getErrorMsg.call(this, input)
+    },
+    _isValid(input) {
+      if (!isObject(input)) return false
+
+      let isValid = true
+
+      for (const [key, type] of Object.entries(shape)) {
+        type._parent = this._parent ? this._parent : this
+
+        if (type._isValid(input[key])) {
+          this._fallback[key as keyof T] = input[key]
+        }
+        //
+        else {
+          isValid = false
+
+          if (type._kind === 'object') {
+            let typeErrors = type._getErrorMsg(input[key]) as NestedError[]
+
+            typeErrors = typeErrors.map((error) => ({
+              ...error,
+              path: `${key}.${error.path}`,
+            }))
+
+            this._errorCollector!.push(...typeErrors)
+          } else {
+            this._errorCollector!.push({
+              path: key,
+              error: type._getErrorMsg(input[key]) as string,
+            })
+          }
+
+          if (!this._usingCustomFallback) {
+            this._fallback[key as keyof T] = type._fallback
+          }
+        }
+      }
+
+      return isValid
+    },
+    _fallback: {} as any,
+    _kind: 'object',
+    _errorCollector: [],
+  }
+}
+
+export function rc_parse<S>(input: any, type: RcType<S>): RcParseResult<S> {
+  if (type._isValid(input)) {
+    return { error: false, data: input as any }
   }
 
-  return ref.trim()
+  return {
+    error: type._getErrorMsg(input) as string,
+    data: type._fallback,
+  }
 }
 
-export function gitShort({
-  dir,
-  length = 7,
-}: { dir?: string; length?: number } = {}): string {
-  return gitLong(dir).substring(0, length)
-}
+function errorCollectorFormatter(errors: NestedError[]): string {
+  let result = 'Errors:'
 
-export function gitMessage() {
-  return _command('git', ['log', '-1', '--pretty=%B']);
-}
-
-export function gitTag(markDirty?: boolean) {
-  if (markDirty) {
-    return _command('git', ['describe', '--always', '--tag', '--dirty', '--abbrev=0']);
+  for (const error of errors) {
+    result += `\n  - $.` + `${error.path}: ${error.error}`
   }
 
-  return _command('git', ['describe', '--always', '--tag', '--abbrev=0']);
-}
-
-export function gitTagFirstParent(markDirty?: boolean) {
-  if (markDirty) {
-    return _command('git', [
-      'describe',
-      '--always',
-      '--tag',
-      '--dirty',
-      '--abbrev=0',
-      '--first-parent',
-    ])
-  }
-
-  return _command('git', [
-    'describe',
-    '--always',
-    '--tag',
-    '--abbrev=0',
-    '--first-parent',
-  ])
-}
-
-export function gitHasUnstagedChanges() {
-  const writeTree = _command('git', ['write-tree'])
-  return _command('git', ['diff-index', writeTree, '--']).length > 0
-}
-
-export function gitIsDirty() {
-  return _command('git', ['diff-index', 'HEAD', '--']).length > 0
-}
-
-export function gitIsTagDirty() {
-  try {
-    _command('git', ['describe', '--exact-match', '--tags'])
-  } catch (e) {
-    if (e instanceof Error && e.message.indexOf('no tag exactly matches')) {
-      return true
-    }
-
-    throw e
-  }
-  return false
-}
-
-export function gitRemoteUrl() {
-  return _command('git', ['ls-remote', '--get-url'])
-}
-
-export function gitDate() {
-  return new Date(
-    _command('git', ['log', '--no-color', '-n', '1', '--pretty=format:"%ad"']),
-  )
-}
-
-export function gitCount() {
-  return parseInt(_command('git', ['rev-list', '--all', '--count']), 10)
+  return result
 }
