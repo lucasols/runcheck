@@ -271,6 +271,10 @@ describe('rc_object', () => {
       data: { hello: { world: { value: 1 } }, value: 'ok' },
     })
   })
+
+  test.todo('allow excess properties', () => {})
+
+  test.todo('handle optional props', () => {})
 })
 
 // test.skip('validates', () => {
