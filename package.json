@@ -1,6 +1,6 @@
 {
   "name": "runcheck",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "license": "MIT",
   "scripts": {
     "test": "vitest --ui",
@@ -15,8 +15,16 @@
   "packageManager": "^pnpm@7.6.0",
   "repository": "github:lucasols/runcheck",
   "author": "Lucas Santos",
-  "main": "./dist/runcheck.js",
+  "type": "module",
+  "main": "./dist/runcheck.cjs",
+  "module": "./dist/runcheck.js",
   "types": "./dist/runcheck.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/runcheck.js",
+      "require": "./dist/runcheck.cjs"
+    }
+  },
   "sideEffects": false,
   "engines": {
     "node": ">=14.6.0"
@@ -30,9 +38,7 @@
     "typescript": "^4.8.1-rc",
     "vite": "^3.0.7",
     "vitest": "^0.21.1",
-    "zod": "^3.18.0"
-  },
-  "dependencies": {
+    "zod": "^3.18.0",
     "eslint-plugin-jest": "^26.8.2",
     "tsm": "^2.2.2",
     "tsup": "^6.2.2"
