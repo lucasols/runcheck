@@ -5,8 +5,9 @@
   "scripts": {
     "test": "vitest --ui",
     "test:run": "vitest run",
-    "build": "pnpm test:run && tsc -p tsconfig.prod.json",
-    "npm-publish": "pnpm build && npm publish"
+    "build": "pnpm test:run && pnpm build:no-test",
+    "build:no-test": "tsup src/runcheck.ts --minify --dts && tsm scripts/removeInternalDeclarations.ts",
+    "npm-publish": "./scripts/check-if-is-sync.sh && pnpm build && npm publish"
   },
   "files": [
     "dist"
@@ -32,6 +33,8 @@
     "zod": "^3.18.0"
   },
   "dependencies": {
-    "eslint-plugin-jest": "^26.8.2"
+    "eslint-plugin-jest": "^26.8.2",
+    "tsm": "^2.2.2",
+    "tsup": "^6.2.2"
   }
 }

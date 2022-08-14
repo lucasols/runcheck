@@ -1,3 +1,4 @@
 # Runcheck
 
-Runtime type checks for typescript
+Runtime type checks for js/typescript with autofix support.
+

@@ -9,7 +9,9 @@ export type RcParseResult<T> =
       errors: string[]
     }
 
-type TypeOfRcType<T extends RcType<any>> = T extends RcType<infer U> ? U : never
+export type RcInferType<T extends RcType<any>> = T extends RcType<infer U>
+  ? U
+  : never
 
 type RcOptional<T> = RcType<T | undefined>
 
@@ -30,22 +32,26 @@ export type RcType<T> = {
     customAutofix?: (input: unknown) => false | { fixed: T },
   ) => RcType<T>
 
-  readonly _parse: (
+  /** %remove-declaration-start  */
+  readonly _parse_: (
     input: unknown,
     ctx: ParseResultCtx,
   ) => InternalParseResult<T>
-  readonly _kind: string
-  readonly _getErrorMsg: (input: unknown) => string
-  readonly _fallback?: T
-  readonly _predicate?: (input: T) => boolean
-  readonly _optional?: true
-  readonly _orNullish?: true
-  readonly _useAutFix?: true
-  readonly _autoFix?: (input: unknown) => false | { fixed: T }
+  readonly _kind_: string
+  readonly _getErrorMsg_: (input: unknown) => string
+  readonly _fallback_?: T
+  readonly _predicate_?: (input: T) => boolean
+  readonly _optional_?: true
+  readonly _orNullish_?: true
+  readonly _useAutFix_?: true
+  readonly _obj_shape_?: Record<string, RcType<any>>
+  readonly _array_shape_?: Record<string, RcType<any>>
+  readonly _autoFix_?: (input: unknown) => false | { fixed: T }
+  ___remove_declaration_end?: never
 }
 
 function withFallback(this: RcType<any>, fallback: any): RcType<any> {
-  return { ...this, _fallback: fallback }
+  return { ...this, _fallback_: fallback }
 }
 
 function parseWithFallback<T>(
@@ -54,13 +60,13 @@ function parseWithFallback<T>(
   ctx: ParseResultCtx,
   checkIfIsValid: () => boolean | { data: T } | { errors: string[] },
 ): InternalParseResult<T> {
-  if (type._optional) {
+  if (type._optional_) {
     if (input === undefined) {
       return [true, input as T]
     }
   }
 
-  if (type._orNullish) {
+  if (type._orNullish_) {
     if (input === null || input === undefined) {
       return [true, input as T]
     }
@@ -72,9 +78,9 @@ function parseWithFallback<T>(
     if (isValid === true || 'data' in isValid) {
       const validResult = isValid === true ? (input as T) : isValid.data
 
-      if (type._predicate) {
-        if (!type._predicate(validResult)) {
-          return [false, [type._getErrorMsg(validResult)]]
+      if (type._predicate_) {
+        if (!type._predicate_(validResult)) {
+          return [false, [type._getErrorMsg_(validResult)]]
         }
       }
 
@@ -82,19 +88,19 @@ function parseWithFallback<T>(
     }
   }
 
-  if (type._fallback !== undefined) {
-    ctx.warnings.push(`Fallback used, ${type._getErrorMsg(input)}`)
+  if (type._fallback_ !== undefined) {
+    ctx.warnings.push(`Fallback used, ${type._getErrorMsg_(input)}`)
 
-    return [true, type._fallback]
+    return [true, type._fallback_]
   }
 
-  if (type._useAutFix && type._autoFix) {
-    const autofixed = type._autoFix(input)
+  if (type._useAutFix_ && type._autoFix_) {
+    const autofixed = type._autoFix_(input)
 
     if (autofixed) {
-      if (type._predicate) {
-        if (!type._predicate(autofixed.fixed)) {
-          return [false, [type._getErrorMsg(autofixed.fixed)]]
+      if (type._predicate_) {
+        if (!type._predicate_(autofixed.fixed)) {
+          return [false, [type._getErrorMsg_(autofixed.fixed)]]
         }
       }
 
@@ -106,7 +112,7 @@ function parseWithFallback<T>(
     false,
     isValid && 'errors' in isValid
       ? isValid.errors
-      : [type._getErrorMsg(input)],
+      : [type._getErrorMsg_(input)],
   ]
 }
 
@@ -114,7 +120,7 @@ function withAutofix(
   this: RcType<any>,
   customAutofix?: (input: unknown) => any,
 ): RcType<any> {
-  if (!this._autoFix && !customAutofix) {
+  if (!this._autoFix_ && !customAutofix) {
     throw new Error(
       "This type don't have a default autofix and no custom one was provided",
     )
@@ -122,8 +128,8 @@ function withAutofix(
 
   return {
     ...this,
-    _useAutFix: true,
-    _autoFix: customAutofix || this._autoFix,
+    _useAutFix_: true,
+    _autoFix_: customAutofix || this._autoFix_,
   }
 }
 
@@ -133,29 +139,29 @@ function where(
 ): RcType<any> {
   return {
     ...this,
-    _predicate: predicate,
-    _kind: `${this._kind}_with_predicate`,
+    _predicate_: predicate,
+    _kind_: `${this._kind_}_with_predicate`,
   }
 }
 
 function optional(this: RcType<any>): RcOptional<any> {
   return {
     ...this,
-    _optional: true,
+    _optional_: true,
   }
 }
 
-function _getErrorMsg(this: RcType<any>, input: unknown): string {
+function _getErrorMsg_(this: RcType<any>, input: unknown): string {
   return `Type '${normalizedTypeOf(input)}' is not assignable to '${
-    this._kind
+    this._kind_
   }'`
 }
 
 function orNullish(this: RcType<any>): RcType<any | null | undefined> {
   return {
     ...this,
-    _orNullish: true,
-    _kind: `${this._kind}_or_nullish`,
+    _orNullish_: true,
+    _kind_: `${this._kind_}_or_nullish`,
   }
 }
 
@@ -163,42 +169,42 @@ const defaultProps = {
   withFallback,
   where,
   optional,
-  _getErrorMsg,
+  _getErrorMsg_,
   orNullish,
   withAutofix,
 }
 
 export const rc_undefined: RcType<undefined> = {
   ...defaultProps,
-  _parse(input, ctx) {
+  _parse_(input, ctx) {
     return parseWithFallback(this, input, ctx, () => input === undefined)
   },
-  _kind: 'undefined',
+  _kind_: 'undefined',
 }
 
 export const rc_null: RcType<null> = {
   ...defaultProps,
-  _parse(input, ctx) {
+  _parse_(input, ctx) {
     return parseWithFallback(this, input, ctx, () => input === null)
   },
-  _kind: 'null',
+  _kind_: 'null',
 }
 
 export const rc_any: RcType<any> = {
   ...defaultProps,
-  _parse(input, ctx) {
+  _parse_(input, ctx) {
     return parseWithFallback(this, input, ctx, () => true)
   },
-  _kind: 'any',
+  _kind_: 'any',
 }
 
 export const rc_boolean: RcType<boolean> = {
   ...defaultProps,
-  _parse(input, ctx) {
+  _parse_(input, ctx) {
     return parseWithFallback(this, input, ctx, () => typeof input === 'boolean')
   },
-  _kind: 'boolean',
-  _autoFix(input) {
+  _kind_: 'boolean',
+  _autoFix_(input) {
     if (input === 0 || input === 1) {
       return { fixed: !!input }
     }
@@ -213,11 +219,11 @@ export const rc_boolean: RcType<boolean> = {
 
 export const rc_string: RcType<string> = {
   ...defaultProps,
-  _parse(input, ctx) {
+  _parse_(input, ctx) {
     return parseWithFallback(this, input, ctx, () => typeof input === 'string')
   },
-  _kind: 'string',
-  _autoFix(input) {
+  _kind_: 'string',
+  _autoFix_(input) {
     if (typeof input === 'number' && !Number.isNaN(input)) {
       return { fixed: input.toString() }
     }
@@ -228,7 +234,7 @@ export const rc_string: RcType<string> = {
 
 export const rc_number: RcType<number> = {
   ...defaultProps,
-  _parse(input, ctx) {
+  _parse_(input, ctx) {
     return parseWithFallback(
       this,
       input,
@@ -236,8 +242,8 @@ export const rc_number: RcType<number> = {
       () => typeof input === 'number' && !Number.isNaN(input),
     )
   },
-  _kind: 'number',
-  _autoFix(input) {
+  _kind_: 'number',
+  _autoFix_(input) {
     if (typeof input === 'string') {
       const parsed = Number(input)
 
@@ -252,7 +258,7 @@ export const rc_number: RcType<number> = {
 
 export const rc_date: RcType<Date> = {
   ...defaultProps,
-  _parse(input, ctx) {
+  _parse_(input, ctx) {
     return parseWithFallback(this, input, ctx, () => {
       return (
         typeof input === 'object' &&
@@ -261,32 +267,32 @@ export const rc_date: RcType<Date> = {
       )
     })
   },
-  _kind: 'date',
+  _kind_: 'date',
 }
 
 // eslint-disable-next-line @typescript-eslint/ban-types
 export function rc_instanceof<T extends Function>(classToCheck: T): RcType<T> {
   return {
     ...defaultProps,
-    _parse(input, ctx) {
+    _parse_(input, ctx) {
       return parseWithFallback(this, input, ctx, () => {
         return input instanceof classToCheck
       })
     },
-    _kind: `instanceof_${classToCheck.name ? `_${classToCheck.name}` : ''}`,
+    _kind_: `instanceof_${classToCheck.name ? `_${classToCheck.name}` : ''}`,
   }
 }
 
-export function rc_literals<T extends string | number | boolean>(
-  ...literals: T[]
-): RcType<T> {
+export function rc_literals<T extends (string | number | boolean)[]>(
+  ...literals: T
+): RcType<T[number]> {
   if (literals.length === 0) {
     throw new Error('rc_literal requires at least one literal')
   }
 
   return {
     ...defaultProps,
-    _parse(input, ctx) {
+    _parse_(input, ctx) {
       return parseWithFallback(this, input, ctx, () => {
         for (const literal of literals) {
           if (input === literal) {
@@ -297,7 +303,7 @@ export function rc_literals<T extends string | number | boolean>(
         return false
       })
     },
-    _kind:
+    _kind_:
       literals.length == 1
         ? `${normalizedTypeOf(literals[0])}_literal`
         : 'literals',
@@ -306,17 +312,17 @@ export function rc_literals<T extends string | number | boolean>(
 
 export function rc_union<T extends RcType<any>[]>(
   ...types: T
-): RcType<TypeOfRcType<T[number]>> {
+): RcType<RcInferType<T[number]>> {
   if (types.length === 0) {
     throw new Error('Unions should have at least one type')
   }
 
   return {
     ...defaultProps,
-    _parse(input, ctx) {
+    _parse_(input, ctx) {
       return parseWithFallback(this, input, ctx, () => {
         for (const type of types) {
-          if (type._parse(input, ctx)[0]) {
+          if (type._parse_(input, ctx)[0]) {
             return true
           }
         }
@@ -324,7 +330,7 @@ export function rc_union<T extends RcType<any>[]>(
         return false
       })
     },
-    _kind: types.map((type) => type._kind).join(' | '),
+    _kind_: types.map((type) => type._kind_).join(' | '),
   }
 }
 
@@ -343,16 +349,17 @@ function normalizeSubError(error: string, currentPath: string): string {
 type RcObject = Record<string, RcType<any>>
 
 type TypeOfObjectType<T extends RcObject> = {
-  [K in keyof T]: TypeOfRcType<T[K]>
+  [K in keyof T]: RcInferType<T[K]>
 }
 
-export function rc_object<T extends RcObject>(
-  shape: T,
-): RcType<TypeOfObjectType<T>> {
+type RcObjType<T extends RcObject> = RcType<TypeOfObjectType<T>>
+
+export function rc_object<T extends RcObject>(shape: T): RcObjType<T> {
   return {
     ...defaultProps,
-    _kind: 'object',
-    _parse(inputObj, ctx) {
+    _obj_shape_: shape,
+    _kind_: 'object',
+    _parse_(inputObj, ctx) {
       return parseWithFallback<TypeOfObjectType<T>>(this, inputObj, ctx, () => {
         if (!isObject(inputObj)) return false
 
@@ -368,7 +375,7 @@ export function rc_object<T extends RcObject>(
 
           excessKeys.delete(key)
 
-          const [isValid, result] = type._parse(input, ctx)
+          const [isValid, result] = type._parse_(input, ctx)
 
           if (isValid) {
             resultObj[typekey] = input
@@ -383,7 +390,7 @@ export function rc_object<T extends RcObject>(
           }
         }
 
-        if (this._kind === 'strict_obj') {
+        if (this._kind_ === 'strict_obj') {
           if (excessKeys.size > 0) {
             for (const key of excessKeys) {
               resultErrors.push(
@@ -397,7 +404,7 @@ export function rc_object<T extends RcObject>(
           return { errors: resultErrors }
         }
 
-        if (this._kind.startsWith('extends_object')) {
+        if (this._kind_.startsWith('extends_object')) {
           return { data: inputObj as any }
         }
 
@@ -407,22 +414,25 @@ export function rc_object<T extends RcObject>(
   }
 }
 
-export function rc_extends_obj<T extends RcObject>(
-  shape: T,
-): RcType<TypeOfObjectType<T>> {
+export function rc_extends_obj<T extends RcObject>(shape: T): RcObjType<T> {
   return {
     ...rc_object(shape),
-    _kind: `extends_object`,
+    _kind_: `extends_object`,
   }
 }
 
-export function rc_strict_obj<T extends RcObject>(
-  shape: T,
-): RcType<TypeOfObjectType<T>> {
+export function rc_strict_obj<T extends RcObject>(shape: T): RcObjType<T> {
   return {
     ...rc_object(shape),
-    _kind: `strict_obj`,
+    _kind_: `strict_obj`,
   }
+}
+
+export function rc_obj_intersection<A extends RcObject, B extends RcObject>(
+  a: RcObjType<A>,
+  b: RcObjType<B>,
+): RcObjType<A & B> {
+  return rc_object({ ...a._obj_shape_, ...b._obj_shape_ }) as any
 }
 
 function checkArrayItems(
@@ -437,7 +447,7 @@ function checkArrayItems(
 
     const type: RcType<any> = Array.isArray(types) ? types[index] : types
 
-    const [isValid, result] = type._parse(item, ctx)
+    const [isValid, result] = type._parse_(item, ctx)
 
     if (!isValid) {
       return {
@@ -451,11 +461,11 @@ function checkArrayItems(
 
 export function rc_array<T extends RcType<any>>(
   type: T,
-): RcType<TypeOfRcType<T>[]> {
+): RcType<RcInferType<T>[]> {
   return {
     ...defaultProps,
-    _kind: `${type._kind}[]`,
-    _parse(input, ctx) {
+    _kind_: `${type._kind_}[]`,
+    _parse_(input, ctx) {
       return parseWithFallback(this, input, ctx, () => {
         if (!Array.isArray(input)) return false
 
@@ -468,16 +478,21 @@ export function rc_array<T extends RcType<any>>(
 }
 
 type MapTupleToTypes<T extends readonly [...any[]]> = {
-  -readonly [K in keyof T]: TypeOfRcType<T[K]>
+  -readonly [K in keyof T]: RcInferType<T[K]>
 }
 
+/**
+ * Check for a tuple of types
+ *
+ * TS equivalent example: [string, number, boolean]
+ */
 export function rc_tuple<T extends readonly RcType<any>[]>(
   types: T,
 ): RcType<MapTupleToTypes<T>> {
   return {
     ...defaultProps,
-    _kind: `[${types.map((type) => type._kind).join(', ')}]`,
-    _parse(input, ctx) {
+    _kind_: `[${types.map((type) => type._kind_).join(', ')}]`,
+    _parse_(input, ctx) {
       return parseWithFallback(this, input, ctx, () => {
         if (!Array.isArray(input)) return false
 
@@ -489,12 +504,16 @@ export function rc_tuple<T extends readonly RcType<any>[]>(
   }
 }
 
+/**
+ * Parse a runcheck type. If valid return the valid input, with warning for autofix
+ * and fallback, or the errors if invalid
+ */
 export function rc_parse<S>(input: any, type: RcType<S>): RcParseResult<S> {
   const ctx: ParseResultCtx = {
     warnings: [],
   }
 
-  const [success, dataOrError] = type._parse(input, ctx)
+  const [success, dataOrError] = type._parse_(input, ctx)
 
   if (success) {
     return {
@@ -519,7 +538,7 @@ export function rc_is_valid<S>(input: any, type: RcType<S>): input is S {
     warnings: [],
   }
 
-  return !!type._parse(input, ctx)[0]
+  return !!type._parse_(input, ctx)[0]
 }
 
 export function rc_validator<S>(type: RcType<S>) {
@@ -545,6 +564,6 @@ type NonArrayObject = {
   [y: number]: never
 }
 
-export function isObject(value: any): value is NonArrayObject {
+function isObject(value: any): value is NonArrayObject {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }

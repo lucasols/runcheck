@@ -5,7 +5,9 @@ import {
   rc_extends_obj,
   rc_number,
   rc_object,
+  rc_obj_intersection,
   rc_parse,
+  rc_parser,
   rc_strict_obj,
   rc_string,
 } from '../src/runcheck'
@@ -226,6 +228,40 @@ describe('rc_object', () => {
 
     expect(result).toEqual(
       errorResult(`$.array[2].id: Type 'string' is not assignable to 'number'`),
+    )
+  })
+})
+
+describe('rc_obj_intersections', () => {
+  test('intersection', () => {
+    const parser = rc_parser(
+      rc_obj_intersection(
+        rc_object({
+          a: rc_string,
+          b: rc_number,
+        }),
+        rc_object({
+          c: rc_string,
+        }),
+      ),
+    )
+
+    const input = { a: 'hello', b: 1, c: 'world' }
+
+    expect(parser(input)).toEqual(
+      successResult({
+        a: 'hello',
+        b: 1,
+        c: 'world',
+      }),
+    )
+
+    const input2 = { a: 'hello', b: 1, c: 2 }
+
+    const result = parser(input2)
+
+    expect(result).toEqual(
+      errorResult(`$.c: Type 'number' is not assignable to 'string'`),
     )
   })
 })
