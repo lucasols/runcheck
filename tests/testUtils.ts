@@ -1,12 +1,4 @@
-import { RcParseResult } from '../src/runcheck'
-
-export function simplifyResult(result: RcParseResult<any>): any {
-  if (!result.error) {
-    throw new Error('simplifyResult should only be used on error results')
-  }
-
-  return { error: !!result.error, data: result.data }
-}
+import { RcParseResult, RcType, rc_parse } from '../src/runcheck'
 
 export function pipe<T1, R>(input: T1, fn1: (a: T1) => R): R
 export function pipe<T1, T2, R>(
@@ -57,8 +49,7 @@ export function dedent(strings: TemplateStringsArray, ...values: string[]) {
   // first, perform interpolation
   let result = ''
   for (let i = 0; i < raw.length; i++) {
-    result += raw[i]!
-      // join lines when there is a suppressed newline
+    result += raw[i]! // join lines when there is a suppressed newline
       .replace(/\\\n[ \t]*/g, '')
       // handle escaped backticks
       .replace(/\\`/g, '`')
@@ -96,4 +87,30 @@ export function dedent(strings: TemplateStringsArray, ...values: string[]) {
       // handle escaped newlines at the end to ensure they don't get stripped too
       .replace(/\\n/g, '\n')
   )
+}
+
+export function typeIsEqualTo<Expected>(value: Expected) {}
+
+export function expectParse<T extends RcType<any>>({
+  input,
+  type,
+}: {
+  input: any
+  type: T
+}) {
+  return rc_parse(input, type)
+}
+
+export function successResult(
+  data: any,
+  warningMsgs: string[] | false = false,
+) {
+  return { error: false, data, warningMsgs }
+}
+
+export function errorResult(...errorMsg: string[]) {
+  return {
+    error: true,
+    errors: errorMsg,
+  }
 }
