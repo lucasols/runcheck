@@ -18,7 +18,11 @@ describe('autofix', () => {
   test('fix number to string', () => {
     const result = rc_parse(1, rc_string.withAutofix())
 
-    expect(result).toEqual(successResult('1'))
+    expect(result).toEqual(
+      successResult('1', [
+        "Autofixed from, Type 'number' is not assignable to 'string'",
+      ]),
+    )
   })
 
   test('use a custom implementation', () => {
@@ -29,12 +33,20 @@ describe('autofix', () => {
       }),
     )
 
-    expect(result).toEqual(successResult(true))
+    expect(result).toEqual(
+      successResult(true, [
+        "Autofixed from, Type 'number' is not assignable to 'boolean'",
+      ]),
+    )
   })
 
   test('fix a string to number', () => {
     const result = rc_parse('1', rc_number.withAutofix())
 
-    expect(result).toEqual(successResult(1))
-  });
+    expect(result).toEqual(
+      successResult(1, [
+        "Autofixed from, Type 'string' is not assignable to 'number'",
+      ]),
+    )
+  })
 })

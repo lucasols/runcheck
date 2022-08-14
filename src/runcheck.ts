@@ -2,7 +2,7 @@ export type RcParseResult<T> =
   | {
       error: false
       data: T
-      warningMsgs: string[] | false
+      warnings: string[] | false
     }
   | {
       error: true
@@ -103,6 +103,8 @@ function parseWithFallback<T>(
           return [false, [type._getErrorMsg_(autofixed.fixed)]]
         }
       }
+
+      ctx.warnings.push(`Autofixed from, ${type._getErrorMsg_(input)}`)
 
       return [true, autofixed.fixed]
     }
@@ -519,7 +521,7 @@ export function rc_parse<S>(input: any, type: RcType<S>): RcParseResult<S> {
     return {
       error: false,
       data: dataOrError,
-      warningMsgs: ctx.warnings.length > 0 ? ctx.warnings : false,
+      warnings: ctx.warnings.length > 0 ? ctx.warnings : false,
     }
   }
 

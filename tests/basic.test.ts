@@ -36,13 +36,11 @@ describe('rc_string', () => {
   })
 
   test('with fallback', () => {
-    expect(rc_parse(1, rc_string.withFallback('world'))).toEqual({
-      error: false,
-      data: 'world',
-      warningMsgs: [
+    expect(rc_parse(1, rc_string.withFallback('world'))).toEqual(
+      successResult('world', [
         "Fallback used, Type 'number' is not assignable to 'string'",
-      ],
-    })
+      ]),
+    )
   })
 
   test('extra checks', () => {
@@ -157,7 +155,7 @@ test('rc_instanceof', () => {
       {
         "data": 2022-09-01T03:00:00.000Z,
         "error": false,
-        "warningMsgs": false,
+        "warnings": false,
       }
     `)
 })
@@ -223,7 +221,7 @@ describe('rc_literal', () => {
       {
         "data": "world",
         "error": false,
-        "warningMsgs": false,
+        "warnings": false,
       }
     `)
 
@@ -244,7 +242,7 @@ describe('rc_literal', () => {
       {
         "data": 1,
         "error": false,
-        "warningMsgs": false,
+        "warnings": false,
       }
     `)
 
@@ -261,7 +259,7 @@ describe('rc_literal', () => {
       {
         "data": 2,
         "error": false,
-        "warningMsgs": false,
+        "warnings": false,
       }
     `)
 
@@ -269,7 +267,7 @@ describe('rc_literal', () => {
       {
         "data": true,
         "error": false,
-        "warningMsgs": false,
+        "warnings": false,
       }
     `)
 
