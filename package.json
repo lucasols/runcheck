@@ -1,6 +1,7 @@
 {
   "name": "runcheck",
-  "version": "0.3.0",
+  "description": "A tiny (less than 2 KiB Gzipped) and treeshakable! lib for typescript runtime type checks with autofix support",
+  "version": "0.4.0",
   "license": "MIT",
   "scripts": {
     "test": "vitest --ui",

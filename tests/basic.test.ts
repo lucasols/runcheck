@@ -109,7 +109,7 @@ describe('rc_null or orNullish', () => {
   })
 
   test('orNullish', () => {
-    const validator = rc_validator(rc_string.orNullish())
+    const validator = rc_validator(rc_string.nullable())
 
     expect(validator(null)).toBeTruthy()
     expect(validator(undefined)).toBeTruthy()

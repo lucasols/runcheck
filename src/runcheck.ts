@@ -27,9 +27,9 @@ export type RcType<T> = {
   readonly withFallback: (fallback: T) => RcType<T>
   readonly where: (predicate: (input: T) => boolean) => RcType<T>
   readonly optional: () => RcOptional<T>
-  readonly orNullish: () => RcType<T | null | undefined>
+  readonly nullable: () => RcType<T | null | undefined>
   readonly withAutofix: (
-    customAutofix?: (input: unknown) => false | { fixed: T },
+    customAutofix: (input: unknown) => false | { fixed: T },
   ) => RcType<T>
 
   /** %remove-declaration-start  */
@@ -120,18 +120,12 @@ function parse<T>(
 
 function withAutofix(
   this: RcType<any>,
-  customAutofix?: (input: unknown) => any,
+  customAutofix: (input: unknown) => any,
 ): RcType<any> {
-  if (!this._autoFix_ && !customAutofix) {
-    throw new Error(
-      "This type don't have a default autofix and no custom one was provided",
-    )
-  }
-
   return {
     ...this,
     _useAutFix_: true,
-    _autoFix_: customAutofix || this._autoFix_,
+    _autoFix_: customAutofix,
   }
 }
 
@@ -159,7 +153,7 @@ function _getErrorMsg_(this: RcType<any>, input: unknown): string {
   }'`
 }
 
-function orNullish(this: RcType<any>): RcType<any | null | undefined> {
+function nullable(this: RcType<any>): RcType<any | null | undefined> {
   return {
     ...this,
     _orNullish_: true,
@@ -172,7 +166,7 @@ const defaultProps = {
   where,
   optional,
   _getErrorMsg_,
-  orNullish,
+  nullable,
   withAutofix,
 }
 
@@ -206,17 +200,6 @@ export const rc_boolean: RcType<boolean> = {
     return parse(this, input, ctx, () => typeof input === 'boolean')
   },
   _kind_: 'boolean',
-  _autoFix_(input) {
-    if (input === 0 || input === 1) {
-      return { fixed: !!input }
-    }
-
-    if (input === 'true' || input === 'false') {
-      return { fixed: input === 'true' }
-    }
-
-    return false
-  },
 }
 
 export const rc_string: RcType<string> = {
@@ -225,13 +208,6 @@ export const rc_string: RcType<string> = {
     return parse(this, input, ctx, () => typeof input === 'string')
   },
   _kind_: 'string',
-  _autoFix_(input) {
-    if (typeof input === 'number' && !Number.isNaN(input)) {
-      return { fixed: input.toString() }
-    }
-
-    return false
-  },
 }
 
 export const rc_number: RcType<number> = {
@@ -245,17 +221,6 @@ export const rc_number: RcType<number> = {
     )
   },
   _kind_: 'number',
-  _autoFix_(input) {
-    if (typeof input === 'string') {
-      const parsed = Number(input)
-
-      if (!Number.isNaN(parsed)) {
-        return { fixed: parsed }
-      }
-    }
-
-    return false
-  },
 }
 
 export const rc_date: RcType<Date> = {

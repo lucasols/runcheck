@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'vitest'
+import { rc_number_autofix, rc_string_autofix } from '../src/autofixable'
 import { rc_boolean, rc_number, rc_parse, rc_string } from '../src/runcheck'
 import { successResult } from './testUtils'
 
@@ -16,7 +17,7 @@ describe('fallback', () => {
 
 describe('autofix', () => {
   test('fix number to string', () => {
-    const result = rc_parse(1, rc_string.withAutofix())
+    const result = rc_parse(1, rc_string_autofix)
 
     expect(result).toEqual(
       successResult('1', [
@@ -41,7 +42,7 @@ describe('autofix', () => {
   })
 
   test('fix a string to number', () => {
-    const result = rc_parse('1', rc_number.withAutofix())
+    const result = rc_parse('1', rc_number_autofix)
 
     expect(result).toEqual(
       successResult(1, [
