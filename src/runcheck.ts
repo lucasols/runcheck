@@ -54,7 +54,7 @@ function withFallback(this: RcType<any>, fallback: any): RcType<any> {
   return { ...this, _fallback_: fallback }
 }
 
-function parseWithFallback<T>(
+function parse<T>(
   type: RcType<T>,
   input: unknown,
   ctx: ParseResultCtx,
@@ -179,7 +179,7 @@ const defaultProps = {
 export const rc_undefined: RcType<undefined> = {
   ...defaultProps,
   _parse_(input, ctx) {
-    return parseWithFallback(this, input, ctx, () => input === undefined)
+    return parse(this, input, ctx, () => input === undefined)
   },
   _kind_: 'undefined',
 }
@@ -187,7 +187,7 @@ export const rc_undefined: RcType<undefined> = {
 export const rc_null: RcType<null> = {
   ...defaultProps,
   _parse_(input, ctx) {
-    return parseWithFallback(this, input, ctx, () => input === null)
+    return parse(this, input, ctx, () => input === null)
   },
   _kind_: 'null',
 }
@@ -195,7 +195,7 @@ export const rc_null: RcType<null> = {
 export const rc_any: RcType<any> = {
   ...defaultProps,
   _parse_(input, ctx) {
-    return parseWithFallback(this, input, ctx, () => true)
+    return parse(this, input, ctx, () => true)
   },
   _kind_: 'any',
 }
@@ -203,7 +203,7 @@ export const rc_any: RcType<any> = {
 export const rc_boolean: RcType<boolean> = {
   ...defaultProps,
   _parse_(input, ctx) {
-    return parseWithFallback(this, input, ctx, () => typeof input === 'boolean')
+    return parse(this, input, ctx, () => typeof input === 'boolean')
   },
   _kind_: 'boolean',
   _autoFix_(input) {
@@ -222,7 +222,7 @@ export const rc_boolean: RcType<boolean> = {
 export const rc_string: RcType<string> = {
   ...defaultProps,
   _parse_(input, ctx) {
-    return parseWithFallback(this, input, ctx, () => typeof input === 'string')
+    return parse(this, input, ctx, () => typeof input === 'string')
   },
   _kind_: 'string',
   _autoFix_(input) {
@@ -237,7 +237,7 @@ export const rc_string: RcType<string> = {
 export const rc_number: RcType<number> = {
   ...defaultProps,
   _parse_(input, ctx) {
-    return parseWithFallback(
+    return parse(
       this,
       input,
       ctx,
@@ -261,7 +261,7 @@ export const rc_number: RcType<number> = {
 export const rc_date: RcType<Date> = {
   ...defaultProps,
   _parse_(input, ctx) {
-    return parseWithFallback(this, input, ctx, () => {
+    return parse(this, input, ctx, () => {
       return (
         typeof input === 'object' &&
         input instanceof Date &&
@@ -277,7 +277,7 @@ export function rc_instanceof<T extends Function>(classToCheck: T): RcType<T> {
   return {
     ...defaultProps,
     _parse_(input, ctx) {
-      return parseWithFallback(this, input, ctx, () => {
+      return parse(this, input, ctx, () => {
         return input instanceof classToCheck
       })
     },
@@ -295,7 +295,7 @@ export function rc_literals<T extends (string | number | boolean)[]>(
   return {
     ...defaultProps,
     _parse_(input, ctx) {
-      return parseWithFallback(this, input, ctx, () => {
+      return parse(this, input, ctx, () => {
         for (const literal of literals) {
           if (input === literal) {
             return true
@@ -322,7 +322,7 @@ export function rc_union<T extends RcType<any>[]>(
   return {
     ...defaultProps,
     _parse_(input, ctx) {
-      return parseWithFallback(this, input, ctx, () => {
+      return parse(this, input, ctx, () => {
         for (const type of types) {
           if (type._parse_(input, ctx)[0]) {
             return true
@@ -362,7 +362,7 @@ export function rc_object<T extends RcObject>(shape: T): RcObjType<T> {
     _obj_shape_: shape,
     _kind_: 'object',
     _parse_(inputObj, ctx) {
-      return parseWithFallback<TypeOfObjectType<T>>(this, inputObj, ctx, () => {
+      return parse<TypeOfObjectType<T>>(this, inputObj, ctx, () => {
         if (!isObject(inputObj)) return false
 
         const excessKeys = new Set<string>(Object.keys(inputObj))
@@ -468,7 +468,7 @@ export function rc_array<T extends RcType<any>>(
     ...defaultProps,
     _kind_: `${type._kind_}[]`,
     _parse_(input, ctx) {
-      return parseWithFallback(this, input, ctx, () => {
+      return parse(this, input, ctx, () => {
         if (!Array.isArray(input)) return false
 
         if (input.length === 0) return true
@@ -495,7 +495,7 @@ export function rc_tuple<T extends readonly RcType<any>[]>(
     ...defaultProps,
     _kind_: `[${types.map((type) => type._kind_).join(', ')}]`,
     _parse_(input, ctx) {
-      return parseWithFallback(this, input, ctx, () => {
+      return parse(this, input, ctx, () => {
         if (!Array.isArray(input)) return false
 
         if (input.length !== types.length) return false

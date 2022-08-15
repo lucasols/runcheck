@@ -5,8 +5,11 @@
   "scripts": {
     "test": "vitest --ui",
     "test:run": "vitest run",
+    "benchmark": "tsm benchmarks/benchmark.ts",
+    "benchmark:generate-profile": "tsm benchmarks/generateProfiles.ts",
     "build": "pnpm test:run && pnpm build:no-test",
     "build:no-test": "tsup src/runcheck.ts --minify --dts && tsm scripts/removeInternalDeclarations.ts",
+    "build:unminified": "tsup src/runcheck.ts --outDir dist-bench --dts",
     "npm-publish": "./scripts/check-if-is-sync.sh && pnpm build && npm publish"
   },
   "files": [
@@ -35,12 +38,15 @@
     "@typescript-eslint/parser": "^5.33.0",
     "@vitest/ui": "^0.21.1",
     "eslint": "^8.22.0",
+    "eslint-plugin-jest": "^26.8.2",
+    "mitata": "^0.1.6",
+    "myzod": "^1.8.8",
+    "tsm": "^2.2.2",
+    "tsup": "^6.2.2",
     "typescript": "^4.8.1-rc",
+    "v8-profiler-next": "^1.9.0",
     "vite": "^3.0.7",
     "vitest": "^0.21.1",
-    "zod": "^3.18.0",
-    "eslint-plugin-jest": "^26.8.2",
-    "tsm": "^2.2.2",
-    "tsup": "^6.2.2"
+    "zod": "^3.18.0"
   }
 }
