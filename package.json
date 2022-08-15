@@ -9,8 +9,7 @@
     "benchmark": "tsm benchmarks/benchmark.ts",
     "benchmark:generate-profile": "tsm benchmarks/generateProfiles.ts",
     "build": "pnpm test:run && pnpm build:no-test",
-    "build:no-test": "tsup src/runcheck.ts --minify --dts && tsm scripts/removeInternalDeclarations.ts",
-    "build:unminified": "tsup src/runcheck.ts --outDir dist-bench --dts",
+    "build:no-test": "tsup --minify --dts && tsm scripts/removeInternalDeclarations.ts",
     "npm-publish": "./scripts/check-if-is-sync.sh && pnpm build && npm publish"
   },
   "files": [
@@ -27,6 +26,10 @@
     ".": {
       "import": "./dist/runcheck.js",
       "require": "./dist/runcheck.cjs"
+    },
+    "./autofixable": {
+      "import": "./dist/autofixable.js",
+      "require": "./dist/autofixable.cjs"
     }
   },
   "sideEffects": false,
