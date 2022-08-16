@@ -3,11 +3,12 @@ import { z as zod } from 'zod'
 import myzod from 'myzod'
 import {
   rc_boolean,
+  rc_is_valid,
   rc_number,
   rc_object,
   rc_parse,
   rc_string,
-} from '../dist/runcheck.js'
+} from '../src/runcheck.js'
 
 const validateData = Object.freeze({
   number: 1,
@@ -24,109 +25,109 @@ const validateData = Object.freeze({
   },
 })
 
-group('obj', () => {
-  bench('zod', () => {
-    const dataType = zod.object({
-      number: zod.number(),
-      negNumber: zod.number(),
-      maxNumber: zod.number(),
-      string: zod.string(),
-      longString: zod.string(),
-      boolean: zod.boolean(),
-      deeplyNested: zod.object({
-        foo: zod.string(),
-        num: zod.number(),
-        bool: zod.boolean(),
-      }),
-    })
+// group('obj', () => {
+//   bench('zod', () => {
+//     const dataType = zod.object({
+//       number: zod.number(),
+//       negNumber: zod.number(),
+//       maxNumber: zod.number(),
+//       string: zod.string(),
+//       longString: zod.string(),
+//       boolean: zod.boolean(),
+//       deeplyNested: zod.object({
+//         foo: zod.string(),
+//         num: zod.number(),
+//         bool: zod.boolean(),
+//       }),
+//     })
 
-    dataType.parse(validateData)
-  })
+//     dataType.parse(validateData)
+//   })
 
-  bench('myzod', () => {
-    const dataType = myzod.object({
-      number: myzod.number(),
-      negNumber: myzod.number(),
-      maxNumber: myzod.number(),
-      string: myzod.string(),
-      longString: myzod.string(),
-      boolean: myzod.boolean(),
-      deeplyNested: myzod.object({
-        foo: myzod.string(),
-        num: myzod.number(),
-        bool: myzod.boolean(),
-      }),
-    })
+//   bench('myzod', () => {
+//     const dataType = myzod.object({
+//       number: myzod.number(),
+//       negNumber: myzod.number(),
+//       maxNumber: myzod.number(),
+//       string: myzod.string(),
+//       longString: myzod.string(),
+//       boolean: myzod.boolean(),
+//       deeplyNested: myzod.object({
+//         foo: myzod.string(),
+//         num: myzod.number(),
+//         bool: myzod.boolean(),
+//       }),
+//     })
 
-    dataType.parse(validateData)
-  })
+//     dataType.parse(validateData)
+//   })
 
-  baseline('runcheck', () => {
-    rc_parse(
-      validateData,
-      rc_object({
-        number: rc_number,
-        negNumber: rc_number,
-        maxNumber: rc_number,
-        string: rc_string,
-        longString: rc_string,
-        boolean: rc_boolean,
-        deeplyNested: rc_object({
-          foo: rc_string,
-          num: rc_number,
-          bool: rc_boolean,
-        }),
-      }),
-    )
-  })
-})
+//   baseline('runcheck', () => {
+//     rc_parse(
+//       validateData,
+//       rc_object({
+//         number: rc_number,
+//         negNumber: rc_number,
+//         maxNumber: rc_number,
+//         string: rc_string,
+//         longString: rc_string,
+//         boolean: rc_boolean,
+//         deeplyNested: rc_object({
+//           foo: rc_string,
+//           num: rc_number,
+//           bool: rc_boolean,
+//         }),
+//       }),
+//     )
+//   })
+// })
 
-group('string', () => {
-  bench('zod', () => {
-    const dataType = zod.string()
-    dataType.parse(validateData.string)
-  })
+// group('string', () => {
+//   bench('zod', () => {
+//     const dataType = zod.string()
+//     dataType.parse(validateData.string)
+//   })
 
-  bench('myzod', () => {
-    const dataType = myzod.string()
-    dataType.parse(validateData.string)
-  })
+//   bench('myzod', () => {
+//     const dataType = myzod.string()
+//     dataType.parse(validateData.string)
+//   })
 
-  baseline('runcheck', () => {
-    rc_parse(validateData.string, rc_string)
-  })
-})
+//   baseline('runcheck', () => {
+//     rc_parse(validateData.string, rc_string)
+//   })
+// })
 
-group('number', () => {
-  bench('zod', () => {
-    const dataType = zod.number()
-    dataType.parse(validateData.number)
-  })
+// group('number', () => {
+//   bench('zod', () => {
+//     const dataType = zod.number()
+//     dataType.parse(validateData.number)
+//   })
 
-  bench('myzod', () => {
-    const dataType = myzod.number()
-    dataType.parse(validateData.number)
-  })
+//   bench('myzod', () => {
+//     const dataType = myzod.number()
+//     dataType.parse(validateData.number)
+//   })
 
-  baseline('runcheck', () => {
-    rc_parse(validateData.number, rc_number)
-  })
-})
+//   baseline('runcheck', () => {
+//     rc_parse(validateData.number, rc_number)
+//   })
+// })
 
-group('boolean', () => {
-  bench('zod', () => {
-    const dataType = zod.boolean()
-    dataType.parse(validateData.boolean)
-  })
+// group('boolean', () => {
+//   bench('zod', () => {
+//     const dataType = zod.boolean()
+//     dataType.parse(validateData.boolean)
+//   })
 
-  bench('myzod', () => {
-    const dataType = myzod.boolean()
-    dataType.parse(validateData.boolean)
-  })
+//   bench('myzod', () => {
+//     const dataType = myzod.boolean()
+//     dataType.parse(validateData.boolean)
+//   })
 
-  baseline('runcheck', () => {
-    rc_parse(validateData.boolean, rc_boolean)
-  })
-})
+//   baseline('runcheck', () => {
+//     rc_parse(validateData.boolean, rc_boolean)
+//   })
+// })
 
 await run()

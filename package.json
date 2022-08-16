@@ -1,7 +1,7 @@
 {
   "name": "runcheck",
   "description": "A tiny (less than 2 KiB Gzipped) and treeshakable! lib for typescript runtime type checks with autofix support",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "license": "MIT",
   "scripts": {
     "test": "vitest --ui",
@@ -25,10 +25,12 @@
   "exports": {
     ".": {
       "import": "./dist/runcheck.js",
+      "types": "./dist/runcheck.d.ts",
       "require": "./dist/runcheck.cjs"
     },
     "./autofixable": {
       "import": "./dist/autofixable.js",
+      "types": "./dist/autofixable.d.ts",
       "require": "./dist/autofixable.cjs"
     }
   },
