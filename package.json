@@ -25,13 +25,18 @@
   "exports": {
     ".": {
       "import": "./dist/runcheck.js",
-      "types": "./dist/runcheck.d.ts",
       "require": "./dist/runcheck.cjs"
     },
     "./autofixable": {
       "import": "./dist/autofixable.js",
-      "types": "./dist/autofixable.d.ts",
       "require": "./dist/autofixable.cjs"
+    }
+  },
+  "typesVersions": {
+    "*": {
+      "autofixable": [
+        "./dist/autofixable.d.ts"
+      ]
     }
   },
   "sideEffects": false,
