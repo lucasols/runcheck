@@ -159,6 +159,12 @@ const input = 1
 const positiveNumberType = rc_number.where((input) => input > 0)
 ```
 
-# Optional and nullable types
+# Type modifiers
 
-Use `rc_[type].optional()` to make a type optional, and `rc_[type].orNullish()` to make a type nullable.
+You can use also modiers like `rc_string.optional()` to extend or modify the rc types:
+
+| runcheck modifier      | ts type equivalent       |
+| ---------------------- | ------------------------ |
+| `rc_[type].optional()` | `T \| undefined`         |
+| `rc_[type].nullable()` | `T \| null`              |
+| `rc_[type].nullish()`  | `T \| null \| undefined` |

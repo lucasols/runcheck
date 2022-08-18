@@ -28,6 +28,7 @@ export type RcType<T> = {
   readonly where: (predicate: (input: T) => boolean) => RcType<T>
   readonly optional: () => RcOptional<T>
   readonly nullable: () => RcType<T | null | undefined>
+  readonly nullish: () => RcType<T | null>
   readonly withAutofix: (
     customAutofix: (input: unknown) => false | { fixed: T },
   ) => RcType<T>
@@ -43,6 +44,7 @@ export type RcType<T> = {
   readonly _predicate_?: (input: T) => boolean
   readonly _optional_?: true
   readonly _orNullish_?: true
+  readonly _orNullable_?: true
   readonly _useAutFix_?: true
   readonly _obj_shape_?: Record<string, RcType<any>>
   readonly _array_shape_?: Record<string, RcType<any>>
@@ -68,6 +70,12 @@ function parse<T>(
 
   if (type._orNullish_) {
     if (input === null || input === undefined) {
+      return [true, input as T]
+    }
+  }
+
+  if (type._orNullable_) {
+    if (input === null) {
       return [true, input as T]
     }
   }
@@ -156,6 +164,14 @@ function _getErrorMsg_(this: RcType<any>, input: unknown): string {
 function nullable(this: RcType<any>): RcType<any | null | undefined> {
   return {
     ...this,
+    _orNullable_: true,
+    _kind_: `${this._kind_}_or_nullable`,
+  }
+}
+
+function nullish(this: RcType<any>): RcType<any | null | undefined> {
+  return {
+    ...this,
     _orNullish_: true,
     _kind_: `${this._kind_}_or_nullish`,
   }
@@ -168,6 +184,7 @@ const defaultProps = {
   _getErrorMsg_,
   nullable,
   withAutofix,
+  nullish,
 }
 
 export const rc_undefined: RcType<undefined> = {

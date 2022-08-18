@@ -102,17 +102,27 @@ describe('rc_undefined or optional', () => {
   })
 })
 
-describe('rc_null or orNullish', () => {
+describe('rc_null or nullish or nullable', () => {
   test('rc_null', () => {
     expect(rc_is_valid(null, rc_null)).toBeTruthy()
     expect(rc_is_valid('sdf', rc_null)).toBeFalsy()
   })
 
   test('orNullish', () => {
-    const validator = rc_validator(rc_string.nullable())
+    const validator = rc_validator(rc_string.nullish())
 
     expect(validator(null)).toBeTruthy()
     expect(validator(undefined)).toBeTruthy()
+    expect(validator('sdf')).toBeTruthy()
+
+    expect(validator(2)).toBeFalsy()
+  })
+
+  test('or Nullable', () => {
+    const validator = rc_validator(rc_string.nullable())
+
+    expect(validator(null)).toBeTruthy()
+    expect(validator(undefined)).toBeFalsy()
     expect(validator('sdf')).toBeTruthy()
 
     expect(validator(2)).toBeFalsy()
