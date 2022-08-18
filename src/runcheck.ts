@@ -418,6 +418,50 @@ export function rc_obj_intersection<A extends RcObject, B extends RcObject>(
 ): RcObjType<A & B> {
   return rc_object({ ...a._obj_shape_, ...b._obj_shape_ }) as any
 }
+type RcRecord<V extends RcType<any>> = Record<string, V>
+
+type RcRecordType<V extends RcType<any>> = RcType<TypeOfObjectType<RcRecord<V>>>
+
+export function rc_record<V extends RcType<any>>(
+  valueType: V,
+): RcRecordType<V> {
+  return {
+    ...defaultProps,
+    _kind_: `record<string, ${valueType._kind_}>`,
+    _parse_(inputObj, ctx) {
+      return parse<TypeOfObjectType<RcRecord<V>>>(this, inputObj, ctx, () => {
+        if (!isObject(inputObj)) return false
+
+        const resultObj: Record<any, string> = {} as any
+        const resultErrors: string[] = []
+
+        for (const [key, inputValue] of Object.entries(inputObj)) {
+          const input = inputObj[key]
+
+          const [isValid, result] = valueType._parse_(inputValue, ctx)
+
+          if (isValid) {
+            resultObj[key] = input
+          }
+          //
+          else {
+            const errors = result
+
+            for (const subError of errors) {
+              resultErrors.push(normalizeSubError(subError, `.${key}`))
+            }
+          }
+        }
+
+        if (resultErrors.length > 0) {
+          return { errors: resultErrors }
+        }
+
+        return { data: resultObj as any }
+      })
+    },
+  }
+}
 
 function checkArrayItems(
   this: RcType<any>,
@@ -513,7 +557,9 @@ export function rc_parse<S>(input: any, type: RcType<S>): RcParseResult<S> {
   }
 }
 
-export function rc_parser<S>(type: RcType<S>) {
+export type RcParser<T> = (input: any) => RcParseResult<T>
+
+export function rc_parser<S>(type: RcType<S>): RcParser<S> {
   return (input: any) => rc_parse(input, type)
 }
 

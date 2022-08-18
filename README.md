@@ -63,6 +63,16 @@ const shape = rc_obj_intersection(
 )
 ```
 
+## `rc_record`
+
+Validates only the values of a object, equivalent to `Record<string, T>` in typescript.
+
+```ts
+const shape = rc_record(rc_number)
+
+// shape type is `Record<string, number>`
+```
+
 # Parsing
 
 ```ts
