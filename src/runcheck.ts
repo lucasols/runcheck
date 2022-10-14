@@ -27,8 +27,8 @@ export type RcType<T> = {
   readonly withFallback: (fallback: T) => RcType<T>
   readonly where: (predicate: (input: T) => boolean) => RcType<T>
   readonly optional: () => RcOptional<T>
-  readonly nullable: () => RcType<T | null | undefined>
-  readonly nullish: () => RcType<T | null>
+  readonly nullable: () => RcType<T | null>
+  readonly nullish: () => RcType<T | null | undefined>
   readonly withAutofix: (
     customAutofix: (input: unknown) => false | { fixed: T },
   ) => RcType<T>

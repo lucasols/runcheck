@@ -123,7 +123,7 @@ describe('rc_null or nullish or nullable', () => {
 
     expect(validator(null)).toBeTruthy()
     expect(validator(undefined)).toBeFalsy()
-    expect(validator('sdf')).toBeTruthy()
+    expect(validator('sdfs')).toBeTruthy()
 
     expect(validator(2)).toBeFalsy()
   })
