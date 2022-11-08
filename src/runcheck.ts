@@ -563,6 +563,23 @@ export function rc_parser<S>(type: RcType<S>): RcParser<S> {
   return (input: any) => rc_parse(input, type)
 }
 
+export function rc_loose_parse<S>(
+  input: any,
+  type: RcType<S>,
+): { data: S | null; errors: string[] | false; warnings: string[] | false } {
+  const result = rc_parse(input, type)
+
+  if (result.error) {
+    return {
+      data: null,
+      errors: result.errors,
+      warnings: false,
+    }
+  }
+
+  return { data: result.data, errors: false, warnings: result.warnings }
+}
+
 export function rc_is_valid<S>(input: any, type: RcType<S>): input is S {
   const ctx: ParseResultCtx = {
     warnings: [],

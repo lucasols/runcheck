@@ -116,6 +116,20 @@ if (rc_is_valid(input, rc_array(rc_string))) {
 }
 ```
 
+# Loose parsing
+
+Use `rc_parse_loose` to parse a input and returning null if the input is invalid.
+
+```ts
+import { rc_loose_parse } from 'runcheck'
+
+const input = JSON.parse(jsonInput)
+
+const result = rc_loose_parse(input, rc_array(rc_string)).data
+
+result // string[] | null
+```
+
 # Autofixing and fallback values in parsing
 
 Values can be autofixed and fallback values can be provided for parsing. The checks will pass but the result will return warnings messages.
