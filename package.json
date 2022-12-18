@@ -9,7 +9,7 @@
     "benchmark": "tsm benchmarks/benchmark.ts",
     "benchmark:generate-profile": "tsm benchmarks/generateProfiles.ts",
     "build": "pnpm test:run && pnpm build:no-test",
-    "build:no-test": "tsup --minify --dts && tsm scripts/removeInternalDeclarations.ts",
+    "build:no-test": "tsup --minify --dts",
     "npm-publish": "./scripts/check-if-is-sync.sh && pnpm build && npm publish"
   },
   "files": [

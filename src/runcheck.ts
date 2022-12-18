@@ -33,23 +33,33 @@ export type RcType<T> = {
     customAutofix: (input: unknown) => false | { fixed: T },
   ) => RcType<T>
 
-  /** %remove-declaration-start  */
+  /** @internal */
   readonly _parse_: (
     input: unknown,
     ctx: ParseResultCtx,
   ) => InternalParseResult<T>
+  /** @internal */
   readonly _kind_: string
+  /** @internal */
   readonly _getErrorMsg_: (input: unknown) => string
+  /** @internal */
   readonly _fallback_?: T
+  /** @internal */
   readonly _predicate_?: (input: T) => boolean
+  /** @internal */
   readonly _optional_?: true
+  /** @internal */
   readonly _orNullish_?: true
+  /** @internal */
   readonly _orNullable_?: true
+  /** @internal */
   readonly _useAutFix_?: true
+  /** @internal */
   readonly _obj_shape_?: Record<string, RcType<any>>
+  /** @internal */
   readonly _array_shape_?: Record<string, RcType<any>>
+  /** @internal */
   readonly _autoFix_?: (input: unknown) => false | { fixed: T }
-  ___remove_declaration_end?: never
 }
 
 function withFallback(this: RcType<any>, fallback: any): RcType<any> {

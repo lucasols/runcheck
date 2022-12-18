@@ -15,6 +15,7 @@
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "forceConsistentCasingInFileNames": true,
+    "stripInternal": true,
     "keyofStringsOnly": true,
     "strictPropertyInitialization": true
   }
