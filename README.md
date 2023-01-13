@@ -52,7 +52,7 @@ With the `rc_array` or `rc_loose_array` type you can also use the `unique` optio
 const shape = rc_array(rc_string, { unique: true })
 ```
 
-For arrays of objects, you can provide a string to `unique` options to check if the array items has no duplicated values of a specific property.
+For arrays of objects, you can provide a string to `unique` option to check if the array items has no duplicated values of a specific property.
 
 ```ts
 const shape = rc_array(rc_object({ id: rc_string }), { unique: 'id' })
