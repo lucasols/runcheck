@@ -55,6 +55,8 @@ export type RcType<T> = {
   /** @internal */
   readonly _useAutFix_?: true
   /** @internal */
+  readonly _is_object_?: true
+  /** @internal */
   readonly _obj_shape_?: Record<string, RcType<any>>
   /** @internal */
   readonly _array_shape_?: Record<string, RcType<any>>
@@ -353,6 +355,7 @@ export function rc_object<T extends RcObject>(shape: T): RcObjType<T> {
     ...defaultProps,
     _obj_shape_: shape,
     _kind_: 'object',
+    _is_object_: true,
     _parse_(inputObj, ctx) {
       return parse<TypeOfObjectType<T>>(this, inputObj, ctx, () => {
         if (!isObject(inputObj)) return false
@@ -426,6 +429,7 @@ export function rc_obj_intersection<A extends RcObject, B extends RcObject>(
   a: RcObjType<A>,
   b: RcObjType<B>,
 ): RcObjType<A & B> {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-return
   return rc_object({ ...a._obj_shape_, ...b._obj_shape_ }) as any
 }
 type RcRecord<V extends RcType<any>> = Record<string, V>
@@ -473,33 +477,90 @@ export function rc_record<V extends RcType<any>>(
   }
 }
 
+function checkArrayUniqueOption(
+  type: RcType<any>,
+  uniqueOption: boolean | string | undefined,
+) {
+  if (typeof uniqueOption === 'string') {
+    if (!type._obj_shape_?.[uniqueOption]) {
+      throw new Error(`${type._kind_} can't be used with unique key option`)
+    }
+  }
+}
+
 function checkArrayItems(
   this: RcType<any>,
   input: any[],
   types: RcType<any> | readonly RcType<any>[],
   ctx: ParseResultCtx,
-): { errors: string[] } | true {
+  loose = false,
+  options?: { unique: boolean | string | false },
+): { errors: string[] } | { data: any[] } | true {
   let index = -1
+  const looseResult: any[] = []
+  const uniqueValues = new Set<any>()
   for (const item of input) {
     index++
 
     const type: RcType<any> = Array.isArray(types) ? types[index] : types
 
-    const [isValid, result] = type._parse_(item, ctx)
+    let parseResult = type._parse_(item, ctx)
+
+    const unique = options?.unique
+
+    if (parseResult[0] && unique) {
+      let uniqueValueToCheck = item
+      const isUniqueKey = typeof unique === 'string'
+
+      if (isUniqueKey) {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+        uniqueValueToCheck = item[unique]
+      }
+
+      if (uniqueValues.has(uniqueValueToCheck)) {
+        parseResult = [
+          false,
+          [
+            isUniqueKey
+              ? normalizeSubError(
+                  `${type._obj_shape_?.[unique]?._kind_} value is not unique`,
+                  `.${unique}`,
+                )
+              : `${type._kind_} value is not unique`,
+          ],
+        ]
+      } else {
+        uniqueValues.add(uniqueValueToCheck)
+      }
+    }
+
+    const [isValid, result] = parseResult
 
     if (!isValid) {
-      return {
-        errors: result.map((error) => normalizeSubError(error, `[${index}]`)),
+      if (!loose) {
+        return {
+          errors: result.map((error) => normalizeSubError(error, `[${index}]`)),
+        }
+      } else {
+        ctx.warnings.push(
+          ...result.map((error) => normalizeSubError(error, `[${index}]`)),
+        )
+        continue
       }
+    } else if (loose) {
+      looseResult.push(item)
     }
   }
 
-  return true
+  return loose ? { data: looseResult } : true
 }
 
 export function rc_array<T extends RcType<any>>(
   type: T,
+  options?: { unique: boolean | string | false },
 ): RcType<RcInferType<T>[]> {
+  checkArrayUniqueOption(type, options?.unique)
+
   return {
     ...defaultProps,
     _kind_: `${type._kind_}[]`,
@@ -509,7 +570,28 @@ export function rc_array<T extends RcType<any>>(
 
         if (input.length === 0) return true
 
-        return checkArrayItems.call(this, input, type, ctx)
+        return checkArrayItems.call(this, input, type, ctx, false, options)
+      })
+    },
+  }
+}
+
+export function rc_loose_array<T extends RcType<any>>(
+  type: T,
+  options?: { unique: boolean | string | false },
+): RcType<RcInferType<T>[]> {
+  checkArrayUniqueOption(type, options?.unique)
+
+  return {
+    ...defaultProps,
+    _kind_: `${type._kind_}[]`,
+    _parse_(input, ctx) {
+      return parse(this, input, ctx, () => {
+        if (!Array.isArray(input)) return false
+
+        if (input.length === 0) return true
+
+        return checkArrayItems.call(this, input, type, ctx, true, options)
       })
     },
   }
@@ -536,7 +618,7 @@ export function rc_tuple<T extends readonly RcType<any>[]>(
 
         if (input.length !== types.length) return false
 
-        return checkArrayItems.call(this, input, types, ctx)
+        return checkArrayItems.call(this, input, types, ctx) as boolean
       })
     },
   }

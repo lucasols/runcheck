@@ -27,6 +27,37 @@ pnpm add runcheck
 | `rc_array<T>(type: T)`          | `T[]`                                             |
 | `rc_tuple<T>(...types: T[])`    | `[T, T]`                                          |
 
+# Array types:
+
+## Array loose check
+
+You can also use `rc_loose_array` to reject the wrong elements of an array and return the valid ones.
+
+```ts
+const shape = rc_loose_array(rc_string)
+
+const input = ['hello', 1, 'world']
+
+const result = rc_parse(input, shape)
+
+// result.data will be ['hello', 'world']
+// result.warnings will return the warnings about the invalid elements
+```
+
+## Checking unique values
+
+With the `rc_array` or `rc_loose_array` type you can also use the `unique` option to check if the array has no duplicated values.
+
+```ts
+const shape = rc_array(rc_string, { unique: true })
+```
+
+For arrays of objects, you can provide a string to `unique` options to check if the array items has no duplicated values of a specific property.
+
+```ts
+const shape = rc_array(rc_object({ id: rc_string }), { unique: 'id' })
+```
+
 # Object types:
 
 ## `rc_object`

@@ -2,6 +2,9 @@ import { beforeAll, describe, expect, test } from 'vitest'
 import {
   RcParseResult,
   rc_array,
+  rc_loose_array,
+  rc_number,
+  rc_object,
   rc_parse,
   rc_parser,
   rc_string,
@@ -34,6 +37,130 @@ describe('rc_array', () => {
     expect(
       expectParse({ input: ['ok', 0], type: rc_array(rc_string) }),
     ).toEqual(errorResult(`$[1]: Type 'number' is not assignable to 'string'`))
+  })
+})
+
+describe('rc_loose_array', () => {
+  test('success', () => {
+    const helloParser = rc_parser(rc_loose_array(rc_string))
+
+    const result: RcParseResult<string[]> = helloParser(['hello'])
+
+    expect(result).toEqual(successResult(['hello']))
+
+    expect(helloParser(['hello', 'world'])).toMatchInlineSnapshot(
+      successResult(['hello', 'world']),
+    )
+  })
+
+  test('just reject the wrong items', () => {
+    const helloParser = rc_parser(rc_loose_array(rc_string))
+
+    const result: RcParseResult<string[]> = helloParser(['hello', 1, 'ok'])
+
+    expect(result).toEqual(
+      successResult(
+        ['hello', 'ok'],
+        [`$[1]: Type 'number' is not assignable to 'string'`],
+      ),
+    )
+  })
+})
+
+describe('array unique', () => {
+  test('strict mode for an array of primitives', () => {
+    const helloParser = rc_parser(rc_array(rc_string, { unique: true }))
+
+    const wrongResult: RcParseResult<string[]> = helloParser([
+      '1',
+      '1',
+      '2',
+      '3',
+    ])
+
+    expect(wrongResult).toEqual(errorResult(`$[1]: string value is not unique`))
+
+    expect(helloParser(['1', '2', '3'])).toMatchInlineSnapshot(
+      successResult(['1', '2', '3']),
+    )
+  })
+
+  test('loose mode for an array of primitives', () => {
+    const helloParser = rc_parser(rc_loose_array(rc_string, { unique: true }))
+
+    const wrongResult: RcParseResult<string[]> = helloParser([
+      '1',
+      '1',
+      '2',
+      '3',
+    ])
+
+    expect(wrongResult).toEqual(
+      successResult(['1', '2', '3'], [`$[1]: string value is not unique`]),
+    )
+
+    expect(helloParser(['1', '2', '3'])).toMatchInlineSnapshot(
+      successResult(['1', '2', '3']),
+    )
+  })
+
+  test('trhow error if invalid type is used with unique key', () => {
+    expect(() => {
+      rc_parser(rc_array(rc_number, { unique: 'id' }))
+    }).toThrowError(`number can't be used with unique key option`)
+  })
+
+  test('strict mode for an array of objects', () => {
+    const helloParser = rc_parser(
+      rc_array(
+        rc_object({
+          id: rc_number,
+        }),
+        { unique: 'id' },
+      ),
+    )
+
+    const wrongResult: RcParseResult<{ id: number }[]> = helloParser([
+      { id: 1 },
+      { id: 1 },
+      { id: 2 },
+      { id: 3 },
+    ])
+
+    expect(wrongResult).toEqual(errorResult(`$[1].id: number value is not unique`))
+
+    expect(
+      helloParser([{ id: 1 }, { id: 2 }, { id: 3 }]),
+    ).toMatchInlineSnapshot(successResult([{ id: 1 }, { id: 2 }, { id: 3 }]))
+  })
+
+  test('loose mode for an array of objects', () => {
+    const helloParser = rc_parser(
+      rc_loose_array(
+        rc_object({
+          id: rc_number,
+        }),
+        { unique: 'id' },
+      ),
+    )
+
+    const looseResult: RcParseResult<{ id: number }[]> = helloParser([
+      { id: 1 },
+      { id: 1 },
+      { id: 2 },
+      { id: 3 },
+    ])
+
+    expect(looseResult).toEqual(
+      successResult(
+        [{ id: 1 }, { id: 2 }, { id: 3 }],
+        [`$[1].id: number value is not unique`],
+      ),
+    )
+
+    expect(helloParser([{ id: 1 }, { id: 2 }, { id: 3 }])).toEqual(
+      successResult([{ id: 1 }, { id: 2 }, { id: 3 }]),
+    )
   })
 })
 
