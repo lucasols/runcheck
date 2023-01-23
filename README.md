@@ -223,3 +223,27 @@ You can use also modiers like `rc_string.optional()` to extend or modify the rc 
 | `rc_[type].optional()` | `T \| undefined`         |
 | `rc_[type].nullable()` | `T \| null`              |
 | `rc_[type].nullish()`  | `T \| null \| undefined` |
+
+# Recursive types
+
+You can use `rc_recursive` to create recursive types. But the types can't be inferred in this case. So you need to provide the type manually.
+
+```ts
+type MenuTree = {
+  name: string
+  children: MenuTree[]
+}
+
+// the type should be provided manually to the variable in this case
+const menuTreeSchema: RcType<MenuTree[]> = rc_recursive(() =>
+  rc_array(
+    rc_object({
+      name: rc_string,
+      // you can safely autorefence the schema here
+      children: menuTreeSchema,
+    }),
+  ),
+)
+
+const result = rc_parse(input, menuTreeSchema)
+```

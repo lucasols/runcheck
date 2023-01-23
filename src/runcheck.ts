@@ -684,6 +684,16 @@ export function rc_validator<S>(type: RcType<S>) {
   return (input: any): input is S => rc_is_valid(input, type)
 }
 
+export function rc_recursive(type: () => RcType<any>): RcType<any> {
+  return {
+    ...defaultProps,
+    _kind_: 'recursive',
+    _parse_(input, ctx) {
+      return type()._parse_(input, ctx)
+    },
+  }
+}
+
 function normalizedTypeOf(input: unknown): string {
   if (typeof input === 'object') {
     if (Array.isArray(input)) {
