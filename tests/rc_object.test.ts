@@ -2,16 +2,16 @@ import { describe, expect, test } from 'vitest'
 import {
   RcParseResult,
   rc_array,
-  rc_extends_obj,
   rc_number,
   rc_object,
   rc_obj_intersection,
   rc_parse,
   rc_parser,
+  rc_rename_key,
   rc_strict_obj,
   rc_string,
 } from '../src/runcheck'
-import { dedent, errorResult, successResult } from './testUtils'
+import { errorResult, successResult } from './testUtils'
 
 describe('rc_object', () => {
   test('pass', () => {
@@ -124,26 +124,6 @@ describe('rc_object', () => {
     )
 
     expect(result).toEqual(successResult({ id: 4, user: 'hello' }))
-  })
-
-  test('extends object', () => {
-    const input = { id: 4, user: 'hello', excess: 'world' }
-
-    const result = rc_parse(
-      input,
-      rc_extends_obj({ user: rc_string, id: rc_number }),
-    )
-
-    expect(result).toEqual(
-      successResult({ id: 4, user: 'hello', excess: 'world' }),
-    )
-
-    const result2 = rc_parse(
-      input,
-      rc_extends_obj({ user: rc_string, test: rc_number }),
-    )
-
-    expect(result2.error).toBeTruthy()
   })
 
   test('stric object', () => {
@@ -262,6 +242,83 @@ describe('rc_obj_intersections', () => {
 
     expect(result).toEqual(
       errorResult(`$.c: Type 'number' is not assignable to 'string'`),
+    )
+  })
+})
+
+describe('rc_rename_key', () => {
+  const objSchema = {
+    id: rc_rename_key('user_id', rc_number),
+    renamed: rc_rename_key('old_name', rc_number),
+    name: rc_string,
+  }
+
+  const testSchema = rc_object(objSchema)
+
+  const parse = rc_parser(testSchema)
+
+  test('input with renamed key', () => {
+    const input = { user_id: 1, old_name: 2, name: 'hello' }
+
+    const result = parse(input)
+
+    expect(result).toEqual(
+      successResult({
+        id: 1,
+        renamed: 2,
+        name: 'hello',
+      }),
+    )
+  })
+
+  test('input with original key', () => {
+    const input = { id: 1, renamed: 2, name: 'hello' }
+
+    const result = parse(input)
+
+    expect(result).toEqual(
+      successResult({
+        id: 1,
+        renamed: 2,
+        name: 'hello',
+      }),
+    )
+  })
+
+  test('input with wrong type', () => {
+    const input = { user_id: '1', renamed: 2, name: 'hello' }
+
+    const result = parse(input)
+
+    expect(result).toEqual(
+      errorResult(`$.id: Type 'string' is not assignable to 'number'`),
+    )
+  })
+
+  test('input with wrong keys', () => {
+    const input = { user_ids: '1', olds_name: 2, name: 'hello' }
+
+    const result = parse(input)
+
+    expect(result).toEqual(
+      errorResult(
+        "$.id: Type 'undefined' is not assignable to 'number'",
+        "$.renamed: Type 'undefined' is not assignable to 'number'",
+      ),
+    )
+  })
+
+  test('works in rc_strict_obj', () => {
+    const input = { user_id: 1, old_name: 2, name: 'hello' }
+
+    const result = rc_parse(input, rc_strict_obj(objSchema))
+
+    expect(result).toEqual(
+      successResult({
+        id: 1,
+        renamed: 2,
+        name: 'hello',
+      }),
     )
   })
 })

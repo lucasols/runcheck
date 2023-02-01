@@ -57,6 +57,8 @@ export type RcType<T> = {
   /** @internal */
   readonly _is_object_?: true
   /** @internal */
+  readonly _alternative_key_?: string
+  /** @internal */
   readonly _obj_shape_?: Record<string, RcType<any>>
   /** @internal */
   readonly _array_shape_?: Record<string, RcType<any>>
@@ -338,6 +340,16 @@ export function rc_union<T extends RcType<any>[]>(
   }
 }
 
+export function rc_rename_key<T extends RcType<any>>(
+  alternativeNames: string,
+  type: T,
+): RcType<RcInferType<T>> {
+  return {
+    ...type,
+    _alternative_key_: alternativeNames,
+  }
+}
+
 function normalizeSubError(error: string, currentPath: string): string {
   if (error.startsWith('$[') || error.startsWith('$.')) {
     const [keyPart = '', errorPart] = error.split(': ')
@@ -376,9 +388,22 @@ export function rc_object<T extends RcObject>(shape: T): RcObjType<T> {
         for (const [key, type] of Object.entries(shape)) {
           const typekey = key as keyof T
 
-          const input = inputObj[key]
+          let input
+          let keyToDeleteFromExcessKeys = key
 
-          excessKeys.delete(key)
+          if (type._alternative_key_) {
+            input = inputObj[type._alternative_key_]
+            keyToDeleteFromExcessKeys = type._alternative_key_
+
+            if (input === undefined) {
+              input = inputObj[key]
+              keyToDeleteFromExcessKeys = key
+            }
+          } else {
+            input = inputObj[key]
+          }
+
+          excessKeys.delete(keyToDeleteFromExcessKeys)
 
           const [isValid, result] = type._parse_(input, ctx)
 
@@ -409,23 +434,13 @@ export function rc_object<T extends RcObject>(shape: T): RcObjType<T> {
           return { errors: resultErrors }
         }
 
-        if (this._kind_.startsWith('extends_object')) {
-          return { data: inputObj as any }
-        }
-
         return { data: resultObj as any }
       })
     },
   }
 }
 
-export function rc_extends_obj<T extends RcObject>(shape: T): RcObjType<T> {
-  return {
-    ...rc_object(shape),
-    _kind_: `extends_object`,
-  }
-}
-
+/** return an error if the obj has more keys than the expected type */
 export function rc_strict_obj<T extends RcObject>(shape: T): RcObjType<T> {
   return {
     ...rc_object(shape),
