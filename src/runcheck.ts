@@ -520,24 +520,26 @@ function checkArrayItems(
   options?: { unique: boolean | string | false },
 ): { errors: string[] } | { data: any[] } | true {
   let index = -1
-  const looseResult: any[] = []
+  const arrayResult: any[] = []
   const uniqueValues = new Set<any>()
-  for (const item of input) {
+  for (const _item of input) {
     index++
 
     const type: RcType<any> = Array.isArray(types) ? types[index] : types
 
-    let parseResult = type._parse_(item, ctx)
+    let parseResult = type._parse_(_item, ctx)
+    const [initialIsValid, initialResult] = parseResult
 
     const unique = options?.unique
 
-    if (parseResult[0] && unique) {
-      let uniqueValueToCheck = item
+    if (initialIsValid && unique) {
+      let uniqueValueToCheck = initialResult
+
       const isUniqueKey = typeof unique === 'string'
 
       if (isUniqueKey) {
         // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-        uniqueValueToCheck = item[unique]
+        uniqueValueToCheck = initialResult[unique]
       }
 
       if (uniqueValues.has(uniqueValueToCheck)) {
@@ -570,12 +572,12 @@ function checkArrayItems(
         )
         continue
       }
-    } else if (loose) {
-      looseResult.push(item)
+    } else {
+      arrayResult.push(result)
     }
   }
 
-  return loose ? { data: looseResult } : true
+  return { data: arrayResult }
 }
 
 export function rc_array<T extends RcType<any>>(

@@ -319,4 +319,36 @@ describe('rc_rename_key', () => {
       }),
     )
   })
+
+  describe.only('rc_array with unique key option', () => {
+    const helloParser = rc_parser(
+      rc_array(
+        rc_object({
+          id: rc_rename_key('oldKey', rc_number),
+        }),
+        { unique: 'id' },
+      ),
+    )
+
+    test('invalid input', () => {
+      const wrongResult: RcParseResult<{ id: number }[]> = helloParser([
+        { oldKey: 1 },
+        { id: 1 },
+        { id: 2 },
+        { id: 3 },
+      ])
+
+      expect(wrongResult).toEqual(
+        errorResult(`$[1].id: Type 'number' with value "1" is not unique`),
+      )
+    })
+
+    test('valid input', () => {
+      const validInput = [{ oldKey: 1 }, { id: 2 }, { id: 3 }]
+
+      expect(helloParser(validInput)).toMatchInlineSnapshot(
+        successResult([{ id: 1 }, { id: 2 }, { id: 3 }]),
+      )
+    })
+  })
 })

@@ -199,3 +199,17 @@ describe('rc_tuple', () => {
     ).toEqual(errorResult(`$[1]: Type 'number' is not assignable to 'string'`))
   })
 })
+
+test('rc_object array with excess keys', () => {
+  const result = rc_parse(
+    [{ a: 1, b: 2, c: 3, d: 4 }],
+    rc_array(
+      rc_object({
+        a: rc_number,
+        b: rc_number,
+      }),
+    ),
+  )
+
+  expect(result).toEqual(successResult([{ a: 1, b: 2 }]))
+})
