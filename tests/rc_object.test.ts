@@ -150,8 +150,6 @@ describe('rc_object', () => {
       }),
     )
 
-    console.log(result)
-
     expect(result).toEqual(successResult({ id: 4 }))
   })
 

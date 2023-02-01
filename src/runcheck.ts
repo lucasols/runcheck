@@ -408,7 +408,7 @@ export function rc_object<T extends RcObject>(shape: T): RcObjType<T> {
           const [isValid, result] = type._parse_(input, ctx)
 
           if (isValid) {
-            resultObj[typekey] = input
+            resultObj[typekey] = result
           }
           //
           else {
@@ -713,6 +713,25 @@ export function rc_recursive(type: () => RcType<any>): RcType<any> {
     _kind_: 'recursive',
     _parse_(input, ctx) {
       return type()._parse_(input, ctx)
+    },
+  }
+}
+
+export function rc_transform<S, T>(
+  type: RcType<S>,
+  transform: (input: S) => T,
+): RcType<T> {
+  return {
+    ...defaultProps,
+    _kind_: type._kind_,
+    _parse_(input, ctx) {
+      const [success, dataOrError] = type._parse_(input, ctx)
+
+      if (success) {
+        return [true, transform(dataOrError)]
+      }
+
+      return [false, dataOrError]
     },
   }
 }

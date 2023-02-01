@@ -104,6 +104,18 @@ const shape = rc_record(rc_number)
 // shape type is `Record<string, number>`
 ```
 
+## `rc_rename_key`
+
+Allows to rename a key in a object. Example:
+
+```ts
+const shape = rc_object({
+  name: rc_rename_key('oldName', rc_string), // oldName will be renamed to name
+  age: rc_number,
+  isCool: rc_boolean,
+})
+```
+
 # Parsing
 
 ```ts
@@ -120,7 +132,7 @@ if (parseResult.error) {
 
 const result = parseResult.data
 // Do something with result
-```
+````
 
 You can also use `rc_parser` to create a reusable parser.
 
@@ -246,4 +258,16 @@ const menuTreeSchema: RcType<MenuTree[]> = rc_recursive(() =>
 )
 
 const result = rc_parse(input, menuTreeSchema)
+```
+
+# Transform types
+
+You can use `rc_transform` to validate an input and transform it to another data.
+
+```ts
+const input = 'hello'
+
+const result = rc_parse(input, rc_transform(rc_string, (input) => input.length))
+
+
 ```
