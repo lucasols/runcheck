@@ -223,6 +223,14 @@ export const rc_any: RcType<any> = {
   _kind_: 'any',
 }
 
+export const rc_unknown: RcType<unknown> = {
+  ...defaultProps,
+  _parse_(input, ctx) {
+    return parse(this, input, ctx, () => true)
+  },
+  _kind_: 'unknown',
+}
+
 export const rc_boolean: RcType<boolean> = {
   ...defaultProps,
   _parse_(input, ctx) {

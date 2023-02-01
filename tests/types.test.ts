@@ -1,4 +1,5 @@
 import { beforeAll, describe, expect, test } from 'vitest'
+import { unknown } from 'zod'
 import {
   RcParseResult,
   RcType,
@@ -16,6 +17,7 @@ import {
   rc_string,
   rc_undefined,
   rc_union,
+  rc_unknown,
   rc_validator,
 } from '../src/runcheck'
 import { errorResult, pipe, successResult } from './testUtils'
@@ -133,6 +135,12 @@ test('rc_any', () => {
   expect(rc_is_valid(null, rc_any)).toBeTruthy()
   expect(rc_is_valid(undefined, rc_any)).toBeTruthy()
   expect(rc_is_valid('sdf', rc_any)).toBeTruthy()
+})
+
+test('rc_unknown', () => {
+  expect(rc_is_valid(null, rc_unknown)).toBeTruthy()
+  expect(rc_is_valid(undefined, rc_unknown)).toBeTruthy()
+  expect(rc_is_valid('sdf', rc_unknown)).toBeTruthy()
 })
 
 test('rc_boolean', () => {
