@@ -546,7 +546,7 @@ function checkArrayItems(
           [
             isUniqueKey
               ? normalizeSubError(
-                  `${type._obj_shape_?.[unique]?._kind_} value is not unique`,
+                  `Type '${type._obj_shape_?.[unique]?._kind_}' with value "${uniqueValueToCheck}" is not unique`,
                   `.${unique}`,
                 )
               : `${type._kind_} value is not unique`,

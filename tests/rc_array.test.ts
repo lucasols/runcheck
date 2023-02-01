@@ -127,7 +127,9 @@ describe('array unique', () => {
       { id: 3 },
     ])
 
-    expect(wrongResult).toEqual(errorResult(`$[1].id: number value is not unique`))
+    expect(wrongResult).toEqual(
+      errorResult(`$[1].id: Type 'number' with value "1" is not unique`),
+    )
 
     expect(
       helloParser([{ id: 1 }, { id: 2 }, { id: 3 }]),
@@ -154,7 +156,7 @@ describe('array unique', () => {
     expect(looseResult).toEqual(
       successResult(
         [{ id: 1 }, { id: 2 }, { id: 3 }],
-        [`$[1].id: number value is not unique`],
+        [`$[1].id: Type 'number' with value "1" is not unique`],
       ),
     )
 
