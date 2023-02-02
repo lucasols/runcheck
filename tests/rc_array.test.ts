@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, test } from 'vitest'
+import { describe, expect, test } from 'vitest'
 import {
   RcParseResult,
   rc_array,
@@ -10,7 +10,7 @@ import {
   rc_string,
   rc_tuple,
 } from '../src/runcheck'
-import { dedent, errorResult, expectParse, successResult } from './testUtils'
+import { errorResult, expectParse, successResult } from './testUtils'
 
 describe('rc_array', () => {
   test('basic check', () => {
@@ -162,6 +162,31 @@ describe('array unique', () => {
 
     expect(helloParser([{ id: 1 }, { id: 2 }, { id: 3 }])).toEqual(
       successResult([{ id: 1 }, { id: 2 }, { id: 3 }]),
+    )
+  })
+
+  test('trhow error if all elements are invalid', () => {
+    const helloParser = rc_parser(
+      rc_loose_array(
+        rc_object({
+          id: rc_string,
+        }),
+        { unique: 'id' },
+      ),
+    )
+
+    const looseResult: RcParseResult<{ id: string }[]> = helloParser([
+      { id: 1 },
+      { id: 2 },
+      { id: 3 },
+    ])
+
+    expect(looseResult).toEqual(
+      errorResult(
+        `$[0].id: Type 'number' is not assignable to 'string'`,
+        `$[1].id: Type 'number' is not assignable to 'string'`,
+        `$[2].id: Type 'number' is not assignable to 'string'`,
+      ),
     )
   })
 })

@@ -520,8 +520,10 @@ function checkArrayItems(
   options?: { unique: boolean | string | false },
 ): { errors: string[] } | { data: any[] } | true {
   let index = -1
+  let looseErrors: string[][] = []
   const arrayResult: any[] = []
   const uniqueValues = new Set<any>()
+
   for (const _item of input) {
     index++
 
@@ -567,13 +569,21 @@ function checkArrayItems(
           errors: result.map((error) => normalizeSubError(error, `[${index}]`)),
         }
       } else {
-        ctx.warnings.push(
-          ...result.map((error) => normalizeSubError(error, `[${index}]`)),
+        looseErrors.push(
+          result.map((error) => normalizeSubError(error, `[${index}]`)),
         )
         continue
       }
     } else {
       arrayResult.push(result)
+    }
+  }
+
+  if (looseErrors.length > 0) {
+    if (arrayResult.length === 0) {
+      return { errors: looseErrors.slice(0, 5).flat() }
+    } else {
+      ctx.warnings.push(...looseErrors.flat())
     }
   }
 
@@ -601,6 +611,7 @@ export function rc_array<T extends RcType<any>>(
   }
 }
 
+/** instead of returning a general erroro, rejects invalid array items and return warnings for these items */
 export function rc_loose_array<T extends RcType<any>>(
   type: T,
   options?: { unique: boolean | string | false },
@@ -676,10 +687,12 @@ export function rc_parse<S>(input: any, type: RcType<S>): RcParseResult<S> {
 
 export type RcParser<T> = (input: any) => RcParseResult<T>
 
+/** create a reusable parser for a certain type */
 export function rc_parser<S>(type: RcType<S>): RcParser<S> {
   return (input: any) => rc_parse(input, type)
 }
 
+/** does the same as `rc_parse` but without requiring to check for errors before using the parsed data */
 export function rc_loose_parse<S>(
   input: any,
   type: RcType<S>,
@@ -719,10 +732,11 @@ export function rc_recursive(type: () => RcType<any>): RcType<any> {
   }
 }
 
-export function rc_transform<S, T>(
-  type: RcType<S>,
-  transform: (input: S) => T,
-): RcType<T> {
+/** validate a input or subset of input and transform the valid result */
+export function rc_transform<Input, Transformed>(
+  type: RcType<Input>,
+  transform: (input: Input) => Transformed,
+): RcType<Transformed> {
   return {
     ...defaultProps,
     _kind_: type._kind_,
