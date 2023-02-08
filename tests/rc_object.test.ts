@@ -320,7 +320,7 @@ describe('rc_rename_key', () => {
     )
   })
 
-  describe.only('rc_array with unique key option', () => {
+  describe('rc_array with unique key option', () => {
     const helloParser = rc_parser(
       rc_array(
         rc_object({
@@ -351,4 +351,32 @@ describe('rc_rename_key', () => {
       )
     })
   })
+})
+
+test('rc_object key name normalization', () => {
+  const input = {
+    user_id: 1,
+    old_name: 2,
+    name: 'hello',
+  }
+
+  const result = rc_parse(
+    input,
+    rc_object(
+      {
+        userId: rc_number,
+        oldName: rc_number,
+        name: rc_string,
+      },
+      { normalizeKeysFrom: 'snake_case' },
+    ),
+  )
+
+  expect(result).toEqual(
+    successResult({
+      userId: 1,
+      oldName: 2,
+      name: 'hello',
+    }),
+  )
 })

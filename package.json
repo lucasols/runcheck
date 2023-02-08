@@ -6,9 +6,11 @@
   "scripts": {
     "test": "vitest --ui",
     "test:run": "vitest run",
+    "lint": "pnpm tsc && pnpm eslint",
     "benchmark": "tsm benchmarks/benchmark.ts",
     "benchmark:generate-profile": "tsm benchmarks/generateProfiles.ts",
-    "build": "pnpm test:run && pnpm build:no-test",
+    "eslint": "CI=true eslint --color --ext .jsx,.js,.ts,.tsx src/ test/",
+    "build": "pnpm test:run && pnpm lint && pnpm build:no-test",
     "build:no-test": "tsup --minify --dts",
     "npm-publish": "./scripts/check-if-is-sync.sh && pnpm build && npm publish"
   },

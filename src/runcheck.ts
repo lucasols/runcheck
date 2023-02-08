@@ -379,7 +379,10 @@ type TypeOfObjectType<T extends RcObject> = {
 
 type RcObjType<T extends RcObject> = RcType<TypeOfObjectType<T>>
 
-export function rc_object<T extends RcObject>(shape: T): RcObjType<T> {
+export function rc_object<T extends RcObject>(
+  shape: T,
+  { normalizeKeysFrom }: { normalizeKeysFrom?: 'snake_case' } = {},
+): RcObjType<T> {
   return {
     ...defaultProps,
     _obj_shape_: shape,
@@ -409,13 +412,18 @@ export function rc_object<T extends RcObject>(shape: T): RcObjType<T> {
           if (type._alternative_key_) {
             input = inputObj[type._alternative_key_]
             keyToDeleteFromExcessKeys = type._alternative_key_
+          }
 
-            if (input === undefined) {
-              input = inputObj[key]
-              keyToDeleteFromExcessKeys = key
-            }
-          } else {
+          if (input === undefined) {
             input = inputObj[key]
+            keyToDeleteFromExcessKeys = key
+          }
+
+          if (input === undefined && normalizeKeysFrom === 'snake_case') {
+            const snakeCaseKey = snakeCase(key)
+
+            input = inputObj[snakeCaseKey]
+            keyToDeleteFromExcessKeys = snakeCaseKey
           }
 
           excessKeys.delete(keyToDeleteFromExcessKeys)
@@ -796,4 +804,13 @@ type NonArrayObject = {
 
 function isObject(value: any): value is NonArrayObject {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+/** @internal */
+export function snakeCase(str: string): string {
+  return str
+    .replace(/\W+/g, ' ')
+    .split(/ |\B(?=[A-Z])/)
+    .map((word) => word.toLowerCase())
+    .join('_')
 }

@@ -116,6 +116,23 @@ const shape = rc_object({
 })
 ```
 
+## Snake case normalization
+
+you can use `rc_object` with the `normalizeKeysFrom` option to normalize the keys of a object to snake case.
+
+```ts
+const shape = rc_object(
+  {
+    name: rc_string,
+    age: rc_number,
+    isCool: rc_boolean,
+  },
+  { normalizeKeysFrom: 'snake_case' },
+)
+
+rc_parse({ name: 'John', age: 20, is_cool: true }, shape) // will not return an error and will normalize the response to { name: 'John', age: 20, isCool: true }
+```
+
 # Parsing
 
 ```ts
@@ -132,7 +149,7 @@ if (parseResult.error) {
 
 const result = parseResult.data
 // Do something with result
-````
+```
 
 You can also use `rc_parser` to create a reusable parser.
 
@@ -226,6 +243,20 @@ const input = 1
 const positiveNumberType = rc_number.where((input) => input > 0)
 ```
 
+# Infer types from schemas
+
+You can use `RcInferType<typeof T>` to infer the types from a schema.
+
+```ts
+const schema = rc_object({
+  name: rc_string,
+  age: rc_number,
+  isCool: rc_boolean,
+})
+
+export type Person = RcInferType<typeof schema>
+```
+
 # Type modifiers
 
 You can use also modiers like `rc_string.optional()` to extend or modify the rc types:
@@ -267,7 +298,8 @@ You can use `rc_transform` to validate an input and transform it to another data
 ```ts
 const input = 'hello'
 
-const result = rc_parse(input, rc_transform(rc_string, (input) => input.length))
-
-
+const result = rc_parse(
+  input,
+  rc_transform(rc_string, (input) => input.length),
+)
 ```
