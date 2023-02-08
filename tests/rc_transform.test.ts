@@ -1,13 +1,6 @@
 import { describe, expect, test } from 'vitest'
 import { RcType, rc_transform } from '../src/runcheck'
-import {
-  RcParser,
-  rc_parser,
-  rc_string,
-  rc_object,
-  rc_array,
-  rc_recursive,
-} from '../src/runcheck'
+import { RcParser, rc_parser, rc_string, rc_object } from '../src/runcheck'
 import { errorResult, successResult } from './testUtils'
 
 describe('valid and invalid inputs', () => {

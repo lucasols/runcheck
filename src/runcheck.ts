@@ -762,7 +762,7 @@ export function rc_transform<Input, Transformed>(
 ): RcType<Transformed> {
   return {
     ...defaultProps,
-    _kind_: type._kind_,
+    _kind_: `transform_from_${type._kind_}`,
     _parse_(input, ctx) {
       const [success, dataOrError] = type._parse_(input, ctx)
 
