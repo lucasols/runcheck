@@ -17,6 +17,7 @@ type RcOptional<T> = RcType<T | undefined>
 
 type ParseResultCtx = {
   warnings: string[]
+  path: string
 }
 
 type InternalParseResult<T> =
@@ -126,7 +127,11 @@ function parse<T>(
         }
       }
 
-      ctx.warnings.push(`Autofixed from error: "${type._getErrorMsg_(input)}"`)
+      ctx.warnings.push(
+        `${
+          ctx.path ? `$${ctx.path}: ` : ''
+        }Autofixed from error "${type._getErrorMsg_(input)}"`,
+      )
 
       return [true, autofixed.fixed]
     }
@@ -351,6 +356,10 @@ export function rc_rename_key<T extends RcType<any>>(
 }
 
 function normalizeSubError(error: string, currentPath: string): string {
+  if (!currentPath) {
+    return error
+  }
+
   if (error.startsWith('$[') || error.startsWith('$.')) {
     const [keyPart = '', errorPart] = error.split(': ')
 
@@ -385,8 +394,14 @@ export function rc_object<T extends RcObject>(shape: T): RcObjType<T> {
         const resultObj: Record<any, string> = {} as any
         const resultErrors: string[] = []
 
+        const parentPath = ctx.path
+
         for (const [key, type] of Object.entries(shape)) {
           const typekey = key as keyof T
+
+          const subPath = `.${key}`
+
+          ctx.path = `${parentPath}${subPath}`
 
           let input
           let keyToDeleteFromExcessKeys = key
@@ -415,7 +430,7 @@ export function rc_object<T extends RcObject>(shape: T): RcObjType<T> {
             const errors = result
 
             for (const subError of errors) {
-              resultErrors.push(normalizeSubError(subError, `.${key}`))
+              resultErrors.push(normalizeSubError(subError, subPath))
             }
           }
         }
@@ -520,14 +535,20 @@ function checkArrayItems(
   options?: { unique: boolean | string | false },
 ): { errors: string[] } | { data: any[] } | true {
   let index = -1
-  let looseErrors: string[][] = []
+  const looseErrors: string[][] = []
   const arrayResult: any[] = []
   const uniqueValues = new Set<any>()
+
+  const parentPath = ctx.path
 
   for (const _item of input) {
     index++
 
     const type: RcType<any> = Array.isArray(types) ? types[index] : types
+
+    const subPath = `[${index}]`
+
+    ctx.path = `${parentPath}${subPath}`
 
     let parseResult = type._parse_(_item, ctx)
     const [initialIsValid, initialResult] = parseResult
@@ -566,11 +587,11 @@ function checkArrayItems(
     if (!isValid) {
       if (!loose) {
         return {
-          errors: result.map((error) => normalizeSubError(error, `[${index}]`)),
+          errors: result.map((error) => normalizeSubError(error, subPath)),
         }
       } else {
         looseErrors.push(
-          result.map((error) => normalizeSubError(error, `[${index}]`)),
+          result.map((error) => normalizeSubError(error, subPath)),
         )
         continue
       }
@@ -667,6 +688,7 @@ export function rc_tuple<T extends readonly RcType<any>[]>(
 export function rc_parse<S>(input: any, type: RcType<S>): RcParseResult<S> {
   const ctx: ParseResultCtx = {
     warnings: [],
+    path: '',
   }
 
   const [success, dataOrError] = type._parse_(input, ctx)
@@ -713,6 +735,7 @@ export function rc_loose_parse<S>(
 export function rc_is_valid<S>(input: any, type: RcType<S>): input is S {
   const ctx: ParseResultCtx = {
     warnings: [],
+    path: '',
   }
 
   return !!type._parse_(input, ctx)[0]
