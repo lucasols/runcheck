@@ -126,7 +126,7 @@ function parse<T>(
         }
       }
 
-      ctx.warnings.push(`Autofixed from, ${type._getErrorMsg_(input)}`)
+      ctx.warnings.push(`Autofixed from error: "${type._getErrorMsg_(input)}"`)
 
       return [true, autofixed.fixed]
     }

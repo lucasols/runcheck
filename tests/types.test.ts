@@ -299,21 +299,3 @@ describe('rc_literal', () => {
     `)
   })
 })
-
-// test.skip('validates', () => {
-// const dataToTest = {
-//   status: true,
-//   data: [1, 2, 3],
-//   metadata: { response: 'ok', message: 'OK', notifications: [] },
-// }
-// const validatedSchema = rc_object({
-//   status: rc_boolean(),
-//   data: rc_array(rc_number()),
-//   metadata: rc_object({
-//     response: rc_string(),
-//     message: rc_string(),
-//     notifications: rc_array(rc_string()),
-//   }),
-// })
-// const result = rc_parse(validatedSchema, dataToTest)
-// })

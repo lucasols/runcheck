@@ -21,7 +21,7 @@ describe('autofix', () => {
 
     expect(result).toEqual(
       successResult('1', [
-        "Autofixed from, Type 'number' is not assignable to 'string'",
+        `Autofixed from error: "Type 'number' is not assignable to 'string'"`,
       ]),
     )
   })
@@ -36,7 +36,7 @@ describe('autofix', () => {
 
     expect(result).toEqual(
       successResult(true, [
-        "Autofixed from, Type 'number' is not assignable to 'boolean'",
+        `Autofixed from error: "Type 'number' is not assignable to 'boolean'"`,
       ]),
     )
   })
@@ -46,7 +46,7 @@ describe('autofix', () => {
 
     expect(result).toEqual(
       successResult(1, [
-        "Autofixed from, Type 'string' is not assignable to 'number'",
+        `Autofixed from error: "Type 'string' is not assignable to 'number'"`,
       ]),
     )
   })
