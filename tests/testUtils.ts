@@ -1,4 +1,4 @@
-import { RcParseResult, RcType, rc_parse } from '../src/runcheck'
+import { RcType, rc_parse } from '../src/runcheck'
 
 export function pipe<T1, R>(input: T1, fn1: (a: T1) => R): R
 export function pipe<T1, T2, R>(
@@ -75,6 +75,7 @@ export function dedent(strings: TemplateStringsArray, ...values: string[]) {
     }
   })
 
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
   if (mindent !== null) {
     const m = mindent // appease Flow
     result = lines.map((l) => (l[0] === ' ' ? l.slice(m) : l)).join('\n')
@@ -89,6 +90,7 @@ export function dedent(strings: TemplateStringsArray, ...values: string[]) {
   )
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function typeIsEqualTo<Expected>(value: Expected) {}
 
 export function expectParse<T extends RcType<any>>({
@@ -101,10 +103,7 @@ export function expectParse<T extends RcType<any>>({
   return rc_parse(input, type)
 }
 
-export function successResult(
-  data: any,
-  warnings: string[] | false = false,
-) {
+export function successResult(data: any, warnings: string[] | false = false) {
   return { error: false, data, warnings }
 }
 

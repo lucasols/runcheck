@@ -106,8 +106,6 @@ describe('rc_object', () => {
       }),
     )
 
-    test.todo('nested warning message')
-
     expect(result).toEqual(
       errorResult(
         `$.hello.world.value: Type 'string' is not assignable to 'number'`,

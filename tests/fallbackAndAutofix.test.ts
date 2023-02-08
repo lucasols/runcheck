@@ -3,7 +3,6 @@ import { rc_number_autofix, rc_string_autofix } from '../src/autofixable'
 import {
   rc_array,
   rc_boolean,
-  rc_number,
   rc_object,
   rc_parse,
   rc_string,

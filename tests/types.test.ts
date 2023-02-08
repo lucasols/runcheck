@@ -1,10 +1,8 @@
-import { beforeAll, describe, expect, test } from 'vitest'
-import { unknown } from 'zod'
+import { describe, expect, test } from 'vitest'
 import {
   RcParseResult,
   RcType,
   rc_any,
-  rc_array,
   rc_boolean,
   rc_date,
   rc_instanceof,
@@ -20,7 +18,7 @@ import {
   rc_unknown,
   rc_validator,
 } from '../src/runcheck'
-import { errorResult, pipe, successResult } from './testUtils'
+import { errorResult, successResult } from './testUtils'
 
 describe('rc_string', () => {
   test('pass', () => {
