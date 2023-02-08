@@ -10,7 +10,7 @@
     "tsc": "tsc -p tsconfig.prod.json",
     "benchmark": "tsm benchmarks/benchmark.ts",
     "benchmark:generate-profile": "tsm benchmarks/generateProfiles.ts",
-    "eslint": "CI=true eslint --color --ext .jsx,.js,.ts,.tsx src/ test/",
+    "eslint": "CI=true eslint --color --ext .jsx,.js,.ts,.tsx src/ tests/",
     "build": "pnpm test:run && pnpm lint && pnpm build:no-test",
     "build:no-test": "tsup --minify --dts",
     "npm-publish": "./scripts/check-if-is-sync.sh && pnpm build && npm publish"
