@@ -102,6 +102,12 @@ Validates only the values of a object, equivalent to `Record<string, T>` in type
 const shape = rc_record(rc_number)
 
 // shape type is `Record<string, number>`
+
+// `rc_record` also accepts the following options:
+const shape = rc_record(rc_number, {
+  checkKey: (key) => key !== 'a', // Check if the key is valid
+  looseCheck: true, // If true, the invalid keys will be striped
+})
 ```
 
 # Parsing

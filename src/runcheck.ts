@@ -466,9 +466,7 @@ export function rc_object<T extends RcObject>(
   }
 }
 
-export function rc_get_obj_schema<T extends RcObject>(
-  type: RcObjType<T>,
-): T {
+export function rc_get_obj_schema<T extends RcObject>(type: RcObjType<T>): T {
   return type._obj_shape_ as T
 }
 
@@ -493,6 +491,10 @@ type RcRecordType<V extends RcType<any>> = RcType<TypeOfObjectType<RcRecord<V>>>
 
 export function rc_record<V extends RcType<any>>(
   valueType: V,
+  {
+    checkKey,
+    looseCheck,
+  }: { checkKey?: (key: string) => boolean; looseCheck?: boolean } = {},
 ): RcRecordType<V> {
   return {
     ...defaultProps,
@@ -505,6 +507,15 @@ export function rc_record<V extends RcType<any>>(
         const resultErrors: string[] = []
 
         for (const [key, inputValue] of Object.entries(inputObj)) {
+          const subPath = `.${key}`
+
+          if (checkKey && !checkKey(key)) {
+            resultErrors.push(
+              normalizeSubError(`Key '${key}' is not allowed`, subPath),
+            )
+            continue
+          }
+
           const input = inputObj[key]
 
           const [isValid, result] = valueType._parse_(inputValue, ctx)
@@ -517,13 +528,17 @@ export function rc_record<V extends RcType<any>>(
             const errors = result
 
             for (const subError of errors) {
-              resultErrors.push(normalizeSubError(subError, `.${key}`))
+              resultErrors.push(normalizeSubError(subError, subPath))
             }
           }
         }
 
         if (resultErrors.length > 0) {
-          return { errors: resultErrors }
+          if (looseCheck) {
+            ctx.warnings.push(...resultErrors)
+          } else {
+            return { errors: resultErrors }
+          }
         }
 
         return { data: resultObj as any }

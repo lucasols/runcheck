@@ -47,4 +47,40 @@ describe('rc_record', () => {
       }),
     )
   })
+
+  test('rc_record with checkKey', () => {
+    const parse2: RcParser<Record<string, string>> = rc_parser(
+      rc_record(rc_string, {
+        checkKey: (key) => key !== 'a',
+      }),
+    )
+
+    expect(parse2({ hello: 'world', a: 'b' })).toEqual(
+      errorResult(`$.a: Key 'a' is not allowed`),
+    )
+
+    expect(parse2({ hello: 'world' })).toEqual(
+      successResult({ hello: 'world' }),
+    )
+  })
+
+  test('rc_record with checkKey and looseCheck', () => {
+    const parse2: RcParser<Record<string, string>> = rc_parser(
+      rc_record(rc_string, {
+        checkKey: (key) => key !== 'a',
+        looseCheck: true,
+      }),
+    )
+
+    expect(parse2({ hello: 'world', a: 'b', b: 2 })).toEqual(
+      successResult({ hello: 'world' }, [
+        `$.a: Key 'a' is not allowed`,
+        `$.b: Type 'number' is not assignable to 'string'`,
+      ]),
+    )
+
+    expect(parse2({ hello: 'world' })).toEqual(
+      successResult({ hello: 'world' }),
+    )
+  })
 })
