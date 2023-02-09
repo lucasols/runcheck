@@ -10,6 +10,7 @@ import {
   rc_literals,
   rc_null,
   rc_number,
+  rc_object,
   rc_parse,
   rc_parser,
   rc_string,

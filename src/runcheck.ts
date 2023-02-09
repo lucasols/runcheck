@@ -348,7 +348,7 @@ export function rc_union<T extends RcType<any>[]>(
   }
 }
 
-export function rc_rename_key<T extends RcType<any>>(
+export function rc_rename_from_key<T extends RcType<any>>(
   alternativeNames: string,
   type: T,
 ): RcType<RcInferType<T>> {
@@ -357,6 +357,9 @@ export function rc_rename_key<T extends RcType<any>>(
     _alternative_key_: alternativeNames,
   }
 }
+
+/** @deprecated use `rc_rename_from_key` instead */
+export const rc_rename_key = rc_rename_from_key
 
 function normalizeSubError(error: string, currentPath: string): string {
   if (!currentPath) {
@@ -460,9 +463,25 @@ export function rc_object<T extends RcObject>(
           return { errors: resultErrors }
         }
 
+        if (this._kind_.startsWith('extends_object')) {
+          return {
+            data: {
+              ...(inputObj as any),
+              ...(resultObj as any),
+            },
+          }
+        }
+
         return { data: resultObj as any }
       })
     },
+  }
+}
+
+export function rc_extends_obj<T extends RcObject>(shape: T): RcObjType<T> {
+  return {
+    ...rc_object(shape),
+    _kind_: `extends_object`,
   }
 }
 

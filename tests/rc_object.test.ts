@@ -2,15 +2,18 @@ import { describe, expect, test } from 'vitest'
 import {
   RcParseResult,
   rc_array,
+  rc_extends_obj,
   rc_get_obj_schema,
   rc_number,
   rc_object,
   rc_obj_intersection,
   rc_parse,
   rc_parser,
+  rc_rename_from_key,
   rc_rename_key,
   rc_strict_obj,
   rc_string,
+  rc_transform,
 } from '../src/runcheck'
 import { errorResult, successResult } from './testUtils'
 
@@ -390,4 +393,36 @@ test('rc_get_obj_schema', () => {
   const subSchema = rc_get_obj_schema(baseSchema).name
 
   expect(rc_parse('hello', subSchema)).toEqual(successResult('hello'))
+})
+
+describe('rc_extends_obj', () => {
+  test('extends object', () => {
+    const schema = rc_extends_obj({
+      name: rc_number,
+    })
+
+    expect(rc_parse({ name: 1, a: 2, c: 3 }, schema)).toEqual(
+      successResult({ name: 1, a: 2, c: 3 }),
+    )
+  })
+
+  test('extends object with transformed response', () => {
+    const schema = rc_extends_obj({
+      name: rc_transform(rc_number, (v) => v + 1),
+    })
+
+    expect(rc_parse({ name: 1, a: 2, c: 3 }, schema)).toEqual(
+      successResult({ name: 2, a: 2, c: 3 }),
+    )
+  })
+
+  test('extends object with rc_rename_key response', () => {
+    const schema = rc_extends_obj({
+      newKeyName: rc_rename_from_key('name', rc_number),
+    })
+
+    expect(rc_parse({ name: 1, a: 2, c: 3 }, schema)).toEqual(
+      successResult({ newKeyName: 1, a: 2, c: 3, name: 1 }),
+    )
+  })
 })

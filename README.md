@@ -283,13 +283,13 @@ const result = rc_parse(
 
 # Advanced object types
 
-## `rc_rename_key`
+## `rc_rename_from_key`
 
 Allows to rename a key in a object. Example:
 
 ```ts
 const shape = rc_object({
-  name: rc_rename_key('oldName', rc_string), // oldName will be renamed to name
+  name: rc_rename_from_key('oldName', rc_string), // oldName will be renamed to name
   age: rc_number,
   isCool: rc_boolean,
 })
@@ -324,4 +324,22 @@ const shape = rc_object({
 })
 
 const nameSchema = rc_get_obj_schema(shape).name
+```
+
+## `rc_extends_obj`
+
+Don't strip unchecked keys from the result. Example:
+
+```ts
+const shape = rc_object({
+  name: rc_string,
+})
+
+const result = rc_parse(
+  { name: 'John', age: 20, is_cool: true },
+  rc_extends_obj(shape),
+)
+
+// keys `age` and `is_cool` will be present in the result
+result.data // { name: 'John', age: 20, is_cool: true }
 ```
