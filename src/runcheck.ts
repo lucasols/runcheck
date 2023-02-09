@@ -74,6 +74,25 @@ function withFallback(this: RcType<any>, fallback: any): RcType<any> {
   return { ...this, _fallback_: fallback }
 }
 
+function gerWarningOrErrorWithPath(
+  ctx: ParseResultCtx,
+  message: string,
+): string {
+  if (message.startsWith('$[') || message.startsWith('$.')) {
+    return message
+  }
+
+  return `${ctx.path ? `$${ctx.path}: ` : ''}${message}`
+}
+
+function addWarning(ctx: ParseResultCtx, warning: string) {
+  ctx.warnings.push(gerWarningOrErrorWithPath(ctx, warning))
+}
+
+function addWarnings(ctx: ParseResultCtx, warnings: string[]) {
+  warnings.forEach((warning) => addWarning(ctx, warning))
+}
+
 function parse<T>(
   type: RcType<T>,
   input: unknown,
@@ -115,7 +134,7 @@ function parse<T>(
   }
 
   if (type._fallback_ !== undefined) {
-    ctx.warnings.push(`Fallback used, ${type._getErrorMsg_(input)}`)
+    addWarning(ctx, `Fallback used, ${type._getErrorMsg_(input)}`)
 
     return [true, type._fallback_]
   }
@@ -130,11 +149,7 @@ function parse<T>(
         }
       }
 
-      ctx.warnings.push(
-        `${
-          ctx.path ? `$${ctx.path}: ` : ''
-        }Autofixed from error "${type._getErrorMsg_(input)}"`,
-      )
+      addWarning(ctx, `Autofixed from error "${type._getErrorMsg_(input)}"`)
 
       return [true, autofixed.fixed]
     }
@@ -361,22 +376,6 @@ export function rc_rename_from_key<T extends RcType<any>>(
 /** @deprecated use `rc_rename_from_key` instead */
 export const rc_rename_key = rc_rename_from_key
 
-function normalizeSubError(error: string, currentPath: string): string {
-  if (!currentPath) {
-    return error
-  }
-
-  if (error.startsWith('$[') || error.startsWith('$.')) {
-    const [keyPart = '', errorPart] = error.split(': ')
-
-    const subKey = keyPart.slice(1)
-
-    return `$${currentPath}${subKey}: ${errorPart}`
-  }
-
-  return `$${currentPath}: ${error}`
-}
-
 type RcObject = Record<string, RcType<any>>
 
 type TypeOfObjectType<T extends RcObject> = {
@@ -444,7 +443,7 @@ export function rc_object<T extends RcObject>(
             const errors = result
 
             for (const subError of errors) {
-              resultErrors.push(normalizeSubError(subError, subPath))
+              resultErrors.push(gerWarningOrErrorWithPath(ctx, subError))
             }
           }
         }
@@ -525,13 +524,15 @@ export function rc_record<V extends RcType<any>>(
         const resultObj: Record<any, string> = {} as any
         const resultErrors: string[] = []
 
+        const parentPath = ctx.path
+
         for (const [key, inputValue] of Object.entries(inputObj)) {
           const subPath = `.${key}`
 
+          ctx.path = `${parentPath}${subPath}`
+
           if (checkKey && !checkKey(key)) {
-            resultErrors.push(
-              normalizeSubError(`Key '${key}' is not allowed`, subPath),
-            )
+            resultErrors.push(`$${ctx.path}: Key '${key}' is not allowed`)
             continue
           }
 
@@ -547,14 +548,14 @@ export function rc_record<V extends RcType<any>>(
             const errors = result
 
             for (const subError of errors) {
-              resultErrors.push(normalizeSubError(subError, subPath))
+              resultErrors.push(gerWarningOrErrorWithPath(ctx, subError))
             }
           }
         }
 
         if (resultErrors.length > 0) {
           if (looseCheck) {
-            ctx.warnings.push(...resultErrors)
+            addWarnings(ctx, resultErrors)
           } else {
             return { errors: resultErrors }
           }
@@ -617,15 +618,19 @@ function checkArrayItems(
       }
 
       if (uniqueValues.has(uniqueValueToCheck)) {
+        if (isUniqueKey) {
+          ctx.path = `${parentPath}${subPath}.${unique}`
+        }
+
         parseResult = [
           false,
           [
-            isUniqueKey
-              ? normalizeSubError(
-                  `Type '${type._obj_shape_?.[unique]?._kind_}' with value "${uniqueValueToCheck}" is not unique`,
-                  `.${unique}`,
-                )
-              : `${type._kind_} value is not unique`,
+            gerWarningOrErrorWithPath(
+              ctx,
+              isUniqueKey
+                ? `Type '${type._obj_shape_?.[unique]?._kind_}' with value "${uniqueValueToCheck}" is not unique`
+                : `${type._kind_} value is not unique`,
+            ),
           ],
         ]
       } else {
@@ -638,11 +643,11 @@ function checkArrayItems(
     if (!isValid) {
       if (!loose) {
         return {
-          errors: result.map((error) => normalizeSubError(error, subPath)),
+          errors: result.map((error) => gerWarningOrErrorWithPath(ctx, error)),
         }
       } else {
         looseErrors.push(
-          result.map((error) => normalizeSubError(error, subPath)),
+          result.map((error) => gerWarningOrErrorWithPath(ctx, error)),
         )
         continue
       }
@@ -655,7 +660,7 @@ function checkArrayItems(
     if (arrayResult.length === 0) {
       return { errors: looseErrors.slice(0, 5).flat() }
     } else {
-      ctx.warnings.push(...looseErrors.flat())
+      addWarnings(ctx, looseErrors.flat())
     }
   }
 

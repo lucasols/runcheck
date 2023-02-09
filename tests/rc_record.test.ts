@@ -5,6 +5,7 @@ import {
   rc_record,
   rc_string,
   rc_object,
+  rc_array,
 } from '../src/runcheck'
 import { errorResult, successResult } from './testUtils'
 
@@ -64,6 +65,22 @@ describe('rc_record', () => {
     )
   })
 
+  test('rc_record with checkKey nested error', () => {
+    const parse2 = rc_parser(
+      rc_object({
+        array: rc_array(
+          rc_record(rc_string, {
+            checkKey: (key) => key !== 'a',
+          }),
+        ),
+      }),
+    )
+
+    expect(parse2({ array: [{ hello: 'world', a: 'b' }] })).toEqual(
+      errorResult(`$.array[0].a: Key 'a' is not allowed`),
+    )
+  })
+
   test('rc_record with checkKey and looseCheck', () => {
     const parse2: RcParser<Record<string, string>> = rc_parser(
       rc_record(rc_string, {
@@ -81,6 +98,28 @@ describe('rc_record', () => {
 
     expect(parse2({ hello: 'world' })).toEqual(
       successResult({ hello: 'world' }),
+    )
+  })
+
+  test('rc_record with checkKey and looseCheck nested', () => {
+    const parse2 = rc_parser(
+      rc_object({
+        array: rc_array(
+          rc_record(rc_string, {
+            checkKey: (key) => key !== 'a',
+            looseCheck: true,
+          }),
+        ),
+      }),
+    )
+
+    expect(parse2({ array: [{ hello: 'world', a: 'b' }] })).toEqual(
+      successResult(
+        {
+          array: [{ hello: 'world' }],
+        },
+        [`$.array[0].a: Key 'a' is not allowed`],
+      ),
     )
   })
 })
