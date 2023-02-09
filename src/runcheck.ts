@@ -27,8 +27,11 @@ type InternalParseResult<T> =
 export type RcType<T> = {
   readonly withFallback: (fallback: T) => RcType<T>
   readonly where: (predicate: (input: T) => boolean) => RcType<T>
+  /** RcType | undefined */
   readonly optional: () => RcOptional<T>
+  /** RcType | null */
   readonly nullable: () => RcType<T | null>
+  /** RcType | null | undefined */
   readonly nullish: () => RcType<T | null | undefined>
   readonly withAutofix: (
     customAutofix: (input: unknown) => false | { fixed: T },
@@ -461,6 +464,12 @@ export function rc_object<T extends RcObject>(
       })
     },
   }
+}
+
+export function rc_get_obj_schema<T extends RcObject>(
+  type: RcObjType<T>,
+): T {
+  return type._obj_shape_ as T
 }
 
 /** return an error if the obj has more keys than the expected type */

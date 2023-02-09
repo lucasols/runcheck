@@ -104,35 +104,6 @@ const shape = rc_record(rc_number)
 // shape type is `Record<string, number>`
 ```
 
-## `rc_rename_key`
-
-Allows to rename a key in a object. Example:
-
-```ts
-const shape = rc_object({
-  name: rc_rename_key('oldName', rc_string), // oldName will be renamed to name
-  age: rc_number,
-  isCool: rc_boolean,
-})
-```
-
-## Snake case normalization
-
-you can use `rc_object` with the `normalizeKeysFrom` option to normalize the keys of a object to snake case.
-
-```ts
-const shape = rc_object(
-  {
-    name: rc_string,
-    age: rc_number,
-    isCool: rc_boolean,
-  },
-  { normalizeKeysFrom: 'snake_case' },
-)
-
-rc_parse({ name: 'John', age: 20, is_cool: true }, shape) // will not return an error and will normalize the response to { name: 'John', age: 20, isCool: true }
-```
-
 # Parsing
 
 ```ts
@@ -302,4 +273,49 @@ const result = rc_parse(
   input,
   rc_transform(rc_string, (input) => input.length),
 )
+```
+
+# Advanced object types
+
+## `rc_rename_key`
+
+Allows to rename a key in a object. Example:
+
+```ts
+const shape = rc_object({
+  name: rc_rename_key('oldName', rc_string), // oldName will be renamed to name
+  age: rc_number,
+  isCool: rc_boolean,
+})
+```
+
+## Snake case normalization
+
+you can use `rc_object` with the `normalizeKeysFrom` option to normalize the keys of a object to snake case.
+
+```ts
+const shape = rc_object(
+  {
+    name: rc_string,
+    age: rc_number,
+    isCool: rc_boolean,
+  },
+  { normalizeKeysFrom: 'snake_case' },
+)
+
+rc_parse({ name: 'John', age: 20, is_cool: true }, shape) // will not return an error and will normalize the response to { name: 'John', age: 20, isCool: true }
+```
+
+## `rc_get_obj_schema`
+
+Allows to get a subset of a object schema. Example:
+
+```ts
+const shape = rc_object({
+  name: rc_string,
+  age: rc_number,
+  isCool: rc_boolean,
+})
+
+const nameSchema = rc_get_obj_schema(shape).name
 ```

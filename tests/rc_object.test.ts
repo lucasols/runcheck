@@ -2,6 +2,7 @@ import { describe, expect, test } from 'vitest'
 import {
   RcParseResult,
   rc_array,
+  rc_get_obj_schema,
   rc_number,
   rc_object,
   rc_obj_intersection,
@@ -377,4 +378,16 @@ test('rc_object key name normalization', () => {
       name: 'hello',
     }),
   )
+})
+
+test('rc_get_obj_schema', () => {
+  const baseSchema = rc_object({
+    userId: rc_number,
+    oldName: rc_number,
+    name: rc_string,
+  })
+
+  const subSchema = rc_get_obj_schema(baseSchema).name
+
+  expect(rc_parse('hello', subSchema)).toEqual(successResult('hello'))
 })
