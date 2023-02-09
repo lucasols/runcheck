@@ -532,7 +532,9 @@ export function rc_record<V extends RcType<any>>(
           ctx.path = `${parentPath}${subPath}`
 
           if (checkKey && !checkKey(key)) {
-            resultErrors.push(`$${ctx.path}: Key '${key}' is not allowed`)
+            resultErrors.push(
+              gerWarningOrErrorWithPath(ctx, `Key '${key}' is not allowed`),
+            )
             continue
           }
 

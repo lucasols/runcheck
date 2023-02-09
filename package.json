@@ -1,13 +1,14 @@
 {
   "name": "runcheck",
   "description": "A tiny (less than 2 KiB Gzipped) and treeshakable! lib for typescript runtime type checks with autofix support",
-  "version": "0.20.0",
+  "version": "0.20.1",
   "license": "MIT",
   "scripts": {
     "test": "vitest --ui",
     "test:run": "vitest run",
     "lint": "pnpm tsc && pnpm eslint",
     "tsc": "tsc -p tsconfig.prod.json",
+    "vitest-bench": "vitest bench",
     "benchmark": "tsm benchmarks/benchmark.ts",
     "benchmark:generate-profile": "tsm benchmarks/generateProfiles.ts",
     "eslint": "CI=true eslint --color --ext .jsx,.js,.ts,.tsx src/ tests/",
