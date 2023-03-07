@@ -251,6 +251,17 @@ describe('rc_literal', () => {
       }
     `,
     )
+
+    expect(helloParser(undefined)).toMatchInlineSnapshot(
+      `
+      {
+        "error": true,
+        "errors": [
+          "Type 'string' is not assignable to 'literals'",
+        ],
+      }
+    `,
+    )
   })
 
   test('literal types', () => {
