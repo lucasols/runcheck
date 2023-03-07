@@ -109,7 +109,7 @@ describe('rc_null or nullish or nullable', () => {
   })
 
   test('orNullish', () => {
-    const validator = rc_validator(rc_string.nullish())
+    const validator = rc_validator(rc_string.orNullish())
 
     expect(validator(null)).toBeTruthy()
     expect(validator(undefined)).toBeTruthy()
@@ -119,7 +119,7 @@ describe('rc_null or nullish or nullable', () => {
   })
 
   test('or Nullable', () => {
-    const validator = rc_validator(rc_string.nullable())
+    const validator = rc_validator(rc_string.orNull())
 
     expect(validator(null)).toBeTruthy()
     expect(validator(undefined)).toBeFalsy()
@@ -257,7 +257,7 @@ describe('rc_literal', () => {
       {
         "error": true,
         "errors": [
-          "Type 'string' is not assignable to 'literals'",
+          "Type 'undefined' is not assignable to 'literals'",
         ],
       }
     `,

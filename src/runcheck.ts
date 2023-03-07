@@ -30,9 +30,9 @@ export type RcType<T> = {
   /** RcType | undefined */
   readonly optional: () => RcOptional<T>
   /** RcType | null */
-  readonly nullable: () => RcType<T | null>
+  readonly orNull: () => RcType<T | null>
   /** RcType | null | undefined */
-  readonly nullish: () => RcType<T | null | undefined>
+  readonly orNullish: () => RcType<T | null | undefined>
   readonly withAutofix: (
     customAutofix: (input: unknown) => false | { fixed: T },
   ) => RcType<T>
@@ -55,7 +55,7 @@ export type RcType<T> = {
   /** @internal */
   readonly _orNullish_?: true
   /** @internal */
-  readonly _orNullable_?: true
+  readonly _orNull_?: true
   /** @internal */
   readonly _useAutFix_?: true
   /** @internal */
@@ -111,7 +111,7 @@ function parse<T>(
     }
   }
 
-  if (type._orNullable_) {
+  if (type._orNull_) {
     if (input === null) {
       return [true, input as T]
     }
@@ -198,15 +198,15 @@ function _getErrorMsg_(this: RcType<any>, input: unknown): string {
   }'`
 }
 
-function nullable(this: RcType<any>): RcType<any | null | undefined> {
+function orNull(this: RcType<any>): RcType<any | null> {
   return {
     ...this,
-    _orNullable_: true,
-    _kind_: `${this._kind_}_or_nullable`,
+    _orNull_: true,
+    _kind_: `${this._kind_}_or_null`,
   }
 }
 
-function nullish(this: RcType<any>): RcType<any | null | undefined> {
+function orNullish(this: RcType<any>): RcType<any | null | undefined> {
   return {
     ...this,
     _orNullish_: true,
@@ -219,9 +219,9 @@ const defaultProps = {
   where,
   optional,
   _getErrorMsg_,
-  nullable,
+  orNullish,
   withAutofix,
-  nullish,
+  orNull,
 }
 
 export const rc_undefined: RcType<undefined> = {
