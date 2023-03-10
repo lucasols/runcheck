@@ -6,6 +6,7 @@ import {
   rc_string,
   rc_object,
   rc_array,
+  rc_any,
 } from '../src/runcheck'
 import { errorResult, successResult } from './testUtils'
 
@@ -121,5 +122,15 @@ describe('rc_record', () => {
         [`$.array[0].a: Key 'a' is not allowed`],
       ),
     )
+  })
+
+  test('rc_record with empty array returns error', () => {
+    const parse2 = rc_parser(rc_record(rc_any))
+
+    expect(parse2([])).toEqual(
+      errorResult(`Type 'array' is not assignable to 'record<string, any>'`),
+    )
+
+    expect(parse2({})).toEqual(successResult({}))
   })
 })
