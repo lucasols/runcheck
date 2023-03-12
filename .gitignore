@@ -5,3 +5,4 @@ dist-bench
 cache.json
 .DS_Store
 benchmarks/profiles/*.cpuprofile
+dist-test

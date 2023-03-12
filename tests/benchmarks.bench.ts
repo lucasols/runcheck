@@ -8,6 +8,7 @@ import {
   rc_parse,
   rc_string,
 } from '../src/runcheck.js'
+import * as old from '../dist/runcheck.js'
 
 const validateData = Object.freeze({
   number: 1,
@@ -24,42 +25,55 @@ const validateData = Object.freeze({
   },
 })
 
+const objShape = rc_object({
+  number: rc_number,
+  negNumber: rc_number,
+  maxNumber: rc_number,
+  string: rc_string,
+  longString: rc_string,
+  boolean: rc_boolean,
+  deeplyNested: rc_object({
+    foo: rc_string,
+    num: rc_number,
+    bool: rc_boolean,
+  }),
+})
+
+const oldObjShape = old.rc_object({
+  number: old.rc_number,
+  negNumber: old.rc_number,
+  maxNumber: old.rc_number,
+  string: old.rc_string,
+  longString: old.rc_string,
+  boolean: old.rc_boolean,
+  deeplyNested: old.rc_object({
+    foo: old.rc_string,
+    num: old.rc_number,
+    bool: old.rc_boolean,
+  }),
+})
+
+const objDataType = zod.object({
+  number: zod.number(),
+  negNumber: zod.number(),
+  maxNumber: zod.number(),
+  string: zod.string(),
+  longString: zod.string(),
+  boolean: zod.boolean(),
+  deeplyNested: zod.object({
+    foo: zod.string(),
+    num: zod.number(),
+    bool: zod.boolean(),
+  }),
+})
+
 describe('object', () => {
   bench('runcheck', () => {
-    rc_parse(
-      validateData,
-      rc_object({
-        number: rc_number,
-        negNumber: rc_number,
-        maxNumber: rc_number,
-        string: rc_string,
-        longString: rc_string,
-        boolean: rc_boolean,
-        deeplyNested: rc_object({
-          foo: rc_string,
-          num: rc_number,
-          bool: rc_boolean,
-        }),
-      }),
-    )
+    rc_parse(validateData, objShape)
   })
 
   bench('zod', () => {
-    const dataType = zod.object({
-      number: zod.number(),
-      negNumber: zod.number(),
-      maxNumber: zod.number(),
-      string: zod.string(),
-      longString: zod.string(),
-      boolean: zod.boolean(),
-      deeplyNested: zod.object({
-        foo: zod.string(),
-        num: zod.number(),
-        bool: zod.boolean(),
-      }),
-    })
-
-    dataType.parse(validateData)
+    objDataType.parse(validateData)
   })
 })
 
@@ -97,26 +111,49 @@ describe('boolean', () => {
 })
 
 describe('large array', () => {
-  const largeArray = Array.from({ length: 1000 }, () => ({
+  const largeArray = Array.from({ length: 100 }, (_, i) => ({
+    string: `string${i}`,
+    number: i,
     array: [1, 2, 3],
+    obj: validateData,
   }))
 
+  const dataType = zod.array(
+    zod.object({
+      string: zod.string(),
+      number: zod.number(),
+      array: zod.array(zod.number()),
+      obj: objDataType,
+    }),
+  )
+
   bench('zod', () => {
-    const dataType = zod.array(
-      zod.object({
-        array: zod.array(zod.number()),
-      }),
-    )
     dataType.parse(largeArray)
   })
 
-  bench('runcheck', () => {
-    const schema = rc_array(
-      rc_object({
-        array: rc_array(rc_number),
-      }),
-    )
+  const schema = rc_array(
+    rc_object({
+      string: rc_string,
+      number: rc_number,
+      array: rc_array(rc_number),
+      obj: objShape,
+    }),
+  )
 
+  bench('runcheck', () => {
     rc_parse(largeArray, schema)
+  })
+
+  const oldSchema = old.rc_array(
+    old.rc_object({
+      string: old.rc_string,
+      number: old.rc_number,
+      array: old.rc_array(old.rc_number),
+      obj: oldObjShape,
+    }),
+  )
+
+  bench('runcheck (dist)', () => {
+    old.rc_parse(largeArray, oldSchema)
   })
 })

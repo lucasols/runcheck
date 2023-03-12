@@ -12,6 +12,7 @@
     "noImplicitReturns": true,
     "noImplicitAny": true,
     "alwaysStrict": true,
+    "allowJs": true,
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "forceConsistentCasingInFileNames": true,
