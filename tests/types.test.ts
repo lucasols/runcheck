@@ -214,15 +214,8 @@ describe('rc_literal', () => {
 
     expect(result).toEqual(successResult('hello'))
 
-    expect(helloParser('world')).toMatchInlineSnapshot(
-      `
-      {
-        "error": true,
-        "errors": [
-          "Type 'string' is not assignable to 'string_literal'",
-        ],
-      }
-    `,
+    expect(helloParser('world')).toEqual(
+      errorResult("Type 'string(world)' is not assignable to 'string_literal'"),
     )
   })
 
@@ -233,78 +226,32 @@ describe('rc_literal', () => {
 
     expect(result).toEqual(successResult('hello'))
 
-    expect(helloParser('world')).toMatchInlineSnapshot(`
-      {
-        "data": "world",
-        "error": false,
-        "warnings": false,
-      }
-    `)
+    expect(helloParser('world')).toEqual(successResult('world'))
 
-    expect(helloParser('worlds')).toMatchInlineSnapshot(
-      `
-      {
-        "error": true,
-        "errors": [
-          "Type 'string' is not assignable to 'literals'",
-        ],
-      }
-    `,
+    expect(helloParser('worlds')).toEqual(
+      errorResult("Type 'string(worlds)' is not assignable to 'literals'"),
     )
 
-    expect(helloParser(undefined)).toMatchInlineSnapshot(
-      `
-      {
-        "error": true,
-        "errors": [
-          "Type 'undefined' is not assignable to 'literals'",
-        ],
-      }
-    `,
+    expect(helloParser(undefined)).toEqual(
+      errorResult("Type 'undefined' is not assignable to 'literals'"),
     )
   })
 
   test('literal types', () => {
-    expect(rc_parse(1, rc_literals(1))).toMatchInlineSnapshot(`
-      {
-        "data": 1,
-        "error": false,
-        "warnings": false,
-      }
-    `)
+    expect(rc_parse(1, rc_literals(1))).toEqual(successResult(1))
 
-    expect(rc_parse(2, rc_literals(1))).toMatchInlineSnapshot(`
-      {
-        "error": true,
-        "errors": [
-          "Type 'number' is not assignable to 'number_literal'",
-        ],
-      }
-    `)
+    expect(rc_parse(2, rc_literals(1))).toEqual(
+      errorResult("Type 'number(2)' is not assignable to 'number_literal'"),
+    )
 
-    expect(rc_parse(2, rc_literals(1, 2))).toMatchInlineSnapshot(`
-      {
-        "data": 2,
-        "error": false,
-        "warnings": false,
-      }
-    `)
+    expect(rc_parse(2, rc_literals(1, 2))).toEqual(successResult(2))
 
-    expect(rc_parse(true, rc_literals(true))).toMatchInlineSnapshot(`
-      {
-        "data": true,
-        "error": false,
-        "warnings": false,
-      }
-    `)
+    expect(rc_parse(true, rc_literals(true))).toEqual(successResult(true))
 
-    expect(rc_parse(false, rc_literals(true))).toMatchInlineSnapshot(`
-      {
-        "error": true,
-        "errors": [
-          "Type 'boolean' is not assignable to 'boolean_literal'",
-        ],
-      }
-    `)
+    expect(rc_parse(false, rc_literals(true))).toEqual(
+      errorResult(
+        "Type 'boolean(false)' is not assignable to 'boolean_literal'",
+      ),
+    )
   })
 })

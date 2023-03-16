@@ -61,6 +61,8 @@ export type RcType<T> = {
   /** @internal */
   readonly _is_object_?: true
   /** @internal */
+  readonly _show_value_in_error_?: true
+  /** @internal */
   readonly _alternative_key_?: string
   /** @internal */
   readonly _obj_shape_?: Record<string, RcType<any>>
@@ -193,9 +195,10 @@ function optional(this: RcType<any>): RcOptional<any> {
 }
 
 function _getErrorMsg_(this: RcType<any>, input: unknown): string {
-  return `Type '${normalizedTypeOf(input)}' is not assignable to '${
-    this._kind_
-  }'`
+  return `Type '${normalizedTypeOf(
+    input,
+    !!this._show_value_in_error_,
+  )}' is not assignable to '${this._kind_}'`
 }
 
 function orNull(this: RcType<any>): RcType<any | null> {
@@ -332,9 +335,10 @@ export function rc_literals<T extends (string | number | boolean)[]>(
         return false
       })
     },
+    _show_value_in_error_: true,
     _kind_:
       literals.length == 1
-        ? `${normalizedTypeOf(literals[0])}_literal`
+        ? `${normalizedTypeOf(literals[0], false)}_literal`
         : 'literals',
   }
 }
@@ -833,18 +837,25 @@ export function rc_transform<Input, Transformed>(
   }
 }
 
-function normalizedTypeOf(input: unknown): string {
-  if (typeof input === 'object') {
-    if (Array.isArray(input)) {
-      return 'array'
+function normalizedTypeOf(input: unknown, showValueInError: boolean): string {
+  const type = ((): string => {
+    if (typeof input === 'object') {
+      if (Array.isArray(input)) {
+        return 'array'
+      }
+
+      if (!input) {
+        return 'null'
+      }
     }
 
-    if (!input) {
-      return 'null'
-    }
-  }
+    return typeof input
+  })()
 
-  return typeof input
+  return showValueInError &&
+    (type === 'string' || type === 'number' || type === 'boolean')
+    ? `${type}(${input})`
+    : type
 }
 
 type NonArrayObject = {
