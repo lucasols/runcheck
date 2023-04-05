@@ -1,14 +1,14 @@
 {
   "name": "runcheck",
   "description": "A tiny (less than 2 KiB Gzipped) and treeshakable! lib for typescript runtime type checks with autofix support",
-  "version": "0.21.0",
+  "version": "0.22.0",
   "license": "MIT",
   "scripts": {
     "test": "vitest --ui",
     "test:run": "vitest run",
     "lint": "pnpm tsc && pnpm eslint",
     "tsc": "tsc -p tsconfig.prod.json",
-    "vitest-bench": "vitest bench",
+    "vitest-bench": "vitest bench --run",
     "benchmark": "tsm benchmarks/benchmark.ts",
     "benchmark:generate-profile": "tsm benchmarks/generateProfiles.ts",
     "eslint": "CI=true eslint --color --ext .jsx,.js,.ts,.tsx src/ tests/",
@@ -50,19 +50,18 @@
   },
   "devDependencies": {
     "@lucasols/eslint-plugin-extended-lint": "^0.1.1",
-    "@types/node": "^18.11.18",
-    "@typescript-eslint/eslint-plugin": "^5.48.1",
-    "@typescript-eslint/parser": "^5.48.1",
-    "@vitest/ui": "^0.27.1",
-    "eslint": "^8.31.0",
-    "eslint-plugin-vitest": "^0.0.29",
-    "myzod": "^1.8.8",
+    "@types/node": "^18.15.11",
+    "@typescript-eslint/eslint-plugin": "^5.57.1",
+    "@typescript-eslint/parser": "^5.57.1",
+    "@vitest/ui": "^0.29.8",
+    "eslint": "^8.37.0",
+    "eslint-plugin-vitest": "^0.0.57",
     "tsm": "^2.3.0",
-    "tsup": "^6.5.0",
-    "typescript": "^4.9.4",
+    "tsup": "^6.7.0",
+    "typescript": "^5.0.3",
     "v8-profiler-next": "^1.9.0",
-    "vite": "^4.0.4",
-    "vitest": "^0.27.1",
-    "zod": "^3.20.2"
+    "vite": "^4.2.1",
+    "vitest": "^0.29.8",
+    "zod": "^3.21.4"
   }
 }

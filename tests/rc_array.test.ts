@@ -189,6 +189,42 @@ describe('array unique', () => {
       ),
     )
   })
+
+  test('strict mode for an array of objects, with getId fn', () => {
+    const helloParser = rc_parser(
+      rc_array(
+        rc_object({
+          id: rc_number,
+          meta_id: rc_number.optional(),
+        }),
+        { unique: (item) => item.meta_id ?? item.id },
+      ),
+    )
+
+    const success: RcParseResult<{ id: number }[]> = helloParser([
+      { id: 1 },
+      { id: 1, meta_id: 4 },
+      { id: 2 },
+      { id: 3 },
+    ])
+
+    expect(success).toEqual(
+      successResult([{ id: 1 }, { id: 1, meta_id: 4 }, { id: 2 }, { id: 3 }]),
+    )
+
+    const error = helloParser([
+      { id: 1 },
+      { id: 1, meta_id: 4 },
+      { id: 1, meta_id: 4 },
+      { id: 3 },
+    ])
+
+    expect(error).toMatchInlineSnapshot(
+      errorResult(
+        `$[2].meta_id: Type 'object' unique fn return with value "4" is not unique`,
+      ),
+    )
+  })
 })
 
 describe('rc_tuple', () => {

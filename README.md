@@ -58,6 +58,17 @@ For arrays of objects, you can provide a string to `unique` option to check if t
 const shape = rc_array(rc_object({ id: rc_string }), { unique: 'id' })
 ```
 
+You can also provide a function to `unique` option to check if the array items has no duplicated values based on a custom function return.
+
+```ts
+const shape = rc_array(
+  rc_object({ id: rc_string, meta_id: rc_string.optional() }),
+  {
+    unique: (item) => item.meta_id || item.id,
+  },
+)
+```
+
 # Object types:
 
 ## `rc_object`

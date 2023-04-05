@@ -401,7 +401,10 @@ export function rc_object<T extends RcObject>(
       return parse<TypeOfObjectType<T>>(this, inputObj, ctx, () => {
         if (!isObject(inputObj)) return false
 
-        const excessKeys = new Set<string>(Object.keys(inputObj))
+        const excessKeys =
+          this._kind_ === 'strict_obj'
+            ? new Set<string>(Object.keys(inputObj))
+            : undefined
 
         const resultObj: Record<any, string> = {} as any
         const resultErrors: string[] = []
@@ -435,7 +438,7 @@ export function rc_object<T extends RcObject>(
             keyToDeleteFromExcessKeys = snakeCaseKey
           }
 
-          excessKeys.delete(keyToDeleteFromExcessKeys)
+          excessKeys?.delete(keyToDeleteFromExcessKeys)
 
           const [isValid, result] = type._parse_(input, ctx)
 
@@ -452,7 +455,7 @@ export function rc_object<T extends RcObject>(
           }
         }
 
-        if (this._kind_ === 'strict_obj') {
+        if (excessKeys) {
           if (excessKeys.size > 0) {
             for (const key of excessKeys) {
               resultErrors.push(
@@ -575,7 +578,7 @@ export function rc_record<V extends RcType<any>>(
 
 function checkArrayUniqueOption(
   type: RcType<any>,
-  uniqueOption: boolean | string | undefined,
+  uniqueOption: boolean | string | undefined | ((item: any) => any),
 ) {
   if (typeof uniqueOption === 'string') {
     if (!type._obj_shape_?.[uniqueOption]) {
@@ -590,7 +593,7 @@ function checkArrayItems(
   types: RcType<any> | readonly RcType<any>[],
   ctx: ParseResultCtx,
   loose = false,
-  options?: { unique: boolean | string | false },
+  options?: { unique: boolean | string | false | ((item: any) => any) },
 ): { errors: string[] } | { data: any[] } | true {
   let index = -1
   const looseErrors: string[][] = []
@@ -621,6 +624,8 @@ function checkArrayItems(
       if (isUniqueKey) {
         // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         uniqueValueToCheck = initialResult[unique]
+      } else if (typeof unique === 'function') {
+        uniqueValueToCheck = unique(initialResult)
       }
 
       if (uniqueValues.has(uniqueValueToCheck)) {
@@ -635,6 +640,8 @@ function checkArrayItems(
               ctx,
               isUniqueKey
                 ? `Type '${type._obj_shape_?.[unique]?._kind_}' with value "${uniqueValueToCheck}" is not unique`
+                : typeof unique === 'function'
+                ? `Type '${type._kind_}' unique fn return with value "${uniqueValueToCheck}" is not unique`
                 : `${type._kind_} value is not unique`,
             ),
           ],
@@ -675,7 +682,9 @@ function checkArrayItems(
 
 export function rc_array<T extends RcType<any>>(
   type: T,
-  options?: { unique: boolean | string | false },
+  options?: {
+    unique: boolean | string | false | ((parsedItem: RcInferType<T>) => any)
+  },
 ): RcType<RcInferType<T>[]> {
   checkArrayUniqueOption(type, options?.unique)
 
@@ -697,7 +706,9 @@ export function rc_array<T extends RcType<any>>(
 /** instead of returning a general erroro, rejects invalid array items and return warnings for these items */
 export function rc_loose_array<T extends RcType<any>>(
   type: T,
-  options?: { unique: boolean | string | false },
+  options?: {
+    unique: boolean | string | false | ((parsedItem: RcInferType<T>) => any)
+  },
 ): RcType<RcInferType<T>[]> {
   checkArrayUniqueOption(type, options?.unique)
 
