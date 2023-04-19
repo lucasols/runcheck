@@ -7,6 +7,12 @@ import {
   rc_object,
   rc_array,
   rc_any,
+  rc_boolean,
+  rc_unknown,
+  rc_union,
+  rc_undefined,
+  rc_literals,
+  rc_parse,
 } from '../src/runcheck'
 import { errorResult, successResult } from './testUtils'
 
@@ -132,5 +138,50 @@ describe('rc_record', () => {
     )
 
     expect(parse2({})).toEqual(successResult({}))
+  })
+
+  test('error msg bug', () => {
+    const valueToParse = {
+      test: {
+        '*': '*',
+        ops: {
+          data: [
+            {
+              field: 'criado_por',
+              reference: 'id_user',
+            },
+          ],
+        },
+        channels: {
+          data: [
+            {
+              OR: [1, 2, 3],
+            },
+          ],
+          fields_excluded: ['add_users', 'add_profiles', 'type'],
+        },
+        sdfsdf: '*',
+        u2rgpuxmvmws4ze6xgzn6: '*',
+        '9l5h87yk8337h8giv1846': '*',
+      },
+    }
+
+    const testObjSchema = rc_object({
+      data: rc_array(rc_unknown).optional(),
+      required: rc_boolean,
+    })
+
+    const testSchema = rc_object({
+      test: rc_record(rc_union(rc_undefined, rc_literals('*'), testObjSchema)),
+    })
+
+    const result = rc_parse(valueToParse, testSchema)
+
+    expect(result).toEqual(
+      errorResult(
+        "$.test.ops|union 3|.required: Type 'undefined' is not assignable to 'boolean'",
+        "$.test.channels|union 3|.required: Type 'undefined' is not assignable to 'boolean'",
+      ),
+    )
   })
 })

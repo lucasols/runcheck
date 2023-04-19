@@ -354,10 +354,30 @@ export function rc_union<T extends RcType<any>[]>(
     ...defaultProps,
     _parse_(input, ctx) {
       return parse(this, input, ctx, () => {
+        const basePath = ctx.path
+        const objErrors: string[] = []
+
+        let i = 0
         for (const type of types) {
-          if (type._parse_(input, ctx)[0]) {
-            return true
+          i += 1
+
+          if (type._is_object_) {
+            ctx.path = `${basePath}|union ${i}|`
           }
+
+          const [ok, result] = type._parse_(input, ctx)
+
+          if (ok) {
+            return true
+          } else if (type._is_object_) {
+            objErrors.push(...result)
+          }
+        }
+
+        ctx.path = basePath
+
+        if (objErrors.length > 0) {
+          return { errors: objErrors }
         }
 
         return false
@@ -536,7 +556,8 @@ export function rc_record<V extends RcType<any>>(
         for (const [key, inputValue] of Object.entries(inputObj)) {
           const subPath = `.${key}`
 
-          ctx.path = `${parentPath}${subPath}`
+          const path = `${parentPath}${subPath}`
+          ctx.path = path
 
           if (checkKey && !checkKey(key)) {
             resultErrors.push(
