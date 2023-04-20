@@ -1,7 +1,6 @@
 import { describe, expect, test } from 'vitest'
 import {
   RcParseResult,
-  RcType,
   rc_any,
   rc_boolean,
   rc_date,
@@ -14,7 +13,6 @@ import {
   rc_parser,
   rc_string,
   rc_undefined,
-  rc_union,
   rc_unknown,
   rc_validator,
 } from '../src/runcheck'
