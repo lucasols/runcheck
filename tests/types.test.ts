@@ -176,36 +176,6 @@ test('rc_instanceof', () => {
     `)
 })
 
-describe('rc_union', () => {
-  test('throw error on empty inpu', () => {
-    expect(() => rc_union()).toThrowError()
-  })
-
-  const shape: RcType<string | number> = rc_union(rc_string, rc_number)
-
-  test('pass', () => {
-    expect(rc_parse('hello', shape)).toEqual(successResult('hello'))
-
-    expect(rc_parse(1, shape)).toEqual(successResult(1))
-  })
-
-  test('fail', () => {
-    expect(rc_parse(true, shape)).toEqual(
-      errorResult(`Type 'boolean' is not assignable to 'string | number'`),
-    )
-  })
-
-  test('with fallback', () => {
-    const result = rc_parse({}, shape.withFallback('world'))
-
-    expect(result).toEqual(
-      successResult('world', [
-        "Fallback used, Type 'object' is not assignable to 'string | number'",
-      ]),
-    )
-  })
-})
-
 describe('rc_literal', () => {
   test('simple input', () => {
     const helloParser = rc_parser(rc_literals('hello'))

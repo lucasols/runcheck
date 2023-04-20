@@ -18,6 +18,7 @@ type RcOptional<T> = RcType<T | undefined>
 type ParseResultCtx = {
   warnings: string[]
   path: string
+  objErrShortCircuit: boolean
 }
 
 type InternalParseResult<T> =
@@ -366,11 +367,15 @@ export function rc_union<T extends RcType<any>[]>(
             ctx.path = `${basePath}|union ${i}|`
           }
 
+          ctx.objErrShortCircuit = true
+
           const [ok, result] = type._parse_(input, ctx)
+
+          ctx.objErrShortCircuit = false
 
           if (ok) {
             return true
-          } else if (type._is_object_ && unionPartsWithErrors <= 3) {
+          } else if (type._is_object_ && unionPartsWithErrors <= 2) {
             unionPartsWithErrors += 1
             objErrors.push(...result)
           }
@@ -473,6 +478,10 @@ export function rc_object<T extends RcObject>(
 
             for (const subError of errors) {
               resultErrors.push(gerWarningOrErrorWithPath(ctx, subError))
+            }
+
+            if (ctx.objErrShortCircuit) {
+              break
             }
           }
         }
@@ -581,6 +590,10 @@ export function rc_record<V extends RcType<any>>(
 
             for (const subError of errors) {
               resultErrors.push(gerWarningOrErrorWithPath(ctx, subError))
+            }
+
+            if (ctx.objErrShortCircuit) {
+              break
             }
           }
         }
@@ -785,6 +798,7 @@ export function rc_parse<S>(input: any, type: RcType<S>): RcParseResult<S> {
   const ctx: ParseResultCtx = {
     warnings: [],
     path: '',
+    objErrShortCircuit: false,
   }
 
   const [success, dataOrError] = type._parse_(input, ctx)
@@ -832,6 +846,7 @@ export function rc_is_valid<S>(input: any, type: RcType<S>): input is S {
   const ctx: ParseResultCtx = {
     warnings: [],
     path: '',
+    objErrShortCircuit: false,
   }
 
   return !!type._parse_(input, ctx)[0]
@@ -908,4 +923,20 @@ export function snakeCase(str: string): string {
     .split(/ |\B(?=[A-Z])/)
     .map((word) => word.toLowerCase())
     .join('_')
+}
+
+export function rc_parse_json<T>(
+  jsonString: string,
+  schema: RcType<T>,
+): RcParseResult<T> {
+  try {
+    const parsed = JSON.parse(jsonString)
+
+    return rc_parse(parsed, schema)
+  } catch (err) {
+    return {
+      error: true,
+      errors: [`json parse error: ${isObject(err) ? err.message : ''}`],
+    }
+  }
 }

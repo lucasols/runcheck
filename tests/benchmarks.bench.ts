@@ -3,6 +3,7 @@ import { z as zod } from 'zod'
 import {
   rc_array,
   rc_boolean,
+  rc_literals,
   rc_number,
   rc_object,
   rc_parse,
@@ -203,6 +204,97 @@ describe('large array with union', () => {
       array: old.rc_array(old.rc_number),
       obj: oldObjShape,
       union: old.rc_union(old.rc_string, old.rc_object({ foo: old.rc_string })),
+    }),
+  )
+
+  bench('runcheck (dist)', () => {
+    old.rc_parse(largeArray, oldSchema)
+  })
+})
+
+describe('large array with discriminated union', () => {
+  const largeArray = Array.from({ length: 100 }, (_, i) => ({
+    string: `string${i}`,
+    number: i,
+    array: [1, 2, 3],
+    obj: validateData,
+    union: i % 2 === 0 ? 'foo' : { type: 'qux', baz: 'qux', num: i },
+  }))
+
+  const dataType = zod.array(
+    zod.object({
+      string: zod.string(),
+      number: zod.number(),
+      array: zod.array(zod.number()),
+      obj: objDataType,
+      union: zod.union([
+        zod.string(),
+        zod.object({
+          type: zod.literal('bar'),
+          baz: zod.string(),
+          num: zod.number(),
+        }),
+        zod.object({
+          type: zod.literal('baz'),
+          baz: zod.string(),
+          num: zod.number(),
+        }),
+        zod.object({
+          type: zod.literal('qux'),
+          baz: zod.string(),
+          num: zod.number(),
+        }),
+      ]),
+    }),
+  )
+
+  bench('zod', () => {
+    dataType.parse(largeArray)
+  })
+
+  const schema = rc_array(
+    rc_object({
+      string: rc_string,
+      number: rc_number,
+      array: rc_array(rc_number),
+      obj: objShape,
+      union: rc_union(
+        rc_string,
+        rc_object({ type: rc_literals('bar'), baz: rc_string, num: rc_number }),
+        rc_object({ type: rc_literals('baz'), baz: rc_string, num: rc_number }),
+        rc_object({ type: rc_literals('qux'), baz: rc_string, num: rc_number }),
+      ),
+    }),
+  )
+
+  bench('runcheck', () => {
+    rc_parse(largeArray, schema)
+  })
+
+  const oldSchema = old.rc_array(
+    old.rc_object({
+      string: old.rc_string,
+      number: old.rc_number,
+      array: old.rc_array(old.rc_number),
+      obj: oldObjShape,
+      union: old.rc_union(
+        old.rc_string,
+        old.rc_object({
+          type: rc_literals('bar'),
+          baz: rc_string,
+          num: rc_number,
+        }),
+        old.rc_object({
+          type: rc_literals('baz'),
+          baz: rc_string,
+          num: rc_number,
+        }),
+        old.rc_object({
+          type: rc_literals('qux'),
+          baz: rc_string,
+          num: rc_number,
+        }),
+      ),
     }),
   )
 
