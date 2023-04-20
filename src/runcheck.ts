@@ -356,6 +356,7 @@ export function rc_union<T extends RcType<any>[]>(
       return parse(this, input, ctx, () => {
         const basePath = ctx.path
         const objErrors: string[] = []
+        let unionPartsWithErrors = 0
 
         let i = 0
         for (const type of types) {
@@ -369,7 +370,8 @@ export function rc_union<T extends RcType<any>[]>(
 
           if (ok) {
             return true
-          } else if (type._is_object_) {
+          } else if (type._is_object_ && unionPartsWithErrors <= 3) {
+            unionPartsWithErrors += 1
             objErrors.push(...result)
           }
         }
