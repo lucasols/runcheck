@@ -183,7 +183,7 @@ describe('rc_literal', () => {
     expect(result).toEqual(successResult('hello'))
 
     expect(helloParser('world')).toEqual(
-      errorResult("Type 'string(world)' is not assignable to 'string_literal'"),
+      errorResult("Type 'string(world)' is not assignable to 'string(hello)'"),
     )
   })
 
@@ -197,11 +197,15 @@ describe('rc_literal', () => {
     expect(helloParser('world')).toEqual(successResult('world'))
 
     expect(helloParser('worlds')).toEqual(
-      errorResult("Type 'string(worlds)' is not assignable to 'literals'"),
+      errorResult(
+        "Type 'string(worlds)' is not assignable to 'string(hello) | string(world)'",
+      ),
     )
 
     expect(helloParser(undefined)).toEqual(
-      errorResult("Type 'undefined' is not assignable to 'literals'"),
+      errorResult(
+        "Type 'undefined' is not assignable to 'string(hello) | string(world)'",
+      ),
     )
   })
 
@@ -209,7 +213,7 @@ describe('rc_literal', () => {
     expect(rc_parse(1, rc_literals(1))).toEqual(successResult(1))
 
     expect(rc_parse(2, rc_literals(1))).toEqual(
-      errorResult("Type 'number(2)' is not assignable to 'number_literal'"),
+      errorResult("Type 'number(2)' is not assignable to 'number(1)'"),
     )
 
     expect(rc_parse(2, rc_literals(1, 2))).toEqual(successResult(2))
@@ -217,9 +221,7 @@ describe('rc_literal', () => {
     expect(rc_parse(true, rc_literals(true))).toEqual(successResult(true))
 
     expect(rc_parse(false, rc_literals(true))).toEqual(
-      errorResult(
-        "Type 'boolean(false)' is not assignable to 'boolean_literal'",
-      ),
+      errorResult("Type 'boolean(false)' is not assignable to 'boolean(true)'"),
     )
   })
 })
