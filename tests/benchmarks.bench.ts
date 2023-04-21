@@ -247,6 +247,11 @@ describe('large array with discriminated union', () => {
           num: zod.number(),
         }),
         zod.object({
+          type: zod.literal('bazs'),
+          baz: zod.string(),
+          num: zod.number(),
+        }),
+        zod.object({
           type: zod.literal('qux'),
           baz: zod.string(),
           num: zod.number(),
@@ -269,6 +274,11 @@ describe('large array with discriminated union', () => {
         rc_string,
         rc_object({ type: rc_literals('bar'), baz: rc_string, num: rc_number }),
         rc_object({ type: rc_literals('baz'), baz: rc_string, num: rc_number }),
+        rc_object({
+          type: rc_literals('bazs'),
+          baz: rc_string,
+          num: rc_number,
+        }),
         rc_object({ type: rc_literals('qux'), baz: rc_string, num: rc_number }),
       ),
     }),
@@ -293,6 +303,11 @@ describe('large array with discriminated union', () => {
         }),
         old.rc_object({
           type: old.rc_literals('baz'),
+          baz: old.rc_string,
+          num: old.rc_number,
+        }),
+        old.rc_object({
+          type: old.rc_literals('bazs'),
           baz: old.rc_string,
           num: old.rc_number,
         }),

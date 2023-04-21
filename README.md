@@ -4,7 +4,7 @@ A lib for js/typescript runtime type checks with autofix support. Runcheck has t
 
 Benchmarks:
 
-![benchmarks](imgs/2023-04-20-21-15-14.png)
+![](imgs/2023-04-20-21-17-38.png)
 
 Obs: Runcheck is in Beta and it's api can still change
 
