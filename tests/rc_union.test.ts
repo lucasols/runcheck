@@ -7,8 +7,7 @@ import {
   rc_string,
   rc_union,
 } from '../src/runcheck'
-import * as old from '../dist/runcheck.js'
-import { successResult, errorResult } from './testUtils'
+import { errorResult, successResult } from './testUtils'
 
 describe('rc_union', () => {
   test('throw error on empty inpu', () => {
