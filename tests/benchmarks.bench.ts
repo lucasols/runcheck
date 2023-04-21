@@ -1,6 +1,7 @@
 import { bench, describe } from 'vitest'
 import { z as zod } from 'zod'
 import {
+  RcParseResult,
   rc_array,
   rc_boolean,
   rc_literals,
@@ -41,7 +42,7 @@ const objShape = rc_object({
   }),
 })
 
-const oldObjShape = old.rc_object({
+export const oldObjShape = old.rc_object({
   number: old.rc_number,
   negNumber: old.rc_number,
   maxNumber: old.rc_number,
@@ -54,6 +55,12 @@ const oldObjShape = old.rc_object({
     bool: old.rc_boolean,
   }),
 })
+
+function throwIfError(result: RcParseResult<any>) {
+  if (result.error) {
+    throw new Error(result.errors.join('\n'))
+  }
+}
 
 const objDataType = zod.object({
   number: zod.number(),
@@ -86,7 +93,7 @@ describe('string', () => {
   })
 
   bench('runcheck', () => {
-    rc_parse(validateData.string, rc_string)
+    throwIfError(rc_parse(validateData.string, rc_string))
   })
 })
 
@@ -97,7 +104,7 @@ describe('number', () => {
   })
 
   bench('runcheck', () => {
-    rc_parse(validateData.number, rc_number)
+    throwIfError(rc_parse(validateData.number, rc_number))
   })
 })
 
@@ -108,7 +115,7 @@ describe('boolean', () => {
   })
 
   bench('runcheck', () => {
-    rc_parse(validateData.boolean, rc_boolean)
+    throwIfError(rc_parse(validateData.boolean, rc_boolean))
   })
 })
 
@@ -143,7 +150,7 @@ describe('large array', () => {
   )
 
   bench('runcheck', () => {
-    rc_parse(largeArray, schema)
+    throwIfError(rc_parse(largeArray, schema))
   })
 
   const oldSchema = old.rc_array(
@@ -156,7 +163,7 @@ describe('large array', () => {
   )
 
   bench('runcheck (dist)', () => {
-    old.rc_parse(largeArray, oldSchema)
+    throwIfError(old.rc_parse(largeArray, oldSchema))
   })
 })
 
@@ -194,7 +201,7 @@ describe('large array with union', () => {
   )
 
   bench('runcheck', () => {
-    rc_parse(largeArray, schema)
+    throwIfError(rc_parse(largeArray, schema))
   })
 
   const oldSchema = old.rc_array(
@@ -208,7 +215,7 @@ describe('large array with union', () => {
   )
 
   bench('runcheck (dist)', () => {
-    old.rc_parse(largeArray, oldSchema)
+    throwIfError(old.rc_parse(largeArray, oldSchema))
   })
 })
 
@@ -268,7 +275,7 @@ describe('large array with discriminated union', () => {
   )
 
   bench('runcheck', () => {
-    rc_parse(largeArray, schema)
+    throwIfError(rc_parse(largeArray, schema))
   })
 
   const oldSchema = old.rc_array(
@@ -280,25 +287,25 @@ describe('large array with discriminated union', () => {
       union: old.rc_union(
         old.rc_string,
         old.rc_object({
-          type: rc_literals('bar'),
-          baz: rc_string,
-          num: rc_number,
+          type: old.rc_literals('bar'),
+          baz: old.rc_string,
+          num: old.rc_number,
         }),
         old.rc_object({
-          type: rc_literals('baz'),
-          baz: rc_string,
-          num: rc_number,
+          type: old.rc_literals('baz'),
+          baz: old.rc_string,
+          num: old.rc_number,
         }),
         old.rc_object({
-          type: rc_literals('qux'),
-          baz: rc_string,
-          num: rc_number,
+          type: old.rc_literals('qux'),
+          baz: old.rc_string,
+          num: old.rc_number,
         }),
       ),
     }),
   )
 
   bench('runcheck (dist)', () => {
-    old.rc_parse(largeArray, oldSchema)
+    throwIfError(old.rc_parse(largeArray, oldSchema))
   })
 })

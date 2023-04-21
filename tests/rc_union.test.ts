@@ -7,6 +7,7 @@ import {
   rc_string,
   rc_union,
 } from '../src/runcheck'
+import * as old from '../dist/runcheck.js'
 import { successResult, errorResult } from './testUtils'
 
 describe('rc_union', () => {
