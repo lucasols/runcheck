@@ -339,8 +339,10 @@ export function rc_literals<T extends (string | number | boolean)[]>(
     _show_value_in_error_: true,
     _kind_:
       literals.length == 1
-        ? `${normalizedTypeOf(literals[0], false)}_literal`
-        : 'literals',
+        ? normalizedTypeOf(literals[0], true)
+        : literals
+            .map((literal) => normalizedTypeOf(literal, true))
+            .join(' | '),
   }
 }
 
