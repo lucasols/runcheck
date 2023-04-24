@@ -26,7 +26,7 @@ type InternalParseResult<T> =
   | [success: false, errors: string[]]
 
 export type RcType<T> = {
-  readonly withFallback: (fallback: T) => RcType<T>
+  readonly withFallback: (fallback: T | (() => T)) => RcType<T>
   readonly where: (predicate: (input: T) => boolean) => RcType<T>
   /** RcType | undefined */
   readonly optional: () => RcOptional<T>
@@ -48,7 +48,7 @@ export type RcType<T> = {
   /** @internal */
   readonly _getErrorMsg_: (input: unknown) => string
   /** @internal */
-  readonly _fallback_?: T
+  readonly _fallback_?: T | (() => T)
   /** @internal */
   readonly _predicate_?: (input: T) => boolean
   /** @internal */
@@ -136,10 +136,12 @@ function parse<T>(
     }
   }
 
-  if (type._fallback_ !== undefined) {
+  const fb = type._fallback_
+
+  if (fb !== undefined) {
     addWarning(ctx, `Fallback used, ${type._getErrorMsg_(input)}`)
 
-    return [true, type._fallback_]
+    return [true, isFn(fb) ? fb() : fb]
   }
 
   if (type._useAutFix_ && type._autoFix_) {
@@ -941,4 +943,8 @@ export function rc_parse_json<T>(
       errors: [`json parse error: ${isObject(err) ? err.message : ''}`],
     }
   }
+}
+
+function isFn(value: any): value is Function {
+  return typeof value === 'function'
 }
