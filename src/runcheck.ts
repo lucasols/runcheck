@@ -945,6 +945,6 @@ export function rc_parse_json<T>(
   }
 }
 
-function isFn(value: any): value is Function {
+function isFn(value: any): value is () => any {
   return typeof value === 'function'
 }
