@@ -3,6 +3,7 @@ import { rc_number_autofix, rc_string_autofix } from '../src/autofixable'
 import {
   rc_array,
   rc_boolean,
+  rc_number,
   rc_object,
   rc_parse,
   rc_string,
@@ -17,6 +18,18 @@ describe('fallback', () => {
       successResult('world', [
         "Fallback used, Type 'number' is not assignable to 'string'",
       ]),
+    )
+  })
+
+  test('lazy fallback', () => {
+    const shape = rc_number.withFallback(() => Math.random())
+
+    const result1 = rc_parse('1', shape)
+
+    const result2 = rc_parse('2', shape)
+
+    expect(!result1.error && result1.data).not.toBe(
+      !result2.error && result2.data,
     )
   })
 })

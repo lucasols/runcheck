@@ -539,12 +539,72 @@ export function rc_strict_obj<T extends RcObject>(shape: T): RcObjType<T> {
 }
 
 export function rc_obj_intersection<A extends RcObject, B extends RcObject>(
-  a: RcObjType<A>,
-  b: RcObjType<B>,
-): RcObjType<A & B> {
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-  return rc_object({ ...a._obj_shape_, ...b._obj_shape_ }) as any
+  ...objs: [RcObjType<A>, RcObjType<B>]
+): RcObjType<A & B>
+export function rc_obj_intersection<
+  A extends RcObject,
+  B extends RcObject,
+  C extends RcObject,
+>(...objs: [RcObjType<A>, RcObjType<B>, RcObjType<C>]): RcObjType<A & B & C>
+export function rc_obj_intersection<
+  A extends RcObject,
+  B extends RcObject,
+  C extends RcObject,
+  D extends RcObject,
+>(
+  ...objs: [RcObjType<A>, RcObjType<B>, RcObjType<C>, RcObjType<D>]
+): RcObjType<A & B & C & D>
+export function rc_obj_intersection(...objs: RcObjType<any>[]): RcObjType<any> {
+  const finalShape = {} as any
+
+  for (const objShape of objs) {
+    Object.assign(finalShape, objShape._obj_shape_)
+  }
+
+  return rc_object(finalShape)
 }
+
+export function rc_obj_pick<O extends RcObject, K extends keyof O>(
+  obj: RcObjType<O>,
+  keys: K[],
+): RcObjType<Pick<O, K>> {
+  const shape = {} as any
+
+  if (!obj._obj_shape_) {
+    throw new Error('rc_obj_pick: obj must be an object type')
+  }
+
+  for (const key of keys) {
+    const keyShape = obj._obj_shape_[key as string]
+    if (keyShape) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      shape[key] = keyShape
+    }
+  }
+
+  return rc_object(shape)
+}
+
+export function rc_obj_omit<O extends RcObject, K extends keyof O>(
+  obj: RcObjType<O>,
+  keys: K[],
+): RcObjType<Pick<O, K>> {
+  const shape = {} as any
+
+  if (!obj._obj_shape_) {
+    throw new Error('rc_obj_omit: obj must be an object type')
+  }
+
+  for (const key of Object.keys(obj._obj_shape_)) {
+    if (!(keys as any[]).includes(key)) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      shape[key] = obj._obj_shape_[key]
+    }
+  }
+
+  return rc_object(shape)
+}
+
 type RcRecord<V extends RcType<any>> = Record<string, V>
 
 type RcRecordType<V extends RcType<any>> = RcType<TypeOfObjectType<RcRecord<V>>>
@@ -914,6 +974,14 @@ function normalizedTypeOf(input: unknown, showValueInError: boolean): string {
 type NonArrayObject = {
   [x: string]: any
   [y: number]: never
+}
+
+export function rc_assert_is_valid<S>(
+  result: RcParseResult<S>,
+): asserts result is { error: false; data: S; warnings: string[] | false } {
+  if (result.error) {
+    throw new Error(`invalid input: ${result.errors.join(', ')}`)
+  }
 }
 
 function isObject(value: any): value is NonArrayObject {

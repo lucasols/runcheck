@@ -168,6 +168,21 @@ if (rc_is_valid(input, rc_array(rc_string))) {
 }
 ```
 
+# Type assertion in a parse result
+
+Use `rc_assert_is_valid` to do a simple type assertion in a parse result.
+
+```ts
+import { rc_assert_is_valid } from 'runcheck'
+
+const input = JSON.parse(jsonInput)
+
+const result = rc_parse(input, rc_array(rc_string))
+
+rc_assert_is_valid(result, rc_array(rc_string))
+// will throw an error if the result is invalid, otherwise will narrow the result type to a valid result
+```
+
 # Loose parsing
 
 Use `rc_parse_loose` to parse a input and returning null if the input is invalid.
@@ -358,3 +373,33 @@ const result = rc_parse(
 // keys `age` and `is_cool` will be present in the result
 result.data // { name: 'John', age: 20, is_cool: true }
 ```
+
+## `rc_obj_pick`
+
+Allows to pick a subset of a object schema. Example:
+
+```ts
+const shape = rc_object({
+  name: rc_string,
+  age: rc_number,
+  isCool: rc_boolean,
+})
+
+const nameSchema = rc_obj_pick(shape, ['name'])
+```
+
+## `rc_obj_omit`
+
+Allows to omit a subset of a object schema. Example:
+
+```ts
+const shape = rc_object({
+  name: rc_string,
+  age: rc_number,
+  isCool: rc_boolean,
+})
+
+const baseSchema = rc_obj_omit(shape, ['isCool'])
+```
+
+# Other useful utils

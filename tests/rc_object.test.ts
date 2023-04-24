@@ -14,6 +14,9 @@ import {
   rc_strict_obj,
   rc_string,
   rc_transform,
+  rc_obj_pick,
+  rc_assert_is_valid,
+  rc_obj_omit,
 } from '../src/runcheck'
 import { errorResult, successResult } from './testUtils'
 
@@ -423,6 +426,72 @@ describe('rc_extends_obj', () => {
 
     expect(rc_parse({ name: 1, a: 2, c: 3 }, schema)).toEqual(
       successResult({ newKeyName: 1, a: 2, c: 3, name: 1 }),
+    )
+  })
+})
+
+describe('rc_obj_pick', () => {
+  const baseSchema = rc_object({
+    userId: rc_number,
+    oldName: rc_number,
+    name: rc_string,
+    a: rc_number,
+    b: rc_number,
+    c: rc_number,
+  })
+
+  test('pick keys success', () => {
+    const schema = rc_obj_pick(baseSchema, ['userId', 'name'])
+
+    const result = rc_parse({ userId: 1, name: 'hello' }, schema)
+
+    expect(result).toEqual(successResult({ userId: 1, name: 'hello' }))
+
+    rc_assert_is_valid(result)
+  })
+
+  test('pick keys excess keys', () => {
+    const schema = rc_obj_pick(baseSchema, ['userId', 'name'])
+
+    const result = rc_parse({ userId: 1, name: 'hello', err: 1 }, schema)
+
+    expect(result).toEqual(successResult({ userId: 1, name: 'hello' }))
+  })
+})
+
+describe('rc_obj_omit', () => {
+  const baseSchema = rc_object({
+    userId: rc_number,
+    oldName: rc_number,
+    name: rc_string,
+    a: rc_number,
+    b: rc_number,
+    c: rc_number,
+  })
+
+  test('omit keys success', () => {
+    const schema = rc_obj_omit(baseSchema, ['userId', 'name'])
+
+    const result = rc_parse({ oldName: 1, a: 2, b: 3, c: 4 }, schema)
+
+    expect(result).toEqual(successResult({ oldName: 1, a: 2, b: 3, c: 4 }))
+  })
+
+  test('omit keys excess keys', () => {
+    const schema = rc_obj_omit(baseSchema, ['userId', 'name'])
+
+    const result = rc_parse({ oldName: 1, a: 2, b: 3, c: 4, err: 1 }, schema)
+
+    expect(result).toEqual(successResult({ oldName: 1, a: 2, b: 3, c: 4 }))
+  })
+
+  test('missing keys', () => {
+    const schema = rc_obj_omit(baseSchema, ['userId', 'name'])
+
+    const result = rc_parse({ a: 2, b: 3, c: 4 }, schema)
+
+    expect(result).toEqual(
+      errorResult("$.oldName: Type 'undefined' is not assignable to 'number'"),
     )
   })
 })
