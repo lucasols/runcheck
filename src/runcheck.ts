@@ -19,6 +19,7 @@ type ParseResultCtx = {
   warnings: string[]
   path: string
   objErrShortCircuit: boolean
+  objErrKeyIndex: number
 }
 
 type InternalParseResult<T> =
@@ -360,8 +361,9 @@ export function rc_union<T extends RcType<any>[]>(
     _parse_(input, ctx) {
       return parse(this, input, ctx, () => {
         const basePath = ctx.path
-        const objErrors: string[] = []
-        let unionPartsWithErrors = 0
+        let objErrors: string[] = []
+        let hasNonObjTypeMember = false
+        const objErrorsWithDepth: string[] = []
 
         let i = 0
         for (const type of types) {
@@ -372,23 +374,43 @@ export function rc_union<T extends RcType<any>[]>(
           }
 
           ctx.objErrShortCircuit = true
+          ctx.objErrKeyIndex = 0
 
           const [ok, result] = type._parse_(input, ctx)
 
           ctx.objErrShortCircuit = false
 
+          const objErrIndex = ctx.objErrKeyIndex
+
+          ctx.objErrKeyIndex = 0
+
           if (ok) {
             return true
-          } else if (type._is_object_ && unionPartsWithErrors <= 2) {
-            unionPartsWithErrors += 1
-            objErrors.push(...result)
+          } else if (type._is_object_) {
+            if (objErrIndex > 0) {
+              objErrorsWithDepth.push(...result)
+            } else {
+              objErrors.push(...result)
+            }
+          } else {
+            hasNonObjTypeMember = true
           }
         }
 
         ctx.path = basePath
 
-        if (objErrors.length > 0) {
-          return { errors: objErrors }
+        if (objErrorsWithDepth.length > 0 || objErrors.length > 0) {
+          const objErrorsLength = objErrors.length
+
+          if (objErrorsLength > 3) {
+            objErrors = objErrors.slice(0, 3)
+          }
+
+          if (objErrorsLength > 3 || hasNonObjTypeMember) {
+            objErrors.push('not matches any union member')
+          }
+
+          return { errors: [...objErrorsWithDepth, ...objErrors] }
         }
 
         return false
@@ -442,8 +464,10 @@ export function rc_object<T extends RcObject>(
 
         const parentPath = ctx.path
 
+        let i = -1
         for (const [key, type] of Object.entries(shape)) {
           const typekey = key as keyof T
+          i += 1
 
           const subPath = `.${key}`
 
@@ -485,6 +509,7 @@ export function rc_object<T extends RcObject>(
             }
 
             if (ctx.objErrShortCircuit) {
+              ctx.objErrKeyIndex = i
               break
             }
           }
@@ -863,6 +888,7 @@ export function rc_parse<S>(input: any, type: RcType<S>): RcParseResult<S> {
     warnings: [],
     path: '',
     objErrShortCircuit: false,
+    objErrKeyIndex: 0,
   }
 
   const [success, dataOrError] = type._parse_(input, ctx)
@@ -911,6 +937,7 @@ export function rc_is_valid<S>(input: any, type: RcType<S>): input is S {
     warnings: [],
     path: '',
     objErrShortCircuit: false,
+    objErrKeyIndex: 0,
   }
 
   return !!type._parse_(input, ctx)[0]

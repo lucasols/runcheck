@@ -54,6 +54,7 @@ test('limit object union errors to 3', () => {
       "$|union 1|.a: Type 'number' is not assignable to 'string'",
       "$|union 2|.b: Type 'undefined' is not assignable to 'number'",
       "$|union 3|.c: Type 'undefined' is not assignable to 'number'",
+      'not matches any union member'
     ),
   )
 })
@@ -70,6 +71,29 @@ test('circuit break in obj errors', () => {
       "$|union 1|.a: Type 'number' is not assignable to 'string'",
       "$|union 2|.b: Type 'undefined' is not assignable to 'number'",
       "$|union 3|.c: Type 'undefined' is not assignable to 'number'",
+    ),
+  )
+})
+
+test('show errors with more depth', () => {
+  const shape = rc_object({
+    obj: rc_union(
+      rc_object({ a: rc_string }),
+      rc_object({ b: rc_number }),
+      rc_object({ c: rc_number }),
+      rc_object({ d: rc_number }),
+      rc_object({ e: rc_number }),
+      rc_object({ a: rc_number, b: rc_number }),
+    ),
+  })
+
+  expect(rc_parse({ obj: { a: 1 } }, shape)).toEqual(
+    errorResult(
+      "$.obj|union 6|.b: Type 'undefined' is not assignable to 'number'",
+      "$.obj|union 1|.a: Type 'number' is not assignable to 'string'",
+      "$.obj|union 2|.b: Type 'undefined' is not assignable to 'number'",
+      "$.obj|union 3|.c: Type 'undefined' is not assignable to 'number'",
+      "$.obj: not matches any union member"
     ),
   )
 })
