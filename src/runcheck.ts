@@ -349,6 +349,8 @@ export function rc_literals<T extends (string | number | boolean)[]>(
   }
 }
 
+const maxShallowObjErrors = 1
+
 export function rc_union<T extends RcType<any>[]>(
   ...types: T
 ): RcType<RcInferType<T[number]>> {
@@ -361,9 +363,10 @@ export function rc_union<T extends RcType<any>[]>(
     _parse_(input, ctx) {
       return parse(this, input, ctx, () => {
         const basePath = ctx.path
-        let objErrors: string[] = []
+        const shallowObjErrors: string[] = []
+        let shallowObjErrorsCount = 0
         let hasNonObjTypeMember = false
-        const objErrorsWithDepth: string[] = []
+        const nonShallowObjErrors: string[] = []
 
         let i = 0
         for (const type of types) {
@@ -388,9 +391,13 @@ export function rc_union<T extends RcType<any>[]>(
             return true
           } else if (type._is_object_) {
             if (objErrIndex > 0) {
-              objErrorsWithDepth.push(...result)
+              nonShallowObjErrors.push(...result)
             } else {
-              objErrors.push(...result)
+              if (shallowObjErrorsCount < maxShallowObjErrors) {
+                shallowObjErrors.push(...result)
+              }
+
+              shallowObjErrorsCount += 1
             }
           } else {
             hasNonObjTypeMember = true
@@ -399,18 +406,15 @@ export function rc_union<T extends RcType<any>[]>(
 
         ctx.path = basePath
 
-        if (objErrorsWithDepth.length > 0 || objErrors.length > 0) {
-          const objErrorsLength = objErrors.length
-
-          if (objErrorsLength > 3) {
-            objErrors = objErrors.slice(0, 3)
+        if (nonShallowObjErrors.length > 0 || shallowObjErrors.length > 0) {
+          if (
+            shallowObjErrorsCount > maxShallowObjErrors ||
+            hasNonObjTypeMember
+          ) {
+            shallowObjErrors.push('not matches any other union member')
           }
 
-          if (objErrorsLength > 3 || hasNonObjTypeMember) {
-            objErrors.push('not matches any union member')
-          }
-
-          return { errors: [...objErrorsWithDepth, ...objErrors] }
+          return { errors: [...nonShallowObjErrors, ...shallowObjErrors] }
         }
 
         return false

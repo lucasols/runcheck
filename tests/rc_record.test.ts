@@ -180,7 +180,9 @@ describe('rc_record', () => {
     expect(result).toEqual(
       errorResult(
         "$.test.ops|union 3|.required: Type 'undefined' is not assignable to 'boolean'",
+        "$.test.ops: not matches any other union member",
         "$.test.channels|union 3|.required: Type 'undefined' is not assignable to 'boolean'",
+        "$.test.channels: not matches any other union member",
       ),
     )
   })
