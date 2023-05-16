@@ -260,8 +260,46 @@ describe('large array with discriminated union', () => {
     }),
   )
 
-  bench('zod', () => {
+  bench('zod.union', () => {
     dataType.parse(largeArray)
+  })
+
+  const dataType2 = zod.array(
+    zod.object({
+      string: zod.string(),
+      number: zod.number(),
+      array: zod.array(zod.number()),
+      obj: objDataType,
+      union: zod.union([
+        zod.string(),
+        zod.discriminatedUnion('type', [
+          zod.object({
+            type: zod.literal('bar'),
+            baz: zod.string(),
+            num: zod.number(),
+          }),
+          zod.object({
+            type: zod.literal('baz'),
+            baz: zod.string(),
+            num: zod.number(),
+          }),
+          zod.object({
+            type: zod.literal('bazs'),
+            baz: zod.string(),
+            num: zod.number(),
+          }),
+          zod.object({
+            type: zod.literal('qux'),
+            baz: zod.string(),
+            num: zod.number(),
+          }),
+        ]),
+      ]),
+    }),
+  )
+
+  bench('zod.discriminatedUnion', () => {
+    dataType2.parse(largeArray)
   })
 
   const schema = rc_array(
