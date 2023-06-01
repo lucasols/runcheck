@@ -16,13 +16,11 @@ type MenuTree = {
 }
 
 describe('rc_recursive', () => {
-  const menuTreeSchema: RcType<MenuTree[]> = rc_recursive(() =>
-    rc_array(
-      rc_object({
-        name: rc_string,
-        children: menuTreeSchema,
-      }),
-    ),
+  const menuTreeSchema: RcType<MenuTree[]> = rc_array(
+    rc_object({
+      name: rc_string,
+      children: rc_recursive(() => menuTreeSchema),
+    }),
   )
 
   const parse: RcParser<MenuTree[]> = rc_parser(menuTreeSchema)

@@ -954,7 +954,7 @@ export function rc_validator<S>(type: RcType<S>) {
   return (input: any): input is S => rc_is_valid(input, type)
 }
 
-export function rc_recursive(type: () => RcType<any>): RcType<any> {
+export function rc_recursive<T>(type: () => RcType<T>): RcType<T> {
   return {
     ...defaultProps,
     _kind_: 'recursive',
