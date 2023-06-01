@@ -1,10 +1,13 @@
 import { describe, expect, test } from 'vitest'
 import {
   RcType,
+  rc_literals,
   rc_number,
   rc_object,
   rc_parse,
+  rc_record,
   rc_string,
+  rc_undefined,
   rc_union,
 } from '../src/runcheck'
 import { errorResult, successResult } from './testUtils'
@@ -89,6 +92,27 @@ test('show errors with more depth', () => {
       "$.obj|union 6|.b: Type 'undefined' is not assignable to 'number'",
       "$.obj|union 1|.a: Type 'number' is not assignable to 'string'",
       '$.obj: not matches any other union member',
+    ),
+  )
+})
+
+test('show union in error', () => {
+  const shape = rc_object({
+    obj: rc_record(
+      rc_union(rc_undefined, rc_literals('*'), rc_object({ a: rc_string })),
+    ),
+  })
+
+  expect(rc_parse({ obj: { a: 1 } }, shape)).toEqual(
+    errorResult(
+      "$.obj.a: Type 'number' is not assignable to 'undefined | string(*) | object'",
+    ),
+  )
+
+  expect(rc_parse({ obj: { a: { b: 2 } } }, shape)).toEqual(
+    errorResult(
+      "$.obj.a|union 3|.a: Type 'undefined' is not assignable to 'string'",
+      '$.obj.a: not matches any other union member',
     ),
   )
 })

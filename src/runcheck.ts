@@ -389,7 +389,7 @@ export function rc_union<T extends RcType<any>[]>(
 
           if (ok) {
             return true
-          } else if (type._is_object_) {
+          } else if (type._is_object_ && objErrIndex !== -1) {
             if (objErrIndex > 0) {
               nonShallowObjErrors.push(...result)
             } else {
@@ -456,7 +456,10 @@ export function rc_object<T extends RcObject>(
     _is_object_: true,
     _parse_(inputObj, ctx) {
       return parse<TypeOfObjectType<T>>(this, inputObj, ctx, () => {
-        if (!isObject(inputObj)) return false
+        if (!isObject(inputObj)) {
+          ctx.objErrKeyIndex = -1
+          return false
+        }
 
         const excessKeys =
           this._kind_ === 'strict_obj'
