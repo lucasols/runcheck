@@ -103,9 +103,9 @@ test('show union in error', () => {
     ),
   })
 
-  expect(rc_parse({ obj: { a: 1 } }, shape)).toEqual(
+  expect(rc_parse({ obj: { a: '**' } }, shape)).toEqual(
     errorResult(
-      "$.obj.a: Type 'number' is not assignable to 'undefined | string(*) | object'",
+      "$.obj.a: Type 'string' is not assignable to 'undefined | string(*) | object'",
     ),
   )
 
