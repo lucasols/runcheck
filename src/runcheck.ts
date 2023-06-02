@@ -142,11 +142,7 @@ function parse<T>(
   if (fb !== undefined) {
     addWarning(
       ctx,
-      `Fallback used, errors -> ${
-        isValid && 'errors' in isValid
-          ? isValid.errors.map((err) => err.replace(ctx.path, '')).join('; ')
-          : type._getErrorMsg_(input)
-      }`,
+      `Fallback used, errors -> ${getWarnings<T>(isValid, ctx, type, input)}`,
     )
 
     return [true, isFn(fb) ? fb() : fb]
@@ -162,7 +158,10 @@ function parse<T>(
         }
       }
 
-      addWarning(ctx, `Autofixed from error "${type._getErrorMsg_(input)}"`)
+      addWarning(
+        ctx,
+        `Autofixed from error "${getWarnings<T>(isValid, ctx, type, input)}"`,
+      )
 
       return [true, autofixed.fixed]
     }
@@ -174,6 +173,17 @@ function parse<T>(
       ? isValid.errors
       : [type._getErrorMsg_(input)],
   ]
+}
+
+function getWarnings<T>(
+  isValid: false | { errors: string[] },
+  ctx: ParseResultCtx,
+  type: RcType<T>,
+  input: unknown,
+) {
+  return isValid && 'errors' in isValid
+    ? isValid.errors.map((err) => err.replace(ctx.path, '')).join('; ')
+    : type._getErrorMsg_(input)
 }
 
 function withAutofix(
