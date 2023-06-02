@@ -47,9 +47,7 @@ describe('rc_string', () => {
         'hello',
         rc_string.where((input) => input.length === 6),
       ),
-    ).toEqual(
-      errorResult(`Type 'string' is not assignable to 'string_with_predicate'`),
-    )
+    ).toEqual(errorResult(`Predicate failed for type 'string'`))
   })
 })
 
@@ -81,7 +79,7 @@ describe('rc_number', () => {
         rc_number.where((input) => input < 2),
       ),
     ).toEqual(
-      errorResult(`Type 'number' is not assignable to 'number_with_predicate'`),
+      errorResult(`Predicate failed for type 'number'`),
     )
   })
 })

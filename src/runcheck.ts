@@ -129,7 +129,7 @@ function parse<T>(
 
       if (type._predicate_) {
         if (!type._predicate_(validResult)) {
-          return [false, [type._getErrorMsg_(validResult)]]
+          return [false, [`Predicate failed for type '${type._kind_}'`]]
         }
       }
 
@@ -142,7 +142,12 @@ function parse<T>(
   if (fb !== undefined) {
     addWarning(
       ctx,
-      `Fallback used, errors -> ${getWarnings<T>(isValid, ctx, type, input)}`,
+      `Fallback used, errors -> ${getResultErrors<T>(
+        isValid,
+        ctx,
+        type,
+        input,
+      )}`,
     )
 
     return [true, isFn(fb) ? fb() : fb]
@@ -154,13 +159,18 @@ function parse<T>(
     if (autofixed) {
       if (type._predicate_) {
         if (!type._predicate_(autofixed.fixed)) {
-          return [false, [type._getErrorMsg_(autofixed.fixed)]]
+          return [false, [`Predicate failed for autofix in type '${type._kind_}'`]]
         }
       }
 
       addWarning(
         ctx,
-        `Autofixed from error "${getWarnings<T>(isValid, ctx, type, input)}"`,
+        `Autofixed from error "${getResultErrors<T>(
+          isValid,
+          ctx,
+          type,
+          input,
+        )}"`,
       )
 
       return [true, autofixed.fixed]
@@ -175,7 +185,7 @@ function parse<T>(
   ]
 }
 
-function getWarnings<T>(
+function getResultErrors<T>(
   isValid: false | { errors: string[] },
   ctx: ParseResultCtx,
   type: RcType<T>,
@@ -204,7 +214,6 @@ function where(
   return {
     ...this,
     _predicate_: predicate,
-    _kind_: `${this._kind_}_with_predicate`,
   }
 }
 
