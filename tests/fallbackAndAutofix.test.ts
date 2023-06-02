@@ -16,7 +16,7 @@ describe('fallback', () => {
 
     expect(result).toEqual(
       successResult('world', [
-        "Fallback used, Type 'number' is not assignable to 'string'",
+        "Fallback used, errors -> Type 'number' is not assignable to 'string'",
       ]),
     )
   })

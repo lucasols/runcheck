@@ -2,21 +2,22 @@ import { describe, expect, test } from 'vitest'
 import {
   RcParseResult,
   rc_array,
+  rc_assert_is_valid,
   rc_extends_obj,
   rc_get_obj_schema,
+  rc_literals,
+  rc_loose_array,
   rc_number,
-  rc_object,
   rc_obj_intersection,
+  rc_obj_omit,
+  rc_obj_pick,
+  rc_object,
   rc_parse,
   rc_parser,
   rc_rename_from_key,
-  rc_rename_key,
   rc_strict_obj,
   rc_string,
   rc_transform,
-  rc_obj_pick,
-  rc_assert_is_valid,
-  rc_obj_omit,
 } from '../src/runcheck'
 import { errorResult, successResult } from './testUtils'
 
@@ -49,7 +50,7 @@ describe('rc_object', () => {
 
     expect(result).toEqual(
       successResult({ hello: 'world' }, [
-        `Fallback used, Type 'number' is not assignable to 'object'`,
+        `Fallback used, errors -> Type 'number' is not assignable to 'object'`,
       ]),
     )
   })
@@ -251,8 +252,8 @@ describe('rc_obj_intersections', () => {
 
 describe('rc_rename_key', () => {
   const objSchema = {
-    id: rc_rename_key('user_id', rc_number),
-    renamed: rc_rename_key('old_name', rc_number),
+    id: rc_rename_from_key('user_id', rc_number),
+    renamed: rc_rename_from_key('old_name', rc_number),
     name: rc_string,
   }
 
@@ -329,7 +330,7 @@ describe('rc_rename_key', () => {
     const helloParser = rc_parser(
       rc_array(
         rc_object({
-          id: rc_rename_key('oldKey', rc_number),
+          id: rc_rename_from_key('oldKey', rc_number),
         }),
         { unique: 'id' },
       ),
@@ -493,5 +494,69 @@ describe('rc_obj_omit', () => {
     expect(result).toEqual(
       errorResult("$.oldName: Type 'undefined' is not assignable to 'number'"),
     )
+  })
+})
+
+test('reproduce wrong message bug', () => {
+  const dataToValidate = [
+    {
+      attachments: [
+        {
+          id: 'GpkM0HesSgi5cJZifxGPB-2',
+          ext: 'png',
+          date: '2023-04-06T15:14',
+          file: {
+            data: [137, 96, 130],
+            type: 'Buffer',
+          },
+          name: 'Screen Shot',
+          size: 306577,
+          type: 'image',
+          user: {
+            id: 82,
+            name: 'Teilor Magrin',
+          },
+          isNew: true,
+          status: 'temp_uploaded',
+          user_id: 82,
+          fileType: 'image/png',
+          originalName: 'Screen Shot.png',
+        },
+      ],
+    },
+  ]
+
+  const apiFileObjSchema = rc_object({
+    id: rc_string,
+    name: rc_string,
+    originalName: rc_string,
+    ext: rc_string,
+    fileType: rc_string,
+    file: rc_string,
+    size: rc_number,
+    user_id: rc_number.orNull(),
+    videoThumb: rc_string.optional(),
+    universal_file: rc_string.optional(),
+    transcription: rc_string.optional(),
+    short_transcription: rc_string.optional(),
+    audio_conversion_status: rc_literals(
+      'pending',
+      'success',
+      'error',
+    ).optional(),
+  })
+
+  const attachmentsSchema = rc_loose_array(apiFileObjSchema).withFallback([])
+
+  const schema = rc_object({
+    attachments: attachmentsSchema.orNullish(),
+  })
+
+  const result = rc_parse(dataToValidate, rc_array(schema))
+
+  expect(result).toMatchObject({
+    warnings: [
+      "$[0].attachments[0]: Fallback used, errors -> $.file: Type 'object' is not assignable to 'string'",
+    ],
   })
 })

@@ -221,7 +221,7 @@ describe('array unique', () => {
 
     expect(error).toMatchInlineSnapshot(
       errorResult(
-        `$[2].meta_id: Type 'object' unique fn return with value "4" is not unique`,
+        `$[2]: Type 'object' unique fn return with value "4" is not unique`,
       ),
     )
   })

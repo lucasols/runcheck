@@ -36,7 +36,7 @@ describe('rc_string', () => {
   test('with fallback', () => {
     expect(rc_parse(1, rc_string.withFallback('world'))).toEqual(
       successResult('world', [
-        "Fallback used, Type 'number' is not assignable to 'string'",
+        "Fallback used, errors -> Type 'number' is not assignable to 'string'",
       ]),
     )
   })
@@ -69,7 +69,7 @@ describe('rc_number', () => {
 
     expect(rc_parse(NaN, rc_number.withFallback(5))).toEqual(
       successResult(5, [
-        "Fallback used, Type 'number' is not assignable to 'number'",
+        "Fallback used, errors -> Type 'number' is not assignable to 'number'",
       ]),
     )
   })

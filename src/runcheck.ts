@@ -140,7 +140,14 @@ function parse<T>(
   const fb = type._fallback_
 
   if (fb !== undefined) {
-    addWarning(ctx, `Fallback used, ${type._getErrorMsg_(input)}`)
+    addWarning(
+      ctx,
+      `Fallback used, errors -> ${
+        isValid && 'errors' in isValid
+          ? isValid.errors.map((err) => err.replace(ctx.path, '')).join('; ')
+          : type._getErrorMsg_(input)
+      }`,
+    )
 
     return [true, isFn(fb) ? fb() : fb]
   }
@@ -741,10 +748,14 @@ function checkArrayItems(
 
     const subPath = `[${index}]`
 
-    ctx.path = `${parentPath}${subPath}`
+    const path = `${parentPath}${subPath}`
+
+    ctx.path = path
 
     let parseResult = type._parse_(_item, ctx)
     const [initialIsValid, initialResult] = parseResult
+
+    ctx.path = path
 
     const unique = options?.unique
 

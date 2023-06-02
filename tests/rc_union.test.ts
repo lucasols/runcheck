@@ -36,7 +36,7 @@ describe('rc_union', () => {
 
     expect(result).toEqual(
       successResult('world', [
-        "Fallback used, Type 'object' is not assignable to 'string | number'",
+        "Fallback used, errors -> Type 'object' is not assignable to 'string | number'",
       ]),
     )
   })
