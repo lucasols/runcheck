@@ -119,7 +119,7 @@ describe('boolean', () => {
   })
 })
 
-describe.only('large array', () => {
+describe('large array', () => {
   const largeArray = Array.from({ length: 100 }, (_, i) => ({
     string: `string${i}`,
     number: i,
