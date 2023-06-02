@@ -1,9 +1,9 @@
 node_modules
 table.cpuprofile
-dist
-dist-bench
+dist*
 cache.json
 .DS_Store
 benchmarks/profiles/*.cpuprofile
 dist-test
-v8.log
+v8*.log
+last-build-version.txt

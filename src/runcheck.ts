@@ -49,33 +49,40 @@ export type RcType<T> = {
   /** @internal */
   readonly _getErrorMsg_: (input: unknown) => string
   /** @internal */
-  readonly _fallback_?: T | (() => T)
+  readonly _fallback_: T | (() => T) | undefined
   /** @internal */
-  readonly _predicate_?: (input: T) => boolean
+  readonly _predicate_: ((input: T) => boolean) | undefined
   /** @internal */
-  readonly _optional_?: true
+  readonly _optional_: boolean
   /** @internal */
-  readonly _orNullish_?: true
+  readonly _orNullish_: boolean
   /** @internal */
-  readonly _orNull_?: true
+  readonly _orNull_: boolean
   /** @internal */
-  readonly _useAutFix_?: true
+  readonly _useAutFix_: boolean
   /** @internal */
-  readonly _is_object_?: true
+  readonly _is_extend_obj_: boolean
   /** @internal */
-  readonly _show_value_in_error_?: true
+  readonly _is_object_: boolean
   /** @internal */
-  readonly _alternative_key_?: string
+  readonly _shape_entries_: [string, RcType<any>][]
   /** @internal */
-  readonly _obj_shape_?: Record<string, RcType<any>>
+  readonly _show_value_in_error_: boolean
   /** @internal */
-  readonly _array_shape_?: Record<string, RcType<any>>
+  readonly _alternative_key_: string | undefined
   /** @internal */
-  readonly _autoFix_?: (input: unknown) => false | { fixed: T }
+  readonly _obj_shape_: Record<string, RcType<any>> | undefined
+  /** @internal */
+  readonly _array_shape_: Record<string, RcType<any>> | undefined
+  /** @internal */
+  readonly _autoFix_: ((input: unknown) => false | { fixed: T }) | undefined
 }
 
 function withFallback(this: RcType<any>, fallback: any): RcType<any> {
-  return { ...this, _fallback_: fallback }
+  return {
+    ...this,
+    _fallback_: fallback,
+  }
 }
 
 function gerWarningOrErrorWithPath(
@@ -97,11 +104,16 @@ function addWarnings(ctx: ParseResultCtx, warnings: string[]) {
   warnings.forEach((warning) => addWarning(ctx, warning))
 }
 
+type IsValid<T> =
+  | boolean
+  | { data: T; errors: false }
+  | { data: undefined; errors: string[] }
+
 function parse<T>(
   type: RcType<T>,
   input: unknown,
   ctx: ParseResultCtx,
-  checkIfIsValid: () => boolean | { data: T } | { errors: string[] },
+  checkIfIsValid: () => IsValid<T>,
 ): InternalParseResult<T> {
   if (type._optional_) {
     if (input === undefined) {
@@ -124,7 +136,7 @@ function parse<T>(
   const isValid = checkIfIsValid()
 
   if (isValid) {
-    if (isValid === true || 'data' in isValid) {
+    if (isValid === true || !isValid.errors) {
       const validResult = isValid === true ? (input as T) : isValid.data
 
       if (type._predicate_) {
@@ -142,12 +154,7 @@ function parse<T>(
   if (fb !== undefined) {
     addWarning(
       ctx,
-      `Fallback used, errors -> ${getResultErrors<T>(
-        isValid,
-        ctx,
-        type,
-        input,
-      )}`,
+      `Fallback used, errors -> ${getResultErrors(isValid, ctx, type, input)}`,
     )
 
     return [true, isFn(fb) ? fb() : fb]
@@ -159,39 +166,32 @@ function parse<T>(
     if (autofixed) {
       if (type._predicate_) {
         if (!type._predicate_(autofixed.fixed)) {
-          return [false, [`Predicate failed for autofix in type '${type._kind_}'`]]
+          return [
+            false,
+            [`Predicate failed for autofix in type '${type._kind_}'`],
+          ]
         }
       }
 
       addWarning(
         ctx,
-        `Autofixed from error "${getResultErrors<T>(
-          isValid,
-          ctx,
-          type,
-          input,
-        )}"`,
+        `Autofixed from error "${getResultErrors(isValid, ctx, type, input)}"`,
       )
 
       return [true, autofixed.fixed]
     }
   }
 
-  return [
-    false,
-    isValid && 'errors' in isValid
-      ? isValid.errors
-      : [type._getErrorMsg_(input)],
-  ]
+  return [false, isValid ? isValid.errors : [type._getErrorMsg_(input)]]
 }
 
-function getResultErrors<T>(
+function getResultErrors(
   isValid: false | { errors: string[] },
   ctx: ParseResultCtx,
-  type: RcType<T>,
+  type: RcType<any>,
   input: unknown,
 ) {
-  return isValid && 'errors' in isValid
+  return isValid
     ? isValid.errors.map((err) => err.replace(ctx.path, '')).join('; ')
     : type._getErrorMsg_(input)
 }
@@ -247,7 +247,7 @@ function orNullish(this: RcType<any>): RcType<any | null | undefined> {
   }
 }
 
-const defaultProps = {
+const defaultProps: Omit<RcType<any>, '_parse_' | '_kind_'> = {
   withFallback,
   where,
   optional,
@@ -255,6 +255,20 @@ const defaultProps = {
   orNullish,
   withAutofix,
   orNull,
+  _fallback_: undefined,
+  _predicate_: undefined,
+  _optional_: false,
+  _orNull_: false,
+  _orNullish_: false,
+  _useAutFix_: false,
+  _show_value_in_error_: false,
+  _alternative_key_: undefined,
+  _autoFix_: undefined,
+  _array_shape_: undefined,
+  _obj_shape_: undefined,
+  _is_object_: false,
+  _is_extend_obj_: false,
+  _shape_entries_: [],
 }
 
 export const rc_undefined: RcType<undefined> = {
@@ -440,7 +454,10 @@ export function rc_union<T extends RcType<any>[]>(
             shallowObjErrors.push('not matches any other union member')
           }
 
-          return { errors: [...nonShallowObjErrors, ...shallowObjErrors] }
+          return {
+            errors: [...nonShallowObjErrors, ...shallowObjErrors],
+            data: undefined,
+          }
         }
 
         return false
@@ -480,6 +497,7 @@ export function rc_object<T extends RcObject>(
     _obj_shape_: shape,
     _kind_: 'object',
     _is_object_: true,
+    _shape_entries_: Object.entries(shape),
     _parse_(inputObj, ctx) {
       return parse<TypeOfObjectType<T>>(this, inputObj, ctx, () => {
         if (!isObject(inputObj)) {
@@ -498,7 +516,7 @@ export function rc_object<T extends RcObject>(
         const parentPath = ctx.path
 
         let i = -1
-        for (const [key, type] of Object.entries(shape)) {
+        for (const [key, type] of this._shape_entries_) {
           const typekey = key as keyof T
           i += 1
 
@@ -535,9 +553,7 @@ export function rc_object<T extends RcObject>(
           }
           //
           else {
-            const errors = result
-
-            for (const subError of errors) {
+            for (const subError of result) {
               resultErrors.push(gerWarningOrErrorWithPath(ctx, subError))
             }
 
@@ -559,11 +575,12 @@ export function rc_object<T extends RcObject>(
         }
 
         if (resultErrors.length > 0) {
-          return { errors: resultErrors }
+          return { errors: resultErrors, data: undefined }
         }
 
-        if (this._kind_.startsWith('extends_object')) {
+        if (this._is_extend_obj_) {
           return {
+            errors: false,
             data: {
               ...(inputObj as any),
               ...(resultObj as any),
@@ -571,7 +588,7 @@ export function rc_object<T extends RcObject>(
           }
         }
 
-        return { data: resultObj as any }
+        return { errors: false, data: resultObj as any }
       })
     },
   }
@@ -581,6 +598,7 @@ export function rc_extends_obj<T extends RcObject>(shape: T): RcObjType<T> {
   return {
     ...rc_object(shape),
     _kind_: `extends_object`,
+    _is_extend_obj_: true,
   }
 }
 
@@ -724,11 +742,11 @@ export function rc_record<V extends RcType<any>>(
           if (looseCheck) {
             addWarnings(ctx, resultErrors)
           } else {
-            return { errors: resultErrors }
+            return { errors: resultErrors, data: undefined }
           }
         }
 
-        return { data: resultObj as any }
+        return { errors: false, data: resultObj as any }
       })
     },
   }
@@ -751,19 +769,21 @@ function checkArrayItems(
   types: RcType<any> | readonly RcType<any>[],
   ctx: ParseResultCtx,
   loose = false,
-  options?: { unique: boolean | string | false | ((item: any) => any) },
-): { errors: string[] } | { data: any[] } | true {
-  let index = -1
+  options?: { unique: boolean | string | ((item: any) => any) },
+): IsValid<any[]> {
   const looseErrors: string[][] = []
   const arrayResult: any[] = []
   const uniqueValues = new Set<any>()
 
   const parentPath = ctx.path
 
+  const isTuple = Array.isArray(types)
+
+  let index = -1
   for (const _item of input) {
     index++
 
-    const type: RcType<any> = Array.isArray(types) ? types[index] : types
+    const type: RcType<any> = isTuple ? types[index] : types
 
     const subPath = `[${index}]`
 
@@ -819,6 +839,7 @@ function checkArrayItems(
       if (!loose) {
         return {
           errors: result.map((error) => gerWarningOrErrorWithPath(ctx, error)),
+          data: undefined,
         }
       } else {
         looseErrors.push(
@@ -833,13 +854,13 @@ function checkArrayItems(
 
   if (looseErrors.length > 0) {
     if (arrayResult.length === 0) {
-      return { errors: looseErrors.slice(0, 5).flat() }
+      return { errors: looseErrors.slice(0, 5).flat(), data: undefined }
     } else {
       addWarnings(ctx, looseErrors.flat())
     }
   }
 
-  return { data: arrayResult }
+  return { errors: false, data: arrayResult }
 }
 
 export function rc_array<T extends RcType<any>>(

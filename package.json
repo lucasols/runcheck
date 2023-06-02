@@ -15,8 +15,7 @@
     "build": "pnpm test:run && pnpm lint && pnpm build:no-test",
     "build:no-test": "tsup --minify --dts",
     "build-test": "tsup --config tsup.test.config.ts",
-    "npm-publish": "./scripts/check-if-is-sync.sh && pnpm build && npm publish",
-    "dexnode": "pnpx dexnode --out ./benchmarks/v8.log ./benchmarks/deopt-test.js -p ."
+    "npm-publish": "./scripts/check-if-is-sync.sh && pnpm build && npm publish"
   },
   "files": [
     "dist"
