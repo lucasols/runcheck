@@ -45,23 +45,23 @@ export type RcType<T> = {
     ctx: ParseResultCtx,
   ) => InternalParseResult<T>
   /** @internal */
-  _kind_: string
+  readonly _kind_: string
   /** @internal */
   readonly _getErrorMsg_: (input: unknown) => string
   /** @internal */
-  _fallback_: T | (() => T) | undefined
+  readonly _fallback_: T | (() => T) | undefined
   /** @internal */
-  _predicate_: ((input: T) => boolean) | undefined
+  readonly _predicate_: ((input: T) => boolean) | undefined
   /** @internal */
-  _optional_: boolean
+  readonly _optional_: boolean
   /** @internal */
-  _orNullish_: boolean
+  readonly _orNullish_: boolean
   /** @internal */
-  _orNull_: boolean
+  readonly _orNull_: boolean
   /** @internal */
-  _useAutFix_: boolean
+  readonly _useAutFix_: boolean
   /** @internal */
-  _is_extend_obj_: boolean
+  readonly _is_extend_obj_: boolean
   /** @internal */
   readonly _is_object_: boolean
   /** @internal */
@@ -69,19 +69,20 @@ export type RcType<T> = {
   /** @internal */
   readonly _show_value_in_error_: boolean
   /** @internal */
-  _alternative_key_: string | undefined
+  readonly _alternative_key_: string | undefined
   /** @internal */
   readonly _obj_shape_: Record<string, RcType<any>> | undefined
   /** @internal */
   readonly _array_shape_: Record<string, RcType<any>> | undefined
   /** @internal */
-  _autoFix_: ((input: unknown) => false | { fixed: T }) | undefined
+  readonly _autoFix_: ((input: unknown) => false | { fixed: T }) | undefined
 }
 
 function withFallback(this: RcType<any>, fallback: any): RcType<any> {
-  this._fallback_ = fallback
-
-  return this
+  return {
+    ...this,
+    _fallback_: fallback,
+  }
 }
 
 function gerWarningOrErrorWithPath(
@@ -199,25 +200,28 @@ function withAutofix(
   this: RcType<any>,
   customAutofix: (input: unknown) => any,
 ): RcType<any> {
-  this._useAutFix_ = true
-  this._autoFix_ = customAutofix
-
-  return this
+  return {
+    ...this,
+    _autoFix_: customAutofix,
+    _useAutFix_: true,
+  }
 }
 
 function where(
   this: RcType<any>,
   predicate: (input: any) => boolean,
 ): RcType<any> {
-  this._predicate_ = predicate
-
-  return this
+  return {
+    ...this,
+    _predicate_: predicate,
+  }
 }
 
 function optional(this: RcType<any>): RcOptional<any> {
-  this._optional_ = true
-
-  return this
+  return {
+    ...this,
+    _optional_: true,
+  }
 }
 
 function _getErrorMsg_(this: RcType<any>, input: unknown): string {
@@ -228,17 +232,19 @@ function _getErrorMsg_(this: RcType<any>, input: unknown): string {
 }
 
 function orNull(this: RcType<any>): RcType<any | null> {
-  this._orNull_ = true
-  this._kind_ = `${this._kind_}_or_null`
-
-  return this
+  return {
+    ...this,
+    _orNull_: true,
+    _kind_: `${this._kind_}_or_null`,
+  }
 }
 
 function orNullish(this: RcType<any>): RcType<any | null | undefined> {
-  this._orNullish_ = true
-  this._kind_ = `${this._kind_}_or_nullish`
-
-  return this
+  return {
+    ...this,
+    _orNullish_: true,
+    _kind_: `${this._kind_}_or_nullish`,
+  }
 }
 
 const defaultProps: Omit<RcType<any>, '_parse_' | '_kind_'> = {
@@ -465,9 +471,10 @@ export function rc_rename_from_key<T extends RcType<any>>(
   alternativeNames: string,
   type: T,
 ): RcType<RcInferType<T>> {
-  type._alternative_key_ = alternativeNames
-
-  return type
+  return {
+    ...type,
+    _alternative_key_: alternativeNames,
+  }
 }
 
 /** @deprecated use `rc_rename_from_key` instead */
@@ -588,12 +595,11 @@ export function rc_object<T extends RcObject>(
 }
 
 export function rc_extends_obj<T extends RcObject>(shape: T): RcObjType<T> {
-  const obj = rc_object(shape)
-
-  obj._kind_ = `extends_object`
-  obj._is_extend_obj_ = true
-
-  return obj
+  return {
+    ...rc_object(shape),
+    _kind_: `extends_object`,
+    _is_extend_obj_: true,
+  }
 }
 
 export function rc_get_obj_schema<T extends RcObject>(type: RcObjType<T>): T {
