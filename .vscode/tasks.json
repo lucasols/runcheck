@@ -7,6 +7,31 @@
       "label": "run tests",
       "type": "npm",
       "script": "test"
+    },
+    {
+      "label": "bump version and deploy",
+      "type": "shell",
+      "command": "pnpm version ${input:version} && pnpm run npm-publish",
+      "problemMatcher": []
+    },
+    {
+      "label": "run v8 profiler",
+      "type": "shell",
+      "command": "pnpx dexnode --out ./benchmarks/${input:fileName}.log ./benchmarks/deopt-test.js -p .",
+      "problemMatcher": []
+    }
+  ],
+  "inputs": [
+    {
+      "id": "fileName",
+      "type": "promptString",
+      "description": "Enter the file name"
+    },
+    {
+      "id": "version",
+      "type": "pickString",
+      "description": "Select version type",
+      "options": ["minor", "patch", "major"]
     }
   ]
 }

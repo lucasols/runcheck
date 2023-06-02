@@ -12,6 +12,7 @@
     "noImplicitReturns": true,
     "noImplicitAny": true,
     "alwaysStrict": true,
+    "resolveJsonModule": true,
     "allowJs": true,
     "strict": true,
     "noUncheckedIndexedAccess": true,

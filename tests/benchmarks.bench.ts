@@ -119,7 +119,7 @@ describe('boolean', () => {
   })
 })
 
-describe('large array', () => {
+describe.only('large array', () => {
   const largeArray = Array.from({ length: 100 }, (_, i) => ({
     string: `string${i}`,
     number: i,
@@ -219,7 +219,7 @@ describe('large array with union', () => {
   })
 })
 
-describe('large array with discriminated union', () => {
+describe.only('large array with discriminated union', () => {
   const largeArray = Array.from({ length: 100 }, (_, i) => ({
     string: `string${i}`,
     number: i,
