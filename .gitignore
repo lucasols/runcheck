@@ -6,3 +6,4 @@ cache.json
 .DS_Store
 benchmarks/profiles/*.cpuprofile
 dist-test
+v8.log

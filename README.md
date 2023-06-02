@@ -1,6 +1,6 @@
 # Runcheck
 
-A lib for js/typescript runtime type checks with autofix support. Runcheck has the goal of being very lightweight and fast ⚡. Because of that, it has only around [1.7kb Gzipped](https://bundlephobia.com/package/runcheck), has no dependencies and is tree-shakeable!
+A lib for js/typescript runtime type checks with autofix support. Runcheck has the goal of being very lightweight and fast ⚡. Because of that, it has only around [2.9kb Gzipped](https://bundlephobia.com/package/runcheck) (at v0.30), has no dependencies and is tree-shakeable!
 
 Benchmarks:
 
@@ -285,14 +285,12 @@ type MenuTree = {
 }
 
 // the type should be provided manually to the variable in this case
-const menuTreeSchema: RcType<MenuTree[]> = rc_recursive(() =>
-  rc_array(
-    rc_object({
-      name: rc_string,
-      // you can safely autorefence the schema here
-      children: menuTreeSchema,
-    }),
-  ),
+const menuTreeSchema: RcType<MenuTree[]> = rc_array(
+  rc_object({
+    name: rc_string,
+    // you can safely autorefence the schema here
+    children: rc_recursive(() => menuTreeSchema),
+  }),
 )
 
 const result = rc_parse(input, menuTreeSchema)
