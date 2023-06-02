@@ -5,8 +5,9 @@ import {
   rc_array,
   rc_string,
   rc_boolean,
-} from '../dist-test/runcheck.js'
+} from '../src/runcheck.js'
 import { generateProfile } from './profileUtils'
+import * as old from '../dist/runcheck.js'
 
 const validateData = Object.freeze({
   number: 1,
@@ -62,5 +63,40 @@ generateProfile(
   () => {
     rc_parse(largeArray, schema)
   },
-  { heatup: 100 },
+  { heatup: 1000 },
+)
+
+export const oldObjShape = old.rc_object({
+  number: old.rc_number,
+  negNumber: old.rc_number,
+  maxNumber: old.rc_number,
+  string: old.rc_string,
+  longString: old.rc_string,
+  boolean: old.rc_boolean,
+  deeplyNested: old.rc_object({
+    foo: old.rc_string,
+    num: old.rc_number,
+    bool: old.rc_boolean,
+  }),
+})
+
+const oldSchema = old.rc_array(
+  old.rc_object({
+    string: old.rc_string,
+    number: old.rc_number,
+    array: old.rc_array(old.rc_number),
+    obj: oldObjShape,
+  }),
+)
+
+if (old.rc_parse(largeArray, oldSchema).error) {
+  throw new Error('invalid data')
+}
+
+generateProfile(
+  'large arrays old',
+  () => {
+    old.rc_parse(largeArray, oldSchema)
+  },
+  { heatup: 1000 },
 )

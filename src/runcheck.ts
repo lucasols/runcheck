@@ -202,8 +202,8 @@ function withAutofix(
 ): RcType<any> {
   return {
     ...this,
-    _autoFix_: customAutofix,
     _useAutFix_: true,
+    _autoFix_: customAutofix,
   }
 }
 
@@ -495,6 +495,7 @@ export function rc_object<T extends RcObject>(
   return {
     ...defaultProps,
     _obj_shape_: shape,
+    _kind_: 'object',
     _is_object_: true,
     _shape_entries_: Object.entries(shape),
     _parse_(inputObj, ctx) {
@@ -590,7 +591,6 @@ export function rc_object<T extends RcObject>(
         return { errors: false, data: resultObj as any }
       })
     },
-    _kind_: 'object',
   }
 }
 
@@ -694,6 +694,7 @@ export function rc_record<V extends RcType<any>>(
 ): RcRecordType<V> {
   return {
     ...defaultProps,
+    _kind_: `record<string, ${valueType._kind_}>`,
     _parse_(inputObj, ctx) {
       return parse<TypeOfObjectType<RcRecord<V>>>(this, inputObj, ctx, () => {
         if (!isObject(inputObj)) return false
@@ -748,7 +749,6 @@ export function rc_record<V extends RcType<any>>(
         return { errors: false, data: resultObj as any }
       })
     },
-    _kind_: `record<string, ${valueType._kind_}>`,
   }
 }
 
@@ -873,6 +873,7 @@ export function rc_array<T extends RcType<any>>(
 
   return {
     ...defaultProps,
+    _kind_: `${type._kind_}[]`,
     _parse_(input, ctx) {
       return parse(this, input, ctx, () => {
         if (!Array.isArray(input)) return false
@@ -882,7 +883,6 @@ export function rc_array<T extends RcType<any>>(
         return checkArrayItems.call(this, input, type, ctx, false, options)
       })
     },
-    _kind_: `${type._kind_}[]`,
   }
 }
 
@@ -897,6 +897,7 @@ export function rc_loose_array<T extends RcType<any>>(
 
   return {
     ...defaultProps,
+    _kind_: `${type._kind_}[]`,
     _parse_(input, ctx) {
       return parse(this, input, ctx, () => {
         if (!Array.isArray(input)) return false
@@ -906,7 +907,6 @@ export function rc_loose_array<T extends RcType<any>>(
         return checkArrayItems.call(this, input, type, ctx, true, options)
       })
     },
-    _kind_: `${type._kind_}[]`,
   }
 }
 
@@ -924,6 +924,7 @@ export function rc_tuple<T extends readonly RcType<any>[]>(
 ): RcType<MapTupleToTypes<T>> {
   return {
     ...defaultProps,
+    _kind_: `[${types.map((type) => type._kind_).join(', ')}]`,
     _parse_(input, ctx) {
       return parse(this, input, ctx, () => {
         if (!Array.isArray(input)) return false
@@ -933,7 +934,6 @@ export function rc_tuple<T extends readonly RcType<any>[]>(
         return checkArrayItems.call(this, input, types, ctx) as boolean
       })
     },
-    _kind_: `[${types.map((type) => type._kind_).join(', ')}]`,
   }
 }
 
@@ -1008,10 +1008,10 @@ export function rc_validator<S>(type: RcType<S>) {
 export function rc_recursive<T>(type: () => RcType<T>): RcType<T> {
   return {
     ...defaultProps,
+    _kind_: 'recursive',
     _parse_(input, ctx) {
       return type()._parse_(input, ctx)
     },
-    _kind_: 'recursive',
   }
 }
 
@@ -1022,6 +1022,7 @@ export function rc_transform<Input, Transformed>(
 ): RcType<Transformed> {
   return {
     ...defaultProps,
+    _kind_: `transform_from_${type._kind_}`,
     _parse_(input, ctx) {
       const [success, dataOrError] = type._parse_(input, ctx)
 
@@ -1031,7 +1032,6 @@ export function rc_transform<Input, Transformed>(
 
       return [false, dataOrError]
     },
-    _kind_: `transform_from_${type._kind_}`,
   }
 }
 
