@@ -45,37 +45,39 @@ export type RcType<T> = {
     ctx: ParseResultCtx,
   ) => InternalParseResult<T>
   /** @internal */
-  readonly _kind_: string
+  _kind_: string
   /** @internal */
   readonly _getErrorMsg_: (input: unknown) => string
   /** @internal */
-  readonly _fallback_?: T | (() => T)
+  _fallback_: T | (() => T) | undefined
   /** @internal */
-  readonly _predicate_?: (input: T) => boolean
+  _predicate_: ((input: T) => boolean) | undefined
   /** @internal */
-  readonly _optional_?: true
+  _optional_: boolean
   /** @internal */
-  readonly _orNullish_?: true
+  _orNullish_: boolean
   /** @internal */
-  readonly _orNull_?: true
+  _orNull_: boolean
   /** @internal */
-  readonly _useAutFix_?: true
+  _useAutFix_: boolean
   /** @internal */
-  readonly _is_object_?: true
+  readonly _is_object_: boolean
   /** @internal */
-  readonly _show_value_in_error_?: true
+  readonly _show_value_in_error_: boolean
   /** @internal */
-  readonly _alternative_key_?: string
+  _alternative_key_: string | undefined
   /** @internal */
-  readonly _obj_shape_?: Record<string, RcType<any>>
+  readonly _obj_shape_: Record<string, RcType<any>> | undefined
   /** @internal */
-  readonly _array_shape_?: Record<string, RcType<any>>
+  readonly _array_shape_: Record<string, RcType<any>> | undefined
   /** @internal */
-  readonly _autoFix_?: (input: unknown) => false | { fixed: T }
+  _autoFix_: ((input: unknown) => false | { fixed: T }) | undefined
 }
 
 function withFallback(this: RcType<any>, fallback: any): RcType<any> {
-  return { ...this, _fallback_: fallback }
+  this._fallback_ = fallback
+
+  return this
 }
 
 function gerWarningOrErrorWithPath(
@@ -159,7 +161,10 @@ function parse<T>(
     if (autofixed) {
       if (type._predicate_) {
         if (!type._predicate_(autofixed.fixed)) {
-          return [false, [`Predicate failed for autofix in type '${type._kind_}'`]]
+          return [
+            false,
+            [`Predicate failed for autofix in type '${type._kind_}'`],
+          ]
         }
       }
 
@@ -200,28 +205,25 @@ function withAutofix(
   this: RcType<any>,
   customAutofix: (input: unknown) => any,
 ): RcType<any> {
-  return {
-    ...this,
-    _useAutFix_: true,
-    _autoFix_: customAutofix,
-  }
+  this._useAutFix_ = true
+  this._autoFix_ = customAutofix
+
+  return this
 }
 
 function where(
   this: RcType<any>,
   predicate: (input: any) => boolean,
 ): RcType<any> {
-  return {
-    ...this,
-    _predicate_: predicate,
-  }
+  this._predicate_ = predicate
+
+  return this
 }
 
 function optional(this: RcType<any>): RcOptional<any> {
-  return {
-    ...this,
-    _optional_: true,
-  }
+  this._optional_ = true
+
+  return this
 }
 
 function _getErrorMsg_(this: RcType<any>, input: unknown): string {
@@ -232,22 +234,20 @@ function _getErrorMsg_(this: RcType<any>, input: unknown): string {
 }
 
 function orNull(this: RcType<any>): RcType<any | null> {
-  return {
-    ...this,
-    _orNull_: true,
-    _kind_: `${this._kind_}_or_null`,
-  }
+  this._orNull_ = true
+  this._kind_ = `${this._kind_}_or_null`
+
+  return this
 }
 
 function orNullish(this: RcType<any>): RcType<any | null | undefined> {
-  return {
-    ...this,
-    _orNullish_: true,
-    _kind_: `${this._kind_}_or_nullish`,
-  }
+  this._orNullish_ = true
+  this._kind_ = `${this._kind_}_or_nullish`
+
+  return this
 }
 
-const defaultProps = {
+const defaultProps: Omit<RcType<any>, '_parse_' | '_kind_'> = {
   withFallback,
   where,
   optional,
@@ -255,6 +255,18 @@ const defaultProps = {
   orNullish,
   withAutofix,
   orNull,
+  _fallback_: undefined,
+  _predicate_: undefined,
+  _optional_: false,
+  _orNull_: false,
+  _orNullish_: false,
+  _useAutFix_: false,
+  _show_value_in_error_: false,
+  _alternative_key_: undefined,
+  _autoFix_: undefined,
+  _array_shape_: undefined,
+  _obj_shape_: undefined,
+  _is_object_: false,
 }
 
 export const rc_undefined: RcType<undefined> = {
@@ -454,10 +466,9 @@ export function rc_rename_from_key<T extends RcType<any>>(
   alternativeNames: string,
   type: T,
 ): RcType<RcInferType<T>> {
-  return {
-    ...type,
-    _alternative_key_: alternativeNames,
-  }
+  type._alternative_key_ = alternativeNames
+
+  return type
 }
 
 /** @deprecated use `rc_rename_from_key` instead */
@@ -478,7 +489,6 @@ export function rc_object<T extends RcObject>(
   return {
     ...defaultProps,
     _obj_shape_: shape,
-    _kind_: 'object',
     _is_object_: true,
     _parse_(inputObj, ctx) {
       return parse<TypeOfObjectType<T>>(this, inputObj, ctx, () => {
@@ -574,6 +584,7 @@ export function rc_object<T extends RcObject>(
         return { data: resultObj as any }
       })
     },
+    _kind_: 'object',
   }
 }
 
@@ -676,7 +687,6 @@ export function rc_record<V extends RcType<any>>(
 ): RcRecordType<V> {
   return {
     ...defaultProps,
-    _kind_: `record<string, ${valueType._kind_}>`,
     _parse_(inputObj, ctx) {
       return parse<TypeOfObjectType<RcRecord<V>>>(this, inputObj, ctx, () => {
         if (!isObject(inputObj)) return false
@@ -731,6 +741,7 @@ export function rc_record<V extends RcType<any>>(
         return { data: resultObj as any }
       })
     },
+    _kind_: `record<string, ${valueType._kind_}>`,
   }
 }
 
@@ -852,7 +863,6 @@ export function rc_array<T extends RcType<any>>(
 
   return {
     ...defaultProps,
-    _kind_: `${type._kind_}[]`,
     _parse_(input, ctx) {
       return parse(this, input, ctx, () => {
         if (!Array.isArray(input)) return false
@@ -862,6 +872,7 @@ export function rc_array<T extends RcType<any>>(
         return checkArrayItems.call(this, input, type, ctx, false, options)
       })
     },
+    _kind_: `${type._kind_}[]`,
   }
 }
 
@@ -876,7 +887,6 @@ export function rc_loose_array<T extends RcType<any>>(
 
   return {
     ...defaultProps,
-    _kind_: `${type._kind_}[]`,
     _parse_(input, ctx) {
       return parse(this, input, ctx, () => {
         if (!Array.isArray(input)) return false
@@ -886,6 +896,7 @@ export function rc_loose_array<T extends RcType<any>>(
         return checkArrayItems.call(this, input, type, ctx, true, options)
       })
     },
+    _kind_: `${type._kind_}[]`,
   }
 }
 
@@ -903,7 +914,6 @@ export function rc_tuple<T extends readonly RcType<any>[]>(
 ): RcType<MapTupleToTypes<T>> {
   return {
     ...defaultProps,
-    _kind_: `[${types.map((type) => type._kind_).join(', ')}]`,
     _parse_(input, ctx) {
       return parse(this, input, ctx, () => {
         if (!Array.isArray(input)) return false
@@ -913,6 +923,7 @@ export function rc_tuple<T extends readonly RcType<any>[]>(
         return checkArrayItems.call(this, input, types, ctx) as boolean
       })
     },
+    _kind_: `[${types.map((type) => type._kind_).join(', ')}]`,
   }
 }
 
@@ -987,10 +998,10 @@ export function rc_validator<S>(type: RcType<S>) {
 export function rc_recursive<T>(type: () => RcType<T>): RcType<T> {
   return {
     ...defaultProps,
-    _kind_: 'recursive',
     _parse_(input, ctx) {
       return type()._parse_(input, ctx)
     },
+    _kind_: 'recursive',
   }
 }
 
@@ -1001,7 +1012,6 @@ export function rc_transform<Input, Transformed>(
 ): RcType<Transformed> {
   return {
     ...defaultProps,
-    _kind_: `transform_from_${type._kind_}`,
     _parse_(input, ctx) {
       const [success, dataOrError] = type._parse_(input, ctx)
 
@@ -1011,6 +1021,7 @@ export function rc_transform<Input, Transformed>(
 
       return [false, dataOrError]
     },
+    _kind_: `transform_from_${type._kind_}`,
   }
 }
 
