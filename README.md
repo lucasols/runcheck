@@ -252,7 +252,7 @@ const positiveNumberType = rc_number.where((input) => input > 0)
 
 # Infer types from schemas
 
-You can use `RcInferType<typeof T>` to infer the types from a schema.
+You can use `RcInferType<typeof schema>` to infer the types from a schema.
 
 ```ts
 const schema = rc_object({
@@ -264,15 +264,17 @@ const schema = rc_object({
 export type Person = RcInferType<typeof schema>
 ```
 
+You can also use the `RcPrettyInferType<typeof schema>` to get a more readable type.
+
 # Type modifiers
 
 You can use also modiers like `rc_string.optional()` to extend the rc types:
 
-| runcheck modifier      | ts type equivalent       |
-| ---------------------- | ------------------------ |
-| `rc_[type].optional()` | `T \| undefined`         |
-| `rc_[type].orNull()` | `T \| null`              |
-| `rc_[type].orNullish()`  | `T \| null \| undefined` |
+| runcheck modifier       | ts type equivalent       |
+| ----------------------- | ------------------------ |
+| `rc_[type].optional()`  | `T \| undefined`         |
+| `rc_[type].orNull()`    | `T \| null`              |
+| `rc_[type].orNullish()` | `T \| null \| undefined` |
 
 # Recursive types
 
@@ -400,4 +402,36 @@ const shape = rc_object({
 const baseSchema = rc_obj_omit(shape, ['isCool'])
 ```
 
-# Other useful utils
+# Investigage rc nested type errors
+
+There are two type utils to help investigate deeply nested type errors, the `RcPrettyInferType` and the `RcSchemaHasType`
+
+```ts
+const schema = rc_object({
+  level1: {
+    level2: {
+      level3: {
+        level4: {
+          level5: rc_string,
+        },
+      },
+    },
+  },
+})
+
+type SchemaType = {
+  level1: {
+    level2: {
+      level3: {
+        level4: {
+          level5: number
+        }
+      }
+    }
+  }
+}
+
+type CheckType = RcSchemaHasType<SchemaType, RcPrettyInferType<typeof schema>>
+// this will reporte better errors than:
+// const schema: RcType<SchemaType> = rc_object...
+```

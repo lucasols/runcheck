@@ -1101,3 +1101,13 @@ export function rc_parse_json<T>(
 function isFn(value: any): value is () => any {
   return typeof value === 'function'
 }
+
+type Prettify<T> = T extends Record<string, any>
+  ? {
+      [K in keyof T]: Prettify<T[K]>
+    }
+  : T
+
+export type RcPrettyInferType<T extends RcType<any>> = Prettify<RcInferType<T>>
+
+export type RcSchemaHasType<E, T extends E> = T
