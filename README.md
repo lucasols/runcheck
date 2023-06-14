@@ -271,8 +271,8 @@ You can use also modiers like `rc_string.optional()` to extend or modify the rc 
 | runcheck modifier      | ts type equivalent       |
 | ---------------------- | ------------------------ |
 | `rc_[type].optional()` | `T \| undefined`         |
-| `rc_[type].nullable()` | `T \| null`              |
-| `rc_[type].nullish()`  | `T \| null \| undefined` |
+| `rc_[type].orNull()` | `T \| null`              |
+| `rc_[type].orNullish()`  | `T \| null \| undefined` |
 
 # Recursive types
 
