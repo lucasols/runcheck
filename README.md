@@ -266,7 +266,7 @@ export type Person = RcInferType<typeof schema>
 
 # Type modifiers
 
-You can use also modiers like `rc_string.optional()` to extend or modify the rc types:
+You can use also modiers like `rc_string.optional()` to extend the rc types:
 
 | runcheck modifier      | ts type equivalent       |
 | ---------------------- | ------------------------ |
