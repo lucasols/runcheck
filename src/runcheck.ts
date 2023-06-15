@@ -752,6 +752,7 @@ export function rc_record<V extends RcType<any>>(
   }
 }
 
+/** instead of returning a general error, rejects invalid keys and returns warnings for these items */
 export function rc_loose_record<V extends RcType<any>>(
   valueType: V,
   { checkKey }: { checkKey?: (key: string) => boolean } = {},
@@ -893,7 +894,7 @@ export function rc_array<T extends RcType<any>>(
   }
 }
 
-/** instead of returning a general erroro, rejects invalid array items and return warnings for these items */
+/** instead of returning a general error, rejects invalid array items and returns warnings for these items */
 export function rc_loose_array<T extends RcType<any>>(
   type: T,
   options?: {
