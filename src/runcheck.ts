@@ -752,6 +752,13 @@ export function rc_record<V extends RcType<any>>(
   }
 }
 
+export function rc_loose_record<V extends RcType<any>>(
+  valueType: V,
+  { checkKey }: { checkKey?: (key: string) => boolean } = {},
+): RcRecordType<V> {
+  return rc_record(valueType, { checkKey, looseCheck: true })
+}
+
 function checkArrayUniqueOption(
   type: RcType<any>,
   uniqueOption: boolean | string | undefined | ((item: any) => any),
