@@ -125,6 +125,20 @@ const shape = rc_record(rc_number, {
 })
 ```
 
+## `rc_loose_record`
+
+Validates only the values of a object, equivalent to `Record<string, T>` in typescript. But, it will reject invalid keys and return the valid ones.
+
+
+
+```ts
+const shape = rc_loose_record(rc_number)
+
+
+
+```
+
+
 # Parsing
 
 ```ts
