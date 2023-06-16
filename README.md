@@ -82,6 +82,11 @@ const shape = rc_object({
   name: rc_string,
   age: rc_number,
   isCool: rc_boolean,
+  // nested objects
+  address: {
+    street: rc_string,
+    number: rc_number,
+  },
 })
 ```
 
@@ -129,15 +134,9 @@ const shape = rc_record(rc_number, {
 
 Validates only the values of a object, equivalent to `Record<string, T>` in typescript. But, it will reject invalid keys and return the valid ones.
 
-
-
 ```ts
 const shape = rc_loose_record(rc_number)
-
-
-
 ```
-
 
 # Parsing
 
@@ -416,23 +415,11 @@ const shape = rc_object({
 const baseSchema = rc_obj_omit(shape, ['isCool'])
 ```
 
-# Investigage rc nested type errors
+# `rc_obj_builder`
 
-There are two type utils to help investigate deeply nested type errors, the `RcPrettyInferType` and the `RcSchemaHasType`
+Creates a `rc_object` from a type. This gives better error messages and autocompletion.
 
 ```ts
-const schema = rc_object({
-  level1: {
-    level2: {
-      level3: {
-        level4: {
-          level5: rc_string,
-        },
-      },
-    },
-  },
-})
-
 type SchemaType = {
   level1: {
     level2: {
@@ -445,7 +432,16 @@ type SchemaType = {
   }
 }
 
-type CheckType = RcSchemaHasType<SchemaType, RcPrettyInferType<typeof schema>>
-// this will reporte better errors than:
-// const schema: RcType<SchemaType> = rc_object...
+const schema = rc_obj_builder<SchemaType>()({
+  level1: {
+    level2: {
+      level3: {
+        level4: {
+          level5: rc_string,
+          // better error here
+        },
+      },
+    },
+  },
+})
 ```

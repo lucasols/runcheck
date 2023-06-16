@@ -480,24 +480,56 @@ export function rc_rename_from_key<T extends RcType<any>>(
 /** @deprecated use `rc_rename_from_key` instead */
 export const rc_rename_key = rc_rename_from_key
 
-type RcObject = Record<string, RcType<any>>
+type RcObject = {
+  [key: string]: RcType<any> | RcObject
+}
 
 type TypeOfObjectType<T extends RcObject> = {
-  [K in keyof T]: RcInferType<T[K]>
+  [K in keyof T]: T[K] extends RcType<any>
+    ? RcInferType<T[K]>
+    : T[K] extends RcObject
+    ? TypeOfObjectType<T[K]>
+    : never
 }
 
 type RcObjType<T extends RcObject> = RcType<TypeOfObjectType<T>>
+
+function isRcType(value: any): value is RcType<any> {
+  return typeof value === 'object' && value !== null && '_kind_' in value
+}
+
+function unwrapObjSchema(input: unknown): RcType<any> {
+  if (isRcType(input)) {
+    return input
+  } else if (isObject(input)) {
+    const objSchema: Record<string, RcType<any>> = {}
+
+    for (const [key, value] of Object.entries(input)) {
+      objSchema[key] = unwrapObjSchema(value)
+    }
+
+    return rc_object(objSchema)
+  }
+
+  throw new Error(`invalid schema: ${input}`)
+}
 
 export function rc_object<T extends RcObject>(
   shape: T,
   { normalizeKeysFrom }: { normalizeKeysFrom?: 'snake_case' } = {},
 ): RcObjType<T> {
+  const objShape: Record<string, RcType<any>> = {}
+
+  for (const [key, value] of Object.entries(shape)) {
+    objShape[key] = unwrapObjSchema(value)
+  }
+
   return {
     ...defaultProps,
-    _obj_shape_: shape,
+    _obj_shape_: objShape,
     _kind_: 'object',
     _is_object_: true,
-    _shape_entries_: Object.entries(shape),
+    _shape_entries_: Object.entries(objShape),
     _parse_(inputObj, ctx) {
       return parse<TypeOfObjectType<T>>(this, inputObj, ctx, () => {
         if (!isObject(inputObj)) {
@@ -1118,4 +1150,18 @@ type Prettify<T> = T extends Record<string, any>
 
 export type RcPrettyInferType<T extends RcType<any>> = Prettify<RcInferType<T>>
 
-export type RcSchemaHasType<E, T extends E> = T
+type TypeToRcType<T> = [T] extends [
+  string | number | boolean | undefined | null,
+]
+  ? RcType<T>
+  : {
+      [K in keyof T]: TypeToRcType<T[K]>
+    }
+
+export function rc_obj_builder<T extends Record<string, any>>() {
+  return <S extends TypeToRcType<T>>(schema: {
+    [K in keyof S]: K extends keyof T ? S[K] : never
+  }): RcObjType<T> => {
+    return rc_object(schema as any)
+  }
+}

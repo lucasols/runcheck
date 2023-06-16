@@ -8,6 +8,7 @@ import {
   rc_literals,
   rc_loose_array,
   rc_number,
+  rc_obj_builder,
   rc_obj_intersection,
   rc_obj_omit,
   rc_obj_pick,
@@ -82,10 +83,7 @@ describe('rc_object', () => {
   })
 
   test('nested object error', () => {
-    const result: RcParseResult<{
-      hello: { world: string }
-      value: string
-    }> = rc_parse(
+    const result = rc_parse(
       { hello: { world: 1 }, value: 'ok' },
       rc_object({
         hello: rc_object({ world: rc_string }),
@@ -93,26 +91,46 @@ describe('rc_object', () => {
       }),
     )
 
+    type Prettify<T> = T extends Record<string, any>
+      ? {
+          [K in keyof T]: Prettify<T[K]>
+        }
+      : T
+
+    if (!result.error) {
+      type Data = Prettify<typeof result.data>
+
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const _data: Data = {
+        hello: { world: '1' },
+        value: 'ok',
+      }
+    }
+
     expect(result).toEqual(
       errorResult(`$.hello.world: Type 'number' is not assignable to 'string'`),
     )
   })
 
   test('2 levels nested object error', () => {
-    const result: RcParseResult<{
-      hello: { world: { value: number } }
-      value: string
-    }> = rc_parse(
+    const result = rc_parse(
       { hello: { world: { value: '1' } }, value: 'ok' },
       rc_object({
-        hello: rc_object({
-          world: rc_object({
+        hello: {
+          world: {
             value: rc_number,
-          }),
-        }),
+          },
+        },
         value: rc_string,
       }),
     )
+
+    if (!result.error) {
+      type Data = typeof result.data
+
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const _data: Data = { hello: { world: { value: 1 } }, value: 'ok' }
+    }
 
     expect(result).toEqual(
       errorResult(
@@ -559,4 +577,43 @@ test('reproduce wrong message bug', () => {
       "$[0].attachments[0]: Fallback used, errors -> $.file: Type 'object' is not assignable to 'string'",
     ],
   })
+})
+
+test('rc_obj_builder', () => {
+  type Test = {
+    a: string
+    b: number
+    c?: string
+    obj: {
+      a: string
+      b: number
+    }
+  }
+
+  const shape = rc_obj_builder<Test>()({
+    a: rc_string,
+    b: rc_number,
+    c: rc_string.optional(),
+    obj: {
+      a: rc_string,
+      b: rc_number,
+    },
+  })
+
+  const result = rc_parse(
+    {
+      a: 'a',
+      b: 1,
+      c: 'c',
+      obj: {
+        a: 'a',
+        b: 1,
+      },
+    },
+    shape,
+  )
+
+  expect(result).toEqual(
+    successResult({ a: 'a', b: 1, c: 'c', obj: { a: 'a', b: 1 } }),
+  )
 })
