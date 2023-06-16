@@ -13,8 +13,6 @@ export type RcInferType<T extends RcType<any>> = T extends RcType<infer U>
   ? U
   : never
 
-type RcOptional<T> = RcType<T | undefined>
-
 type ParseResultCtx = {
   warnings: string[]
   path: string
@@ -26,11 +24,18 @@ type InternalParseResult<T> =
   | [success: true, data: T]
   | [success: false, errors: string[]]
 
-export type RcType<T> = {
-  readonly withFallback: (fallback: T | (() => T)) => RcType<T>
+type WithFallback<T> = (fallback: T | (() => T)) => RcType<T>
+
+type RcRequiredKeyType<T> = RcBase<T, true>
+
+export type RcType<T> = RcBase<T, false>
+
+type RcBase<T, RequiredKey extends boolean> = {
+  __type: T
+  readonly withFallback: WithFallback<T>
   readonly where: (predicate: (input: T) => boolean) => RcType<T>
   /** RcType | undefined */
-  readonly optional: () => RcOptional<T>
+  readonly optional: () => RcType<T | undefined>
   /** RcType | null */
   readonly orNull: () => RcType<T | null>
   /** RcType | null | undefined */
@@ -38,6 +43,7 @@ export type RcType<T> = {
   readonly withAutofix: (
     customAutofix: (input: unknown) => false | { fixed: T },
   ) => RcType<T>
+  readonly _required_key_: RequiredKey
 
   /** @internal */
   readonly _parse_: (
@@ -217,7 +223,7 @@ function where(
   }
 }
 
-function optional(this: RcType<any>): RcOptional<any> {
+function optional(this: RcType<any>): RcType<any> {
   return {
     ...this,
     _optional_: true,
@@ -231,7 +237,7 @@ function _getErrorMsg_(this: RcType<any>, input: unknown): string {
   )}' is not assignable to '${this._kind_}'`
 }
 
-function orNull(this: RcType<any>): RcType<any | null> {
+function orNull(this: RcType<any>): RcType<any> {
   return {
     ...this,
     _orNull_: true,
@@ -239,7 +245,7 @@ function orNull(this: RcType<any>): RcType<any | null> {
   }
 }
 
-function orNullish(this: RcType<any>): RcType<any | null | undefined> {
+function orNullish(this: RcType<any>): RcType<any> {
   return {
     ...this,
     _orNullish_: true,
@@ -248,6 +254,7 @@ function orNullish(this: RcType<any>): RcType<any | null | undefined> {
 }
 
 const defaultProps: Omit<RcType<any>, '_parse_' | '_kind_'> = {
+  __type: undefined,
   withFallback,
   where,
   optional,
@@ -255,6 +262,7 @@ const defaultProps: Omit<RcType<any>, '_parse_' | '_kind_'> = {
   orNullish,
   withAutofix,
   orNull,
+  _required_key_: false,
   _fallback_: undefined,
   _predicate_: undefined,
   _optional_: false,
@@ -481,18 +489,41 @@ export function rc_rename_from_key<T extends RcType<any>>(
 export const rc_rename_key = rc_rename_from_key
 
 type RcObject = {
-  [key: string]: RcType<any> | RcObject
+  [key: string]: RcBase<any, any> | RcObject
 }
 
-type TypeOfObjectType<T extends RcObject> = {
-  [K in keyof T]: T[K] extends RcType<any>
-    ? RcInferType<T[K]>
-    : T[K] extends RcObject
-    ? TypeOfObjectType<T[K]>
-    : never
-}
+type TypeOfObjectType<T extends RcObject> = Flatten<
+  AddQuestionMarks<{
+    [K in keyof T]: T[K] extends RcRequiredKeyType<infer U>
+      ? KeepRequired<U>
+      : T[K] extends RcType<any>
+      ? RcInferType<T[K]>
+      : T[K] extends RcObject
+      ? TypeOfObjectType<T[K]>
+      : never
+  }>
+>
 
-type RcObjType<T extends RcObject> = RcType<TypeOfObjectType<T>>
+type RcObjTypeReturn<T extends RcObject> = RcType<TypeOfObjectType<T>>
+
+type KeepRequired<T> = { _keep_required_: T }
+
+type RequiredKeys<T extends object> = {
+  [k in keyof T]: undefined extends T[k]
+    ? T[k] extends KeepRequired<any>
+      ? k
+      : never
+    : k
+}[keyof T]
+type AddQuestionMarks<
+  T extends object,
+  R extends keyof T = RequiredKeys<T>,
+> = Pick<Required<T>, R> & Partial<T>
+
+type Identity<T> = T
+type Flatten<T> = Identity<{
+  [k in keyof T]: T[k] extends KeepRequired<infer U> ? U : T[k]
+}>
 
 function isRcType(value: any): value is RcType<any> {
   return isObject(value) && '_kind_' in value
@@ -517,7 +548,7 @@ function unwrapToObjSchema(input: unknown): RcType<any> {
 export function rc_object<T extends RcObject>(
   shape: T,
   { normalizeKeysFrom }: { normalizeKeysFrom?: 'snake_case' } = {},
-): RcObjType<T> {
+): RcObjTypeReturn<T> {
   const objShape: Record<string, RcType<any>> = {}
 
   for (const [key, value] of Object.entries(shape)) {
@@ -626,7 +657,14 @@ export function rc_object<T extends RcObject>(
   }
 }
 
-export function rc_extends_obj<T extends RcObject>(shape: T): RcObjType<T> {
+export function rc_required_key<T>(type: RcType<T>): RcRequiredKeyType<T> {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+  return type as any
+}
+
+export function rc_extends_obj<T extends RcObject>(
+  shape: T,
+): RcObjTypeReturn<T> {
   return {
     ...rc_object(shape),
     _kind_: `extends_object`,
@@ -634,12 +672,16 @@ export function rc_extends_obj<T extends RcObject>(shape: T): RcObjType<T> {
   }
 }
 
-export function rc_get_obj_schema<T extends RcObject>(type: RcObjType<T>): T {
+export function rc_get_obj_schema<T extends RcObject>(
+  type: RcObjTypeReturn<T>,
+): T {
   return type._obj_shape_ as T
 }
 
 /** return an error if the obj has more keys than the expected type */
-export function rc_strict_obj<T extends RcObject>(shape: T): RcObjType<T> {
+export function rc_strict_obj<T extends RcObject>(
+  shape: T,
+): RcObjTypeReturn<T> {
   return {
     ...rc_object(shape),
     _kind_: `strict_obj`,
@@ -647,22 +689,31 @@ export function rc_strict_obj<T extends RcObject>(shape: T): RcObjType<T> {
 }
 
 export function rc_obj_intersection<A extends RcObject, B extends RcObject>(
-  ...objs: [RcObjType<A>, RcObjType<B>]
-): RcObjType<A & B>
+  ...objs: [RcObjTypeReturn<A>, RcObjTypeReturn<B>]
+): RcObjTypeReturn<A & B>
 export function rc_obj_intersection<
   A extends RcObject,
   B extends RcObject,
   C extends RcObject,
->(...objs: [RcObjType<A>, RcObjType<B>, RcObjType<C>]): RcObjType<A & B & C>
+>(
+  ...objs: [RcObjTypeReturn<A>, RcObjTypeReturn<B>, RcObjTypeReturn<C>]
+): RcObjTypeReturn<A & B & C>
 export function rc_obj_intersection<
   A extends RcObject,
   B extends RcObject,
   C extends RcObject,
   D extends RcObject,
 >(
-  ...objs: [RcObjType<A>, RcObjType<B>, RcObjType<C>, RcObjType<D>]
-): RcObjType<A & B & C & D>
-export function rc_obj_intersection(...objs: RcObjType<any>[]): RcObjType<any> {
+  ...objs: [
+    RcObjTypeReturn<A>,
+    RcObjTypeReturn<B>,
+    RcObjTypeReturn<C>,
+    RcObjTypeReturn<D>,
+  ]
+): RcObjTypeReturn<A & B & C & D>
+export function rc_obj_intersection(
+  ...objs: RcObjTypeReturn<any>[]
+): RcObjTypeReturn<any> {
   const finalShape = {} as any
 
   for (const objShape of objs) {
@@ -673,9 +724,9 @@ export function rc_obj_intersection(...objs: RcObjType<any>[]): RcObjType<any> {
 }
 
 export function rc_obj_pick<O extends RcObject, K extends keyof O>(
-  obj: RcObjType<O>,
+  obj: RcObjTypeReturn<O>,
   keys: K[],
-): RcObjType<Pick<O, K>> {
+): RcObjTypeReturn<Pick<O, K>> {
   const shape = {} as any
 
   if (!obj._obj_shape_) {
@@ -690,13 +741,14 @@ export function rc_obj_pick<O extends RcObject, K extends keyof O>(
     }
   }
 
-  return rc_object(shape)
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+  return rc_object(shape) as any
 }
 
 export function rc_obj_omit<O extends RcObject, K extends keyof O>(
-  obj: RcObjType<O>,
+  obj: RcObjTypeReturn<O>,
   keys: K[],
-): RcObjType<Pick<O, K>> {
+): RcObjTypeReturn<Pick<O, K>> {
   const shape = {} as any
 
   if (!obj._obj_shape_) {
@@ -710,7 +762,8 @@ export function rc_obj_omit<O extends RcObject, K extends keyof O>(
     }
   }
 
-  return rc_object(shape)
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+  return rc_object(shape) as any
 }
 
 type RcRecord<V extends RcType<any>> = Record<string, V>
@@ -1163,7 +1216,8 @@ type StricTypeToRcType<T> = [T] extends [any[]]
 export function rc_obj_builder<T extends Record<string, any>>() {
   return <S extends StricTypeToRcType<T>>(schema: {
     [K in keyof S]: K extends keyof T ? S[K] : never
-  }): RcObjType<S extends Record<string, any> ? S : never> => {
-    return rc_object(schema as any)
+  }): RcType<T> => {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call
+    return (rc_object as any)(schema)
   }
 }

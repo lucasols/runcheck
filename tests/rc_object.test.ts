@@ -19,6 +19,7 @@ import {
   rc_strict_obj,
   rc_string,
   rc_transform,
+  RcType,
 } from '../src/runcheck'
 import { errorResult, successResult } from './testUtils'
 

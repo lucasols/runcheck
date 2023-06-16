@@ -445,3 +445,32 @@ const schema = rc_obj_builder<SchemaType>()({
   },
 })
 ```
+
+# `rc_required_key`
+
+Infer a key as required. Example:
+
+```ts
+const shape = rc_object({
+  name: rc_required_key(rc_string.optional()),
+  age: rc_number,
+  isCool: rc_boolean,
+})
+
+/*
+infered type will be:
+{
+  name: string | undefined,
+  age: number,
+  isCool: boolean,
+}
+
+instead of:
+{
+  name?: string | undefined,
+  age: number,
+  isCool: boolean,
+}
+*/
+```
+
