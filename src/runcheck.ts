@@ -495,17 +495,17 @@ type TypeOfObjectType<T extends RcObject> = {
 type RcObjType<T extends RcObject> = RcType<TypeOfObjectType<T>>
 
 function isRcType(value: any): value is RcType<any> {
-  return typeof value === 'object' && value !== null && '_kind_' in value
+  return isObject(value) && '_kind_' in value
 }
 
-function unwrapObjSchema(input: unknown): RcType<any> {
+function unwrapToObjSchema(input: unknown): RcType<any> {
   if (isRcType(input)) {
     return input
   } else if (isObject(input)) {
     const objSchema: Record<string, RcType<any>> = {}
 
     for (const [key, value] of Object.entries(input)) {
-      objSchema[key] = unwrapObjSchema(value)
+      objSchema[key] = unwrapToObjSchema(value)
     }
 
     return rc_object(objSchema)
@@ -521,7 +521,7 @@ export function rc_object<T extends RcObject>(
   const objShape: Record<string, RcType<any>> = {}
 
   for (const [key, value] of Object.entries(shape)) {
-    objShape[key] = unwrapObjSchema(value)
+    objShape[key] = unwrapToObjSchema(value)
   }
 
   return {
@@ -1151,11 +1151,11 @@ type Prettify<T> = T extends Record<string, any>
 export type RcPrettyInferType<T extends RcType<any>> = Prettify<RcInferType<T>>
 
 type TypeToRcType<T> = [T] extends [
-  string | number | boolean | undefined | null,
+  string | number | boolean | undefined | null | any[],
 ]
   ? RcType<T>
   : {
-      [K in keyof T]: TypeToRcType<T[K]>
+      [K in keyof T]-?: TypeToRcType<T[K]>
     }
 
 export function rc_obj_builder<T extends Record<string, any>>() {

@@ -84,10 +84,11 @@ describe('rc_object', () => {
 
   test('nested object error', () => {
     const result = rc_parse(
-      { hello: { world: 1 }, value: 'ok' },
+      { hello: { world: 1 }, value: 'ok', array: [1, 2] },
       rc_object({
         hello: rc_object({ world: rc_string }),
         value: rc_string,
+        array: rc_array(rc_number),
       }),
     )
 
@@ -104,6 +105,7 @@ describe('rc_object', () => {
       const _data: Data = {
         hello: { world: '1' },
         value: 'ok',
+        array: [1, 2],
       }
     }
 
@@ -587,6 +589,8 @@ test('rc_obj_builder', () => {
     obj: {
       a: string
       b: number
+      array?: number[]
+      looseArray: string[]
     }
   }
 
@@ -597,6 +601,8 @@ test('rc_obj_builder', () => {
     obj: {
       a: rc_string,
       b: rc_number,
+      looseArray: rc_array(rc_string),
+      array: rc_array(rc_number).optional(),
     },
   })
 
@@ -608,12 +614,18 @@ test('rc_obj_builder', () => {
       obj: {
         a: 'a',
         b: 1,
+        looseArray: ['a', 'b'],
       },
     },
     shape,
   )
 
   expect(result).toEqual(
-    successResult({ a: 'a', b: 1, c: 'c', obj: { a: 'a', b: 1 } }),
+    successResult({
+      a: 'a',
+      b: 1,
+      c: 'c',
+      obj: { a: 'a', b: 1, looseArray: ['a', 'b'] },
+    }),
   )
 })
