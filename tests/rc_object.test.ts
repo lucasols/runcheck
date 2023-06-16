@@ -592,6 +592,9 @@ test('rc_obj_builder', () => {
       array?: number[]
       looseArray: string[]
     }
+    objOrNull: {
+      a: string
+    } | null
   }
 
   const shape = rc_obj_builder<Test>()({
@@ -604,6 +607,9 @@ test('rc_obj_builder', () => {
       looseArray: rc_array(rc_string),
       array: rc_array(rc_number).optional(),
     },
+    objOrNull: rc_object({
+      a: rc_string,
+    }).orNull(),
   })
 
   const result = rc_parse(
@@ -616,6 +622,7 @@ test('rc_obj_builder', () => {
         b: 1,
         looseArray: ['a', 'b'],
       },
+      objOrNull: null,
     },
     shape,
   )
@@ -626,6 +633,7 @@ test('rc_obj_builder', () => {
       b: 1,
       c: 'c',
       obj: { a: 'a', b: 1, looseArray: ['a', 'b'] },
+      objOrNull: null,
     }),
   )
 })
