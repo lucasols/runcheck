@@ -11,7 +11,7 @@
     {
       "label": "bump version and deploy",
       "type": "shell",
-      "command": "pnpm pre-npm-publish && pnpm version ${input:version} && pnpm publish",
+      "command": "pnpm pre-publish && pnpm version ${input:version} && pnpm publish",
       "problemMatcher": []
     },
     {
