@@ -653,6 +653,7 @@ test('rc_obj_builder', () => {
       a: 'a',
       b: 1,
       c: 'c',
+      literal: 'a',
       obj: {
         a: 'a',
         b: 1,
@@ -661,6 +662,7 @@ test('rc_obj_builder', () => {
       },
       objOrNull: null,
       obj2: { a: 'a' },
+      literalInObjArray: null,
     },
     shape,
   )
