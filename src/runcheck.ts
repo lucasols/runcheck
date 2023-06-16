@@ -1150,20 +1150,20 @@ type Prettify<T> = T extends Record<string, any>
 
 export type RcPrettyInferType<T extends RcType<any>> = Prettify<RcInferType<T>>
 
-type TypeToRcType<T> = [T] extends [any[]]
+type StricTypeToRcType<T> = [T] extends [any[]]
   ? RcType<T>
   : [T] extends [Record<string, any>]
   ?
       | ({
-          [K in keyof T]-?: TypeToRcType<T[K]>
+          [K in keyof T]-?: StricTypeToRcType<T[K]>
         } & Partial<Record<keyof RcType<any>, never>>)
       | RcType<T>
   : RcType<T>
 
 export function rc_obj_builder<T extends Record<string, any>>() {
-  return <S extends TypeToRcType<T>>(schema: {
+  return <S extends StricTypeToRcType<T>>(schema: {
     [K in keyof S]: K extends keyof T ? S[K] : never
-  }): RcObjType<T> => {
+  }): RcObjType<S extends Record<string, any> ? S : never> => {
     return rc_object(schema as any)
   }
 }

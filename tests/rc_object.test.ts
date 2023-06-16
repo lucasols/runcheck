@@ -595,13 +595,28 @@ test('rc_obj_builder', () => {
     }
     objOrNull: {
       a: string
+      literal: 'a' | 'b' | 'c'
     } | null
     obj2: {
       a: string
     }
+    literal: 'a' | 'b'
+    literalInObjArray: null | {
+      items: {
+        id: string
+        type: 'a' | 'b' | 'c'
+      }[]
+    }
+    obj2OrNull?: {
+      a: string
+    } | null
   }
 
   const obj2 = rc_object({
+    a: rc_string,
+  })
+
+  const obj3 = rc_obj_builder<{ a: string }>()({
     a: rc_string,
   })
 
@@ -618,8 +633,19 @@ test('rc_obj_builder', () => {
     },
     objOrNull: rc_object({
       a: rc_string,
+      literal: rc_literals('a', 'b', 'c'),
     }).orNull(),
     obj2,
+    literal: rc_literals('a', 'b'),
+    literalInObjArray: rc_object({
+      items: rc_loose_array(
+        rc_object({
+          id: rc_string,
+          type: rc_literals('a', 'b', 'c'),
+        }),
+      ),
+    }).orNull(),
+    obj2OrNull: obj3.orNullish(),
   })
 
   const result = rc_parse(
