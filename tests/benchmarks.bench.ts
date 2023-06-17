@@ -42,7 +42,7 @@ const objShape = rc_object({
   }),
 })
 
-export const oldObjShape = old.rc_object({
+const oldObjShape = old.rc_object({
   number: old.rc_number,
   negNumber: old.rc_number,
   maxNumber: old.rc_number,

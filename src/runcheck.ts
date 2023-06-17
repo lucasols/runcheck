@@ -31,7 +31,7 @@ type RcOptionalKeyType<T> = RcBase<T, true>
 export type RcType<T> = RcBase<T, false>
 
 type RcBase<T, RequiredKey extends boolean> = {
-  __type: T
+  __rc_type: T
   readonly withFallback: WithFallback<T>
   readonly where: (predicate: (input: T) => boolean) => RcType<T>
   /** RcType | undefined */
@@ -256,7 +256,7 @@ function orNullish(this: RcType<any>): RcType<any> {
 }
 
 const defaultProps: Omit<RcType<any>, '_parse_' | '_kind_'> = {
-  __type: undefined,
+  __rc_type: undefined,
   withFallback,
   where,
   optional,
@@ -526,7 +526,7 @@ type Flatten<T> = Identity<{
 }>
 
 function isRcType(value: any): value is RcType<any> {
-  return isObject(value) && '_kind_' in value
+  return isObject(value) && '__rc_type' in value
 }
 
 function unwrapToObjSchema(input: unknown): RcType<any> {
