@@ -92,6 +92,34 @@ const shape = rc_object({
 
 The `rc_object` will allow extra properties but, any extra propertie will be striped in parsing. To allow extra in parsing properties, use `rc_extends_obj`.
 
+# Marking optional keys
+
+Optional keys can be marked with the `optionalKey()` method.
+
+```ts
+const shape = rc_object({
+  name: rc_string.optionalKey(),
+  age: rc_number,
+  isCool: rc_boolean,
+})
+
+/*
+infered type will be:
+{
+  name?: string | undefined,
+  age: number,
+  isCool: boolean,
+}
+
+instead of:
+{
+  name: string | undefined,
+  age: number,
+  isCool: boolean,
+}
+*/
+```
+
 ## `rc_strict_obj`
 
 The same as `rc_object` but, any extra propertie will be throw an error in parsing.
@@ -445,32 +473,3 @@ const schema = rc_obj_builder<SchemaType>()({
   },
 })
 ```
-
-# `rc_required_key`
-
-Infer a key as required. Example:
-
-```ts
-const shape = rc_object({
-  name: rc_required_key(rc_string.optional()),
-  age: rc_number,
-  isCool: rc_boolean,
-})
-
-/*
-infered type will be:
-{
-  name: string | undefined,
-  age: number,
-  isCool: boolean,
-}
-
-instead of:
-{
-  name?: string | undefined,
-  age: number,
-  isCool: boolean,
-}
-*/
-```
-

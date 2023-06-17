@@ -5,6 +5,7 @@ import {
   RcInferType,
   RcType,
   rc_array,
+  rc_extends_obj,
   rc_object,
   rc_parse,
   rc_string,
@@ -18,6 +19,7 @@ const type: RcType<{
   b: {
     c?: string
   }
+  obj: { a: string | undefined }
 }> = rc_object({
   a: rc_string.optionalKey(),
   array: rc_array(
@@ -28,6 +30,7 @@ const type: RcType<{
   b: {
     c: rc_string.optionalKey(),
   },
+  obj: rc_object({ a: rc_string.optional() }),
 })
 
 const type2 = rc_object({
@@ -66,3 +69,8 @@ function test<T>(schema: RcType<T>): T | null {
 
   return data.value
 }
+
+const extends_obj = rc_extends_obj({
+  a: rc_string.optionalKey(),
+  c: rc_string.optional(),
+})

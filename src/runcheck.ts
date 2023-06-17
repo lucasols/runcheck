@@ -545,9 +545,13 @@ function unwrapToObjSchema(input: unknown): RcType<any> {
   throw new Error(`invalid schema: ${input}`)
 }
 
+type ObjOptions = {
+  normalizeKeysFrom?: 'snake_case'
+}
+
 export function rc_object<T extends RcObject>(
   shape: T,
-  { normalizeKeysFrom }: { normalizeKeysFrom?: 'snake_case' } = {},
+  { normalizeKeysFrom }: ObjOptions = {},
 ): RcObjTypeReturn<T> {
   const objShape: Record<string, RcType<any>> = {}
 
@@ -659,9 +663,10 @@ export function rc_object<T extends RcObject>(
 
 export function rc_extends_obj<T extends RcObject>(
   shape: T,
+  options?: ObjOptions,
 ): RcObjTypeReturn<T> {
   return {
-    ...rc_object(shape),
+    ...rc_object(shape, options),
     _kind_: `extends_object`,
     _is_extend_obj_: true,
   }
@@ -676,9 +681,10 @@ export function rc_get_obj_schema<T extends RcObject>(
 /** return an error if the obj has more keys than the expected type */
 export function rc_strict_obj<T extends RcObject>(
   shape: T,
+  options?: ObjOptions,
 ): RcObjTypeReturn<T> {
   return {
-    ...rc_object(shape),
+    ...rc_object(shape, options),
     _kind_: `strict_obj`,
   }
 }
@@ -1209,10 +1215,13 @@ type StricTypeToRcType<T> = [T] extends [any[]]
   : RcType<T>
 
 export function rc_obj_builder<T extends Record<string, any>>() {
-  return <S extends StricTypeToRcType<T>>(schema: {
-    [K in keyof S]: K extends keyof T ? S[K] : never
-  }): RcType<T> => {
+  return <S extends StricTypeToRcType<T>>(
+    schema: {
+      [K in keyof S]: K extends keyof T ? S[K] : never
+    },
+    options?: ObjOptions,
+  ): RcType<T> => {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call
-    return (rc_object as any)(schema)
+    return rc_object(schema as any, options) as any
   }
 }
