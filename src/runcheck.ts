@@ -45,8 +45,9 @@ type RcBase<T, RequiredKey extends boolean> = {
   readonly withAutofix: (
     customAutofix: (input: unknown) => false | { fixed: T },
   ) => RcType<T>
-  readonly _optional_key_: RequiredKey
 
+  /** @internal */
+  readonly _optional_key_?: RequiredKey
   /** @internal */
   readonly _parse_: (
     input: unknown,
@@ -265,7 +266,6 @@ const defaultProps: Omit<RcType<any>, '_parse_' | '_kind_'> = {
   orNullish,
   withAutofix,
   orNull,
-  _optional_key_: false,
   _fallback_: undefined,
   _predicate_: undefined,
   _optional_: false,
