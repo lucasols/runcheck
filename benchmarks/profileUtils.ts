@@ -7,7 +7,7 @@ export function generateProfile(
   test: () => void,
   {
     heatup = 10,
-    iterations = 1000,
+    iterations = 10_000,
   }: { heatup?: number; iterations?: number } = {},
 ) {
   for (let i = 0; i < heatup; i++) {

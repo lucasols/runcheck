@@ -11,6 +11,7 @@
     "vitest-bench": "vitest bench --run",
     "benchmark": "tsm benchmarks/benchmark.ts",
     "benchmark:generate-profile": "tsm benchmarks/generateProfiles.ts",
+    "benchmark:mitata": "tsm benchmarks/mitataBench.ts",
     "eslint": "CI=true eslint --color --ext .jsx,.js,.ts,.tsx src/ tests/",
     "build": "pnpm test:run && pnpm lint && pnpm build:no-test",
     "build:no-test": "tsup --minify --dts",
@@ -56,12 +57,13 @@
     "@vitest/ui": "^0.29.8",
     "eslint": "^8.37.0",
     "eslint-plugin-vitest": "^0.0.57",
+    "mitata": "^0.1.6",
     "tsm": "^2.3.0",
     "tsup": "^6.7.0",
     "typescript": "^5.0.3",
     "v8-profiler-next": "^1.9.0",
     "vite": "^4.3.9",
-    "vitest": "^0.31.0",
+    "vitest": "0.31.0",
     "zod": "^3.21.4"
   }
 }
