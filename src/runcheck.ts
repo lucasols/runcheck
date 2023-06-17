@@ -26,7 +26,7 @@ type InternalParseResult<T> =
 
 type WithFallback<T> = (fallback: T | (() => T)) => RcType<T>
 
-type RcRequiredKeyType<T> = RcBase<T, true>
+type RcOptionalKeyType<T> = RcBase<T, true>
 
 export type RcType<T> = RcBase<T, false>
 
@@ -36,6 +36,8 @@ type RcBase<T, RequiredKey extends boolean> = {
   readonly where: (predicate: (input: T) => boolean) => RcType<T>
   /** RcType | undefined */
   readonly optional: () => RcType<T | undefined>
+  /** { key?: RcType | undefined } */
+  readonly optionalKey: () => RcOptionalKeyType<T | undefined>
   /** RcType | null */
   readonly orNull: () => RcType<T | null>
   /** RcType | null | undefined */
@@ -43,7 +45,7 @@ type RcBase<T, RequiredKey extends boolean> = {
   readonly withAutofix: (
     customAutofix: (input: unknown) => false | { fixed: T },
   ) => RcType<T>
-  readonly _required_key_: RequiredKey
+  readonly _optional_key_: RequiredKey
 
   /** @internal */
   readonly _parse_: (
@@ -258,11 +260,12 @@ const defaultProps: Omit<RcType<any>, '_parse_' | '_kind_'> = {
   withFallback,
   where,
   optional,
+  optionalKey: optional as any,
   _getErrorMsg_,
   orNullish,
   withAutofix,
   orNull,
-  _required_key_: false,
+  _optional_key_: false,
   _fallback_: undefined,
   _predicate_: undefined,
   _optional_: false,
@@ -494,35 +497,32 @@ type RcObject = {
 
 type TypeOfObjectType<T extends RcObject> = Flatten<
   AddQuestionMarks<{
-    [K in keyof T]: T[K] extends RcRequiredKeyType<infer U>
-      ? KeepRequired<U>
-      : T[K] extends RcType<any>
-      ? RcInferType<T[K]>
+    [K in keyof T]: T[K] extends RcType<infer U>
+      ? RequiredKey<U>
+      : T[K] extends RcOptionalKeyType<infer W>
+      ? W
       : T[K] extends RcObject
-      ? TypeOfObjectType<T[K]>
+      ? RequiredKey<TypeOfObjectType<T[K]>>
       : never
   }>
 >
 
 type RcObjTypeReturn<T extends RcObject> = RcType<TypeOfObjectType<T>>
 
-type KeepRequired<T> = { _keep_required_: T }
+type RequiredKey<T> = { _required_key_: T }
 
 type RequiredKeys<T extends object> = {
-  [k in keyof T]: undefined extends T[k]
-    ? T[k] extends KeepRequired<any>
-      ? k
-      : never
-    : k
+  [k in keyof T]: T[k] extends RequiredKey<any> ? k : never
 }[keyof T]
+
 type AddQuestionMarks<
   T extends object,
   R extends keyof T = RequiredKeys<T>,
-> = Pick<Required<T>, R> & Partial<T>
+> = Pick<Required<T>, R> & Partial<Omit<T, R>>
 
 type Identity<T> = T
 type Flatten<T> = Identity<{
-  [k in keyof T]: T[k] extends KeepRequired<infer U> ? U : T[k]
+  [k in keyof T]: T[k] extends RequiredKey<infer U> ? U : T[k]
 }>
 
 function isRcType(value: any): value is RcType<any> {
@@ -655,11 +655,6 @@ export function rc_object<T extends RcObject>(
       })
     },
   }
-}
-
-export function rc_required_key<T>(type: RcType<T>): RcRequiredKeyType<T> {
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-  return type as any
 }
 
 export function rc_extends_obj<T extends RcObject>(
