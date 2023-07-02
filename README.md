@@ -195,6 +195,21 @@ const parseResult = parser(jsonInput)
 const parseResult2 = parser(jsonInput2)
 ```
 
+## Strict parsing
+
+Use the `strict` option to disable autofix and fallback
+
+```ts
+const parseResult = rc_parse(
+  input,
+  // fallback will be ignored
+  rc_array(rc_string).withFallback([]),
+  {
+    strict: true,
+  },
+)
+```
+
 # Type assertion
 
 Use `rc_is_valid` and `rc_validator` to do a simple type assertion.
@@ -351,6 +366,30 @@ const result = rc_parse(
   rc_transform(rc_string, (input) => input.length),
 )
 ```
+
+# Default types
+
+You can use `rc_default` to provide a default value if the input is `undefined`.
+
+```ts
+const input = {
+  name: 'John',
+}
+
+const result = rc_parse(
+  input,
+  rc_object({
+    name: rc_string,
+    age: rc_default(rc_number, 20),
+  }),
+)
+
+if (result.ok) {
+  result.data.age // = 20
+}
+```
+
+If you need to use default in nullish values you can use `rc_nullish_default`.
 
 # Advanced object types
 

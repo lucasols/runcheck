@@ -1,7 +1,7 @@
-import { run, bench, group, baseline } from 'mitata'
+import { baseline, bench, group, run } from 'mitata'
 import { z as zod } from 'zod'
+import * as old from '../dist-old/runcheck.js'
 import {
-  RcParseResult,
   rc_array,
   rc_boolean,
   rc_literals,
@@ -11,7 +11,6 @@ import {
   rc_string,
   rc_union,
 } from '../src/runcheck.js'
-import * as old from '../dist/runcheck.js'
 
 const validateData = Object.freeze({
   number: 1,
@@ -70,7 +69,9 @@ const objShape = rc_object({
   }),
 })
 
-function throwIfError(result: RcParseResult<any>) {
+function throwIfError(
+  result: { error: true; errors: string[] } | { error: false },
+) {
   if (result.error) {
     throw new Error(result.errors.join('\n'))
   }

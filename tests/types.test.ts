@@ -78,9 +78,7 @@ describe('rc_number', () => {
         2,
         rc_number.where((input) => input < 2),
       ),
-    ).toEqual(
-      errorResult(`Predicate failed for type 'number'`),
-    )
+    ).toEqual(errorResult(`Predicate failed for type 'number'`))
   })
 })
 
@@ -153,23 +151,13 @@ test('rc_instanceof', () => {
   const validator = rc_parser(rc_instanceof(MyClass))
 
   expect(validator(new MyClass()).error).toBeFalsy()
-  expect(validator(true)).toMatchInlineSnapshot(`
-    {
-      "error": true,
-      "errors": [
-        "Type 'boolean' is not assignable to 'instanceof__MyClass'",
-      ],
-    }
-  `)
+  expect(validator(true)).toEqual(
+    errorResult(`Type 'boolean' is not assignable to 'instanceof__MyClass'`),
+  )
 
-  expect(rc_parse(new Date(2022, 8), rc_instanceof(Date)))
-    .toMatchInlineSnapshot(`
-      {
-        "data": 2022-09-01T03:00:00.000Z,
-        "error": false,
-        "warnings": false,
-      }
-    `)
+  expect(rc_parse(new Date(2022, 8), rc_instanceof(Date))).toEqual(
+    successResult(new Date(2022, 8)),
+  )
 })
 
 describe('rc_literal', () => {

@@ -1,10 +1,12 @@
 export type RcParseResult<T> =
   | {
       error: false
+      ok: true
       data: T
       warnings: string[] | false
     }
   | {
+      ok: false
       error: true
       errors: string[]
     }
@@ -18,6 +20,7 @@ type ParseResultCtx = {
   path: string
   objErrShortCircuit: boolean
   objErrKeyIndex: number
+  strict: boolean
 }
 
 type InternalParseResult<T> =
@@ -55,8 +58,6 @@ type RcBase<T, RequiredKey extends boolean> = {
   ) => InternalParseResult<T>
   /** @internal */
   readonly _kind_: string
-  /** @internal */
-  readonly _getErrorMsg_: (input: unknown) => string
   /** @internal */
   readonly _fallback_: T | (() => T) | undefined
   /** @internal */
@@ -158,40 +159,52 @@ function parse<T>(
     }
   }
 
-  const fb = type._fallback_
+  if (!ctx.strict) {
+    const fb = type._fallback_
 
-  if (fb !== undefined) {
-    addWarning(
-      ctx,
-      `Fallback used, errors -> ${getResultErrors(isValid, ctx, type, input)}`,
-    )
-
-    return [true, isFn(fb) ? fb() : fb]
-  }
-
-  if (type._useAutFix_ && type._autoFix_) {
-    const autofixed = type._autoFix_(input)
-
-    if (autofixed) {
-      if (type._predicate_) {
-        if (!type._predicate_(autofixed.fixed)) {
-          return [
-            false,
-            [`Predicate failed for autofix in type '${type._kind_}'`],
-          ]
-        }
-      }
-
+    if (fb !== undefined) {
       addWarning(
         ctx,
-        `Autofixed from error "${getResultErrors(isValid, ctx, type, input)}"`,
+        `Fallback used, errors -> ${getResultErrors(
+          isValid,
+          ctx,
+          type,
+          input,
+        )}`,
       )
 
-      return [true, autofixed.fixed]
+      return [true, isFn(fb) ? fb() : fb]
+    }
+
+    if (type._useAutFix_ && type._autoFix_) {
+      const autofixed = type._autoFix_(input)
+
+      if (autofixed) {
+        if (type._predicate_) {
+          if (!type._predicate_(autofixed.fixed)) {
+            return [
+              false,
+              [`Predicate failed for autofix in type '${type._kind_}'`],
+            ]
+          }
+        }
+
+        addWarning(
+          ctx,
+          `Autofixed from error "${getResultErrors(
+            isValid,
+            ctx,
+            type,
+            input,
+          )}"`,
+        )
+
+        return [true, autofixed.fixed]
+      }
     }
   }
 
-  return [false, isValid ? isValid.errors : [type._getErrorMsg_(input)]]
+  return [false, isValid ? isValid.errors : [getErrorMsg(type, input)]]
 }
 
 function getResultErrors(
@@ -202,7 +215,7 @@ function getResultErrors(
 ) {
   return isValid
     ? isValid.errors.map((err) => err.replace(ctx.path, '')).join('; ')
-    : type._getErrorMsg_(input)
+    : getErrorMsg(type, input)
 }
 
 function withAutofix(
@@ -233,11 +246,11 @@ function optional(this: RcType<any>): RcType<any> {
   }
 }
 
-function _getErrorMsg_(this: RcType<any>, input: unknown): string {
+function getErrorMsg(type: RcType<any>, input: unknown): string {
   return `Type '${normalizedTypeOf(
     input,
-    !!this._show_value_in_error_,
-  )}' is not assignable to '${this._kind_}'`
+    !!type._show_value_in_error_,
+  )}' is not assignable to '${type._kind_}'`
 }
 
 function orNull(this: RcType<any>): RcType<any> {
@@ -262,7 +275,6 @@ const defaultProps: Omit<RcType<any>, '_parse_' | '_kind_'> = {
   where,
   optional,
   optionalKey: optional as any,
-  _getErrorMsg_,
   orNullish,
   withAutofix,
   orNull,
@@ -475,6 +487,81 @@ export function rc_union<T extends RcType<any>[]>(
       })
     },
     _kind_: types.map((type) => type._kind_).join(' | '),
+  }
+}
+
+type NotUndefined<T> = T extends undefined ? never : T
+
+export function rc_default<T>(
+  schema: RcType<T>,
+  defaultValue: NotUndefined<T> | (() => NotUndefined<T>),
+): RcType<NotUndefined<T>> {
+  return {
+    ...(schema as unknown as RcType<NotUndefined<T>>),
+    _optional_: false,
+    _orNullish_: false,
+    _orNull_: false,
+    _parse_(input, ctx) {
+      return parse(this, input, ctx, () => {
+        const result = schema._parse_(input, ctx)
+        const [ok, value] = result
+
+        if (ok) {
+          if (value !== undefined) {
+            return true
+          }
+
+          return {
+            data: isFn(defaultValue) ? defaultValue() : defaultValue,
+            errors: false,
+          }
+        }
+
+        return {
+          data: undefined,
+          errors: value,
+        }
+      })
+    },
+    _kind_: `${schema._kind_}_default`,
+  }
+}
+
+type NotNullish<T> = T extends null | undefined ? never : T
+
+export function rc_nullish_default<T>(
+  schema: RcType<T>,
+  defaultValue: NotNullish<T> | (() => NotNullish<T>),
+): RcType<NotNullish<T>> {
+  return {
+    ...(schema as unknown as RcType<NotNullish<T>>),
+    _optional_: false,
+    _orNullish_: false,
+    _orNull_: false,
+    _parse_(input, ctx) {
+      return parse(this, input, ctx, () => {
+        const result = schema._parse_(input, ctx)
+
+        const [ok, value] = result
+
+        if (ok) {
+          if (value !== null && value !== undefined) {
+            return true
+          }
+
+          return {
+            data: isFn(defaultValue) ? defaultValue() : defaultValue,
+            errors: false,
+          }
+        }
+
+        return {
+          data: undefined,
+          errors: value,
+        }
+      })
+    },
+    _kind_: `${schema._kind_}_nullish_default`,
   }
 }
 
@@ -1031,16 +1118,26 @@ export function rc_tuple<T extends readonly RcType<any>[]>(
   }
 }
 
+type ParseOptions = {
+  /** ignore fallback and autofix */
+  strict?: boolean
+}
+
 /**
  * Parse a runcheck type. If valid return the valid input, with warning for autofix
  * and fallback, or the errors if invalid
  */
-export function rc_parse<S>(input: any, type: RcType<S>): RcParseResult<S> {
+export function rc_parse<S>(
+  input: any,
+  type: RcType<S>,
+  { strict = false }: ParseOptions = {},
+): RcParseResult<S> {
   const ctx: ParseResultCtx = {
     warnings: [],
     path: '',
     objErrShortCircuit: false,
     objErrKeyIndex: 0,
+    strict,
   }
 
   const [success, dataOrError] = type._parse_(input, ctx)
@@ -1048,12 +1145,14 @@ export function rc_parse<S>(input: any, type: RcType<S>): RcParseResult<S> {
   if (success) {
     return {
       error: false,
+      ok: true,
       data: dataOrError,
       warnings: ctx.warnings.length > 0 ? ctx.warnings : false,
     }
   }
 
   return {
+    ok: false,
     error: true,
     errors: dataOrError,
   }
@@ -1070,8 +1169,9 @@ export function rc_parser<S>(type: RcType<S>): RcParser<S> {
 export function rc_loose_parse<S>(
   input: any,
   type: RcType<S>,
+  options?: ParseOptions,
 ): { data: S | null; errors: string[] | false; warnings: string[] | false } {
-  const result = rc_parse(input, type)
+  const result = rc_parse(input, type, options)
 
   if (result.error) {
     return {
@@ -1090,6 +1190,7 @@ export function rc_is_valid<S>(input: any, type: RcType<S>): input is S {
     path: '',
     objErrShortCircuit: false,
     objErrKeyIndex: 0,
+    strict: false,
   }
 
   return !!type._parse_(input, ctx)[0]
@@ -1157,7 +1258,12 @@ type NonArrayObject = {
 
 export function rc_assert_is_valid<S>(
   result: RcParseResult<S>,
-): asserts result is { error: false; data: S; warnings: string[] | false } {
+): asserts result is {
+  ok: true
+  error: false
+  data: S
+  warnings: string[] | false
+} {
   if (result.error) {
     throw new Error(`invalid input: ${result.errors.join(', ')}`)
   }
@@ -1177,15 +1283,26 @@ export function snakeCase(str: string): string {
 }
 
 export function rc_parse_json<T>(
-  jsonString: string,
+  jsonString: unknown,
   schema: RcType<T>,
 ): RcParseResult<T> {
   try {
+    if (typeof jsonString !== 'string') {
+      return {
+        ok: false,
+        error: true,
+        errors: [
+          `expected a json string, got ${normalizedTypeOf(jsonString, true)}`,
+        ],
+      }
+    }
+
     const parsed = JSON.parse(jsonString)
 
     return rc_parse(parsed, schema)
   } catch (err) {
     return {
+      ok: false,
       error: true,
       errors: [`json parse error: ${isObject(err) ? err.message : ''}`],
     }
