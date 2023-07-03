@@ -49,7 +49,6 @@ type RcBase<T, RequiredKey extends boolean> = {
     customAutofix: (input: unknown) => false | { fixed: T },
   ) => RcType<T>
 
-  /** @internal */
   readonly _optional_key_?: RequiredKey
   /** @internal */
   readonly _parse_: (
