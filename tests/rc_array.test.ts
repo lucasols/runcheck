@@ -106,7 +106,7 @@ describe('array unique', () => {
 
   test('trhow error if invalid type is used with unique key', () => {
     // @ts-expect-error invalid type
-    rc_parser(rc_array(rc_number, { unique: 'id' }))
+    expect(rc_parser(rc_array(rc_number, { unique: 'id' }))).not.throw()
   })
 
   test('strict mode for an array of objects', () => {
