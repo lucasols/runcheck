@@ -1229,6 +1229,33 @@ export function rc_transform<Input, Transformed>(
   }
 }
 
+export function rc_unsafe_transform<Input, Transformed>(
+  type: RcType<Input>,
+  transform: (
+    input: Input,
+  ) => { ok: true; data: Transformed } | { ok: false; errors: string[] },
+): RcType<Transformed> {
+  return {
+    ...defaultProps,
+    _kind_: `transform_from_${type._kind_}`,
+    _parse_(input, ctx) {
+      const [success, dataOrError] = type._parse_(input, ctx)
+
+      if (success) {
+        const transformResult = transform(dataOrError)
+
+        if (transformResult.ok) {
+          return [true, transformResult.data]
+        } else {
+          return [false, transformResult.errors]
+        }
+      }
+
+      return [false, dataOrError]
+    },
+  }
+}
+
 function normalizedTypeOf(input: unknown, showValueInError: boolean): string {
   const type = ((): string => {
     if (typeof input === 'object') {
@@ -1284,6 +1311,7 @@ export function snakeCase(str: string): string {
 export function rc_parse_json<T>(
   jsonString: unknown,
   schema: RcType<T>,
+  options?: ParseOptions,
 ): RcParseResult<T> {
   try {
     if (typeof jsonString !== 'string') {
@@ -1298,7 +1326,7 @@ export function rc_parse_json<T>(
 
     const parsed = JSON.parse(jsonString)
 
-    return rc_parse(parsed, schema)
+    return rc_parse(parsed, schema, options)
   } catch (err) {
     return {
       ok: false,
