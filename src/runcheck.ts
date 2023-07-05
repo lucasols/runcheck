@@ -932,24 +932,13 @@ export function rc_loose_record<V extends RcType<any>>(
   return rc_record(valueType, { checkKey, looseCheck: true })
 }
 
-function checkArrayUniqueOption(
-  type: RcType<any>,
-  uniqueOption: boolean | string | undefined | ((item: any) => any),
-) {
-  if (typeof uniqueOption === 'string') {
-    if (!type._obj_shape_?.[uniqueOption]) {
-      throw new Error(`${type._kind_} can't be used with unique key option`)
-    }
-  }
-}
-
 function checkArrayItems(
   this: RcType<any>,
   input: any[],
   types: RcType<any> | readonly RcType<any>[],
   ctx: ParseResultCtx,
   loose = false,
-  options?: { unique: boolean | string | ((item: any) => any) },
+  options?: ArrayOptions<RcType<any>>,
 ): IsValid<any[]> {
   const looseErrors: string[][] = []
   const arrayResult: any[] = []
@@ -1043,14 +1032,16 @@ function checkArrayItems(
   return { errors: false, data: arrayResult }
 }
 
+type ArrayOptions<T extends RcType<any>> = {
+  unique?: RcInferType<T> extends Record<string, any>
+    ? keyof RcInferType<T> | ((parsedItem: RcInferType<T>) => any)
+    : boolean | ((parsedItem: RcInferType<T>) => any)
+}
+
 export function rc_array<T extends RcType<any>>(
   type: T,
-  options?: {
-    unique: boolean | string | false | ((parsedItem: RcInferType<T>) => any)
-  },
+  options?: ArrayOptions<T>,
 ): RcType<RcInferType<T>[]> {
-  checkArrayUniqueOption(type, options?.unique)
-
   return {
     ...defaultProps,
     _kind_: `${type._kind_}[]`,
@@ -1069,12 +1060,8 @@ export function rc_array<T extends RcType<any>>(
 /** instead of returning a general error, rejects invalid array items and returns warnings for these items */
 export function rc_loose_array<T extends RcType<any>>(
   type: T,
-  options?: {
-    unique: boolean | string | false | ((parsedItem: RcInferType<T>) => any)
-  },
+  options?: ArrayOptions<T>,
 ): RcType<RcInferType<T>[]> {
-  checkArrayUniqueOption(type, options?.unique)
-
   return {
     ...defaultProps,
     _kind_: `${type._kind_}[]`,
