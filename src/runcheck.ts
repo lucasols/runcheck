@@ -775,32 +775,25 @@ export function rc_strict_obj<T extends RcObject>(
   }
 }
 
-export function rc_obj_intersection<A extends RcObject, B extends RcObject>(
-  ...objs: [RcObjTypeReturn<A>, RcObjTypeReturn<B>]
-): RcObjTypeReturn<A & B>
+type AnyObj = Record<string, unknown>
+
+export function rc_obj_intersection<A extends AnyObj, B extends AnyObj>(
+  ...objs: [RcType<A>, RcType<B>]
+): RcType<A & B>
 export function rc_obj_intersection<
-  A extends RcObject,
-  B extends RcObject,
-  C extends RcObject,
->(
-  ...objs: [RcObjTypeReturn<A>, RcObjTypeReturn<B>, RcObjTypeReturn<C>]
-): RcObjTypeReturn<A & B & C>
+  A extends AnyObj,
+  B extends AnyObj,
+  C extends AnyObj,
+>(...objs: [RcType<A>, RcType<B>, RcType<C>]): RcType<A & B & C>
 export function rc_obj_intersection<
-  A extends RcObject,
-  B extends RcObject,
-  C extends RcObject,
-  D extends RcObject,
->(
-  ...objs: [
-    RcObjTypeReturn<A>,
-    RcObjTypeReturn<B>,
-    RcObjTypeReturn<C>,
-    RcObjTypeReturn<D>,
-  ]
-): RcObjTypeReturn<A & B & C & D>
+  A extends AnyObj,
+  B extends AnyObj,
+  C extends AnyObj,
+  D extends AnyObj,
+>(...objs: [RcType<A>, RcType<B>, RcType<C>, RcType<D>]): RcType<A & B & C & D>
 export function rc_obj_intersection(
-  ...objs: RcObjTypeReturn<any>[]
-): RcObjTypeReturn<any> {
+  ...objs: RcType<Record<string, unknown>>[]
+): RcType<any> {
   const finalShape = {} as any
 
   for (const objShape of objs) {
