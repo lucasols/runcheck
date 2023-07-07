@@ -3,7 +3,7 @@ import {
   RcParseResult,
   rc_array,
   rc_assert_is_valid,
-  rc_extends_obj,
+  rc_obj_extends,
   rc_get_obj_schema,
   rc_literals,
   rc_loose_array,
@@ -16,7 +16,7 @@ import {
   rc_parse,
   rc_parser,
   rc_rename_from_key,
-  rc_strict_obj,
+  rc_obj_strict,
   rc_string,
   rc_transform,
 } from '../src/runcheck'
@@ -150,19 +150,6 @@ describe('rc_object', () => {
     )
 
     expect(result).toEqual(successResult({ id: 4, user: 'hello' }))
-  })
-
-  test('stric object', () => {
-    const input = { id: 4, user: 'hello', excess: 'world' }
-
-    const result = rc_parse(
-      input,
-      rc_strict_obj({ user: rc_string, id: rc_number }),
-    )
-
-    expect(result).toEqual(
-      errorResult(`Key 'excess' is not defined in the object shape`),
-    )
   })
 
   test('handle optional props', () => {
@@ -335,7 +322,7 @@ describe('rc_rename_key', () => {
   test('works in rc_strict_obj', () => {
     const input = { user_id: 1, old_name: 2, name: 'hello' }
 
-    const result = rc_parse(input, rc_strict_obj(objSchema))
+    const result = rc_parse(input, rc_obj_strict(objSchema))
 
     expect(result).toEqual(
       successResult({
@@ -421,7 +408,7 @@ test('rc_get_obj_schema', () => {
 
 describe('rc_extends_obj', () => {
   test('extends object', () => {
-    const schema = rc_extends_obj({
+    const schema = rc_obj_extends({
       name: rc_number,
     })
 
@@ -431,7 +418,7 @@ describe('rc_extends_obj', () => {
   })
 
   test('extends object with transformed response', () => {
-    const schema = rc_extends_obj({
+    const schema = rc_obj_extends({
       name: rc_transform(rc_number, (v) => v + 1),
     })
 
@@ -441,7 +428,7 @@ describe('rc_extends_obj', () => {
   })
 
   test('extends object with rc_rename_key response', () => {
-    const schema = rc_extends_obj({
+    const schema = rc_obj_extends({
       newKeyName: rc_rename_from_key('name', rc_number),
     })
 
@@ -668,4 +655,89 @@ test('rc_obj_builder', () => {
   )
 
   expect(result).toEqual(successResult(expect.anything()))
+})
+
+describe('rc_strict_obj', () => {
+  test('stric object', () => {
+    const input = { id: 4, user: 'hello', excess: 'world' }
+
+    const result = rc_parse(
+      input,
+      rc_obj_strict({ user: rc_string, id: rc_number }),
+    )
+
+    expect(result).toEqual(
+      errorResult(`Key 'excess' is not defined in the object shape`),
+    )
+  })
+
+  test('use a obj type as input', () => {
+    const objSchema = rc_object({ user: rc_string, id: rc_number })
+
+    const strictObjSchema = rc_obj_strict(objSchema)
+
+    const input = { id: 4, user: 'hello', excess: 'world' }
+
+    const result = rc_parse(input, strictObjSchema)
+
+    expect(result).toEqual(
+      errorResult(`Key 'excess' is not defined in the object shape`),
+    )
+  })
+
+  test('use a obj type as input recursive', () => {
+    const objSchema = rc_object({
+      user: rc_string,
+      id: rc_number,
+      obj: rc_object({ user: rc_string, id: rc_number }),
+      obj2: { string: rc_string },
+    })
+
+    const strictObjSchema = rc_obj_strict(objSchema)
+
+    const input = {
+      id: 4,
+      user: 'hello',
+      obj: { id: 4, user: 'hello', excess: 'world' },
+      obj2: { string: 'hello', excess: 'world' },
+    }
+
+    const result = rc_parse(input, strictObjSchema)
+
+    expect(result).toEqual(
+      errorResult(
+        `$.obj: Key 'excess' is not defined in the object shape`,
+        `$.obj2: Key 'excess' is not defined in the object shape`,
+      ),
+    )
+  })
+
+  test('disable recursive strict obj', () => {
+    const objSchema = rc_object({
+      user: rc_string,
+      id: rc_number,
+      obj: rc_object({ user: rc_string, id: rc_number }),
+      obj2: { string: rc_string },
+    })
+
+    const strictObjSchema = rc_obj_strict(objSchema, { nonRecursive: true })
+
+    const input = {
+      id: 4,
+      user: 'hello',
+      obj: { id: 4, user: 'hello', excess: 'world' },
+      obj2: { string: 'hello', excess: 'world' },
+    }
+
+    const result = rc_parse(input, strictObjSchema)
+
+    expect(result).toEqual(
+      successResult({
+        id: 4,
+        user: 'hello',
+        obj: { id: 4, user: 'hello' },
+        obj2: { string: 'hello' },
+      }),
+    )
+  })
 })

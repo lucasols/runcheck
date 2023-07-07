@@ -109,7 +109,7 @@ describe('array unique', () => {
     expect(rc_parser(rc_array(rc_number, { unique: 'id' }))).not.throw()
   })
 
-  test('strict mode for an array of objects', () => {
+  test('array of objects', () => {
     const helloParser = rc_parser(
       rc_array(
         rc_object({

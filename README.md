@@ -120,9 +120,9 @@ instead of:
 */
 ```
 
-## `rc_strict_obj`
+## `rc_obj_strict`
 
-The same as `rc_object` but, any extra propertie will be throw an error in parsing.
+The same as `rc_object` but, any extra properties will be throw an error in parsing.
 
 ## `rc_obj_intersection`
 
@@ -436,7 +436,7 @@ const shape = rc_object({
 const nameSchema = rc_get_obj_schema(shape).name
 ```
 
-## `rc_extends_obj`
+## `rc_obj_extends`
 
 Don't strip unchecked keys from the result. Example:
 
@@ -447,7 +447,7 @@ const shape = rc_object({
 
 const result = rc_parse(
   { name: 'John', age: 20, is_cool: true },
-  rc_extends_obj(shape),
+  rc_obj_extends(shape),
 )
 
 // keys `age` and `is_cool` will be present in the result

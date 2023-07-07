@@ -675,7 +675,9 @@ export function rc_object<T extends RcObject>(
 
           const subPath = `.${key}`
 
-          ctx.path = `${parentPath}${subPath}`
+          const path = `${parentPath}${subPath}`
+
+          ctx.path = path
 
           let input
           let keyToDeleteFromExcessKeys = key
@@ -707,6 +709,7 @@ export function rc_object<T extends RcObject>(
           //
           else {
             for (const subError of result) {
+              ctx.path = path
               resultErrors.push(gerWarningOrErrorWithPath(ctx, subError))
             }
 
@@ -747,7 +750,7 @@ export function rc_object<T extends RcObject>(
   }
 }
 
-export function rc_extends_obj<T extends RcObject>(
+export function rc_obj_extends<T extends RcObject>(
   shape: T,
   options?: ObjOptions,
 ): RcObjTypeReturn<T> {
@@ -765,12 +768,44 @@ export function rc_get_obj_schema<T extends RcObject>(
 }
 
 /** return an error if the obj has more keys than the expected type */
-export function rc_strict_obj<T extends RcObject>(
+export function rc_obj_strict<T extends AnyObj>(
+  shape: RcType<T>,
+  options?: ObjOptions & { nonRecursive?: boolean },
+): RcType<T>
+export function rc_obj_strict<T extends RcObject>(
   shape: T,
   options?: ObjOptions,
-): RcObjTypeReturn<T> {
+): RcObjTypeReturn<T>
+export function rc_obj_strict(
+  shape: RcObject | RcType<AnyObj>,
+  options?: ObjOptions & { nonRecursive?: boolean },
+): RcType<any> {
+  const objShape = ((): RcObject => {
+    if (isRcType(shape)) {
+      if (!shape._obj_shape_) {
+        throw new Error(`rc_strict_obj: expected an object type`)
+      }
+
+      if (options?.nonRecursive) {
+        return shape._obj_shape_
+      } else {
+        const objShape: RcObject = {}
+
+        for (const [key, value] of Object.entries(shape._obj_shape_)) {
+          objShape[key] = value._obj_shape_
+            ? rc_obj_strict(value, options)
+            : value
+        }
+
+        return objShape
+      }
+    }
+
+    return shape as RcObject
+  })()
+
   return {
-    ...rc_object(shape, options),
+    ...rc_object(objShape, options),
     _kind_: `strict_obj`,
   }
 }

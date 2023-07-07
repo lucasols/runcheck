@@ -5,7 +5,7 @@ import {
   RcInferType,
   RcType,
   rc_array,
-  rc_extends_obj,
+  rc_obj_extends,
   rc_object,
   rc_parse,
   rc_string,
@@ -70,7 +70,7 @@ function test<T>(schema: RcType<T>): T | null {
   return data.value
 }
 
-const extends_obj = rc_extends_obj({
+const extends_obj = rc_obj_extends({
   a: rc_string.optionalKey(),
   c: rc_string.optional(),
 })
