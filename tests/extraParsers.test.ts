@@ -56,7 +56,7 @@ describe('strict parsing', () => {
         withFallback: '1',
       },
       schema,
-      { strict: true },
+      { noWarnings: true },
     )
 
     expect(result).toEqual(
