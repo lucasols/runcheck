@@ -19,6 +19,12 @@
       "type": "shell",
       "command": "pnpx dexnode --out ./benchmarks/${input:fileName}.log ./benchmarks/deopt-test.js -p .",
       "problemMatcher": []
+    },
+    {
+      "label": "run benchmarks",
+      "type": "shell",
+      "command": "pnpm benchmark",
+      "problemMatcher": []
     }
   ],
   "inputs": [
