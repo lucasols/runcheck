@@ -109,7 +109,7 @@ export function rc_object<T extends RcObject>(
           ? new Set<string>(Object.keys(inputObj))
           : undefined
 
-        if (excessKeys && this._shape_entries_.length !== excessKeys.size) {
+        if (excessKeys && excessKeys.size > this._shape_entries_.length) {
           ctx.objErrKeyIndex_ = -1
           const errors: ErrorWithPath[] = []
 
@@ -197,7 +197,7 @@ export function rc_object<T extends RcObject>(
           else {
             for (const subError of result) {
               ctx.path_ = path
-              resultErrors.push(getWarningOrErrorWithPath(ctx, subError))
+              resultErrors.push(subError)
             }
 
             if (ctx.objErrShortCircuit_) {
@@ -210,6 +210,8 @@ export function rc_object<T extends RcObject>(
         if (excessKeys) {
           if (excessKeys.size > 0) {
             for (const key of excessKeys) {
+              ctx.path_ = parentPath
+
               resultErrors.push(
                 getWarningOrErrorWithPath(
                   ctx,

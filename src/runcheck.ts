@@ -113,10 +113,10 @@ export type ErrorWithPath = string & { __withPath: true }
 
 export function getWarningOrErrorWithPath(
   ctx: ParseResultCtx,
-  message: string,
+  message: string & { __withPath?: never },
 ): ErrorWithPath {
   if (message.startsWith('$')) {
-    return message as ErrorWithPath
+    return message as unknown as ErrorWithPath
   }
 
   return `${ctx.path_ ? `$${ctx.path_}: ` : ''}${message}` as ErrorWithPath
@@ -648,7 +648,7 @@ export function rc_record<V>(
             const errors = result
 
             for (const subError of errors) {
-              resultErrors.push(getWarningOrErrorWithPath(ctx, subError))
+              resultErrors.push(subError)
             }
 
             if (ctx.objErrShortCircuit_) {
@@ -756,13 +756,11 @@ function checkArrayItems(
     if (!isValid) {
       if (!useLooseMode) {
         return {
-          errors: result.map((error) => getWarningOrErrorWithPath(ctx, error)),
+          errors: result,
           data: undefined,
         }
       } else {
-        looseErrors.push(
-          result.map((error) => getWarningOrErrorWithPath(ctx, error)),
-        )
+        looseErrors.push(result)
         continue
       }
     } else {

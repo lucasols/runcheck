@@ -775,7 +775,9 @@ describe('rc_strict_obj', () => {
       rc_obj_strict({ user: rc_string, id: rc_number }),
     )
 
-    expect(result).toEqual(errorResult(`Key 'user' is missing`))
+    expect(result).toEqual(
+      errorResult(`$.user: Type 'undefined' is not assignable to 'string'`),
+    )
   })
 
   test('missing and extra keys', () => {
