@@ -9,7 +9,7 @@ import {
   rc_loose_array,
   rc_number,
   rc_obj_builder,
-  rc_obj_intersection,
+  rc_obj_merge,
   rc_obj_omit,
   rc_obj_pick,
   rc_object,
@@ -223,10 +223,10 @@ describe('rc_object', () => {
   })
 })
 
-describe('rc_obj_intersections', () => {
-  test('intersection', () => {
+describe('rc_obj_merges', () => {
+  test('merge', () => {
     const parser = rc_parser(
-      rc_obj_intersection(
+      rc_obj_merge(
         rc_object({
           a: rc_string,
           b: rc_number,

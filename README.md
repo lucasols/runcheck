@@ -124,12 +124,12 @@ instead of:
 
 The same as `rc_object` but, any extra properties will be throw an error in parsing.
 
-## `rc_obj_intersection`
+## `rc_obj_merge`
 
 Allow to merge two `rc_object` types. Example:
 
 ```ts
-const shape = rc_obj_intersection(
+const shape = rc_obj_merge(
   rc_object({
     name: rc_string,
     age: rc_number,
@@ -364,6 +364,44 @@ const input = 'hello'
 const result = rc_parse(
   input,
   rc_transform(rc_string, (input) => input.length),
+)
+```
+
+Use the `outputSchema` option to create a type that validates both the input and the output of the transform. So if the input type is invalid, it will assume that the input is a transformed value and the `outputSchema` will be used
+
+```ts
+const input = 'hello'
+
+const schema = rc_transform(rc_string, (input) => input.length, {
+  outputSchema: rc_number,
+})
+
+const result = rc_parse(input, schema)
+
+if (result.ok) {
+  // this will be valid too
+  const transformedResult = rc_parse(result.data, schema)
+}
+
+// Be carefull: `outputSchema` will be used only if the input type is invalid
+
+const schema = rc_transform(
+  rc_union(rc_string, rc_number),
+  (input) => String(input).toUperCase(),
+  {
+    // this will be ignored because has an equivalent type to the input
+    outputSchema: rc_string,
+  },
+)
+
+// use a more strict input type to avoid this
+
+const schema = rc_transform(
+  rc_union(rc_string, rc_number).where((input) => isNotUperCase(input)),
+  (input) => String(input).toUperCase(),
+  {
+    outputSchema: rc_string.where((input) => isUperCase(input)),
+  },
 )
 ```
 

@@ -116,3 +116,70 @@ test('show union in error', () => {
     ),
   )
 })
+
+describe('nested unions', () => {
+  const shape = rc_object({
+    obj: rc_union(
+      rc_object({ a: rc_string }),
+      rc_object({
+        c: rc_number,
+        b: rc_union(rc_number, rc_string),
+        union: rc_union(
+          rc_object({
+            ok: rc_string,
+            a: rc_string,
+          }),
+          rc_object({ ok: rc_string, b: rc_number }),
+        ),
+      }),
+    ),
+  })
+
+  test('pass', () => {
+    expect(rc_parse({ obj: { a: 'hello' } }, shape)).toEqual(
+      successResult({ obj: { a: 'hello' } }),
+    )
+
+    expect(
+      rc_parse(
+        {
+          obj: {
+            c: 2,
+            b: 1,
+            union: { ok: 'ok', b: 2 },
+          },
+        },
+        shape,
+      ),
+    ).toEqual(
+      successResult({
+        obj: {
+          c: 2,
+          b: 1,
+          union: { ok: 'ok', b: 2 },
+        },
+      }),
+    )
+  })
+
+  test('fail', () => {
+    expect(
+      rc_parse(
+        {
+          obj: {
+            c: 2,
+            b: 1,
+            union: { ok: 'ok', a: 2 },
+          },
+        },
+        shape,
+      ),
+    ).toEqual(
+      errorResult(
+        "$.obj|union 2|.union|union 1|.a: Type 'number' is not assignable to 'string'",
+        "$.obj|union 2|.union|union 2|.b: Type 'undefined' is not assignable to 'number'",
+        "$.obj|union 1|.a: Type 'undefined' is not assignable to 'string'",
+      ),
+    )
+  })
+})
