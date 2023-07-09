@@ -1,5 +1,5 @@
 export {
-  rc_get_obj_schema,
+  rc_get_obj_shape as rc_get_obj_schema,
   rc_obj_builder,
   rc_obj_extends,
   rc_obj_merge,
@@ -90,13 +90,13 @@ export type RcBase<T, RequiredKey extends boolean> = {
   /** @internal */
   readonly _shape_entries_: [string, RcType<any>][]
   /** @internal */
+  readonly _array_item_type_: RcType<any> | undefined
+  /** @internal */
   readonly _show_value_in_error_: boolean
   /** @internal */
   readonly _alternative_key_: string | undefined
   /** @internal */
   readonly _obj_shape_: Record<string, RcType<any>> | undefined
-  /** @internal */
-  readonly _array_shape_: Record<string, RcType<any>> | undefined
   /** @internal */
   readonly _autoFix_: ((input: unknown) => false | { fixed: T }) | undefined
 }
@@ -312,6 +312,7 @@ export const defaultProps: Omit<RcType<any>, '_parse_' | '_kind_'> = {
   orNullish,
   withAutofix,
   orNull,
+  _array_item_type_: undefined,
   _fallback_: undefined,
   _predicate_: undefined,
   _optional_: false,
@@ -321,7 +322,6 @@ export const defaultProps: Omit<RcType<any>, '_parse_' | '_kind_'> = {
   _show_value_in_error_: false,
   _alternative_key_: undefined,
   _autoFix_: undefined,
-  _array_shape_: undefined,
   _obj_shape_: undefined,
   _is_object_: false,
   _is_extend_obj_: false,
@@ -792,6 +792,7 @@ export function rc_array<T extends RcType<any>>(
   return {
     ...defaultProps,
     _kind_: `${type._kind_}[]`,
+    _array_item_type_: type,
     _parse_(input, ctx) {
       return parse(this, input, ctx, () => {
         if (!Array.isArray(input)) return false
@@ -802,6 +803,14 @@ export function rc_array<T extends RcType<any>>(
       })
     },
   }
+}
+
+export function rc_get_array_item_type<T>(type: RcType<T[]>): RcType<T> {
+  if (!type._array_item_type_) {
+    throw new Error(`Type does not have an item type`)
+  }
+
+  return type._array_item_type_
 }
 
 export function rc_disable_loose_array<T extends RcType<any>>(
@@ -850,6 +859,7 @@ export function rc_loose_array<T extends RcType<any>>(
 ): RcType<RcInferType<T>[]> {
   return {
     ...defaultProps,
+    _array_item_type_: type,
     _kind_: `${type._kind_}[]`,
     _parse_(input, ctx) {
       return parse(this, input, ctx, () => {

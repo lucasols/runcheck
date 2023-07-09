@@ -253,9 +253,13 @@ export function rc_obj_extends<T extends RcObject>(
   }
 }
 
-export function rc_get_obj_schema<T extends RcObject>(
+export function rc_get_obj_shape<T extends RcObject>(
   type: RcObjTypeReturn<T>,
 ): T {
+  if (!type._obj_shape_) {
+    throw new Error(`type does not have an object shape`)
+  }
+
   return type._obj_shape_ as T
 }
 
