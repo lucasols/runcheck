@@ -258,47 +258,46 @@ export function rc_get_obj_schema<T extends RcObject>(
 }
 
 /** return an error if the obj has more keys than the expected type */
-export function rc_obj_strict<T extends AnyObj>(
-  shape: RcType<T>,
-  options?: ObjOptions & { nonRecursive?: boolean },
-): RcType<T>
 export function rc_obj_strict<T extends RcObject>(
   shape: T,
   options?: ObjOptions,
-): RcObjTypeReturn<T>
-export function rc_obj_strict(
-  shape: RcObject | RcType<AnyObj>,
-  options?: ObjOptions & { nonRecursive?: boolean },
-): RcType<any> {
-  if (isRcType(shape)) {
-    if (!shape._obj_shape_) {
-      throw new Error(`rc_obj_strict: expected an object type`)
-    }
+): RcObjTypeReturn<T> {
+  return {
+    ...rc_object(shape, options),
+    _kind_: `strict_obj`,
+  }
+}
 
-    const objType = rc_object(shape._obj_shape_, options)
+export function rc_enable_obj_strict<T extends RcType<any>>(
+  type: T,
+  {
+    nonRecursive,
+  }: {
+    nonRecursive?: boolean
+  } = {},
+): T {
+  if (nonRecursive) {
+    if (!type._obj_shape_) {
+      throw new Error(
+        `rc_enable_obj_strict: nonRecursive option can only be used on object types`,
+      )
+    }
 
     return {
-      ...objType,
-      _kind_: `strict_obj`,
-      _parse_(input, ctx) {
-        const parentStrictObj = ctx.strictObj_
-        if (!options?.nonRecursive) {
-          ctx.strictObj_ = true
-        }
-        const result = objType._parse_(input, ctx)
-
-        if (!options?.nonRecursive) {
-          ctx.strictObj_ = parentStrictObj
-        }
-
-        return result
-      },
-    }
-  } else {
-    return {
-      ...rc_object(shape as RcObject, options),
+      ...type,
       _kind_: `strict_obj`,
     }
+  }
+
+  return {
+    ...type,
+    _parse_(input, ctx) {
+      const parentStrictObj = ctx.strictObj_
+      ctx.strictObj_ = true
+      const result = type._parse_(input, ctx)
+      ctx.strictObj_ = parentStrictObj
+      return result
+    },
   }
 }
 

@@ -21,6 +21,7 @@ import {
   rc_transform,
 } from '../src/runcheck'
 import { errorResult, successResult } from './testUtils'
+import { rc_enable_obj_strict } from '../src/rc_object'
 
 describe('rc_object', () => {
   test('pass', () => {
@@ -671,10 +672,10 @@ describe('rc_strict_obj', () => {
     )
   })
 
-  test('use a obj type as input', () => {
+  test('rc_enable_obj_strict: use a obj type as input', () => {
     const objSchema = rc_object({ user: rc_string, id: rc_number })
 
-    const strictObjSchema = rc_obj_strict(objSchema)
+    const strictObjSchema = rc_enable_obj_strict(objSchema)
 
     const input = { id: 4, user: 'hello', excess: 'world' }
 
@@ -685,7 +686,7 @@ describe('rc_strict_obj', () => {
     )
   })
 
-  test('use a obj type as input, recursive', () => {
+  test('rc_enable_obj_strict: use a obj type as input, recursive', () => {
     const objSchema = rc_object({
       user: rc_string,
       id: rc_number,
@@ -693,7 +694,7 @@ describe('rc_strict_obj', () => {
       obj2: { string: rc_string },
     })
 
-    const strictObjSchema = rc_obj_strict(objSchema)
+    const strictObjSchema = rc_enable_obj_strict(objSchema)
 
     const input = {
       id: 4,
@@ -712,7 +713,7 @@ describe('rc_strict_obj', () => {
     )
   })
 
-  test('disable recursive strict obj', () => {
+  test('rc_enable_obj_strict: disable recursive strict obj', () => {
     const objSchema = rc_object({
       user: rc_string,
       id: rc_number,
@@ -720,7 +721,9 @@ describe('rc_strict_obj', () => {
       obj2: { string: rc_string },
     })
 
-    const strictObjSchema = rc_obj_strict(objSchema, { nonRecursive: true })
+    const strictObjSchema = rc_enable_obj_strict(objSchema, {
+      nonRecursive: true,
+    })
 
     const input = {
       id: 4,
@@ -741,12 +744,12 @@ describe('rc_strict_obj', () => {
     )
   })
 
-  test('recursive should affect objects inside arrays', () => {
+  test('rc_enable_obj_strict: recursive should affect objects inside arrays', () => {
     const objSchema = rc_object({
       array: rc_array(rc_object({ id: rc_number, user: rc_string })),
     })
 
-    const strictObjSchema = rc_obj_strict(objSchema)
+    const strictObjSchema = rc_enable_obj_strict(objSchema)
 
     const input = {
       array: [

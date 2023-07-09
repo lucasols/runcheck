@@ -283,4 +283,18 @@ test('rc_disable_loose_array', () => {
   expect(result).toEqual(
     errorResult(`$[1]: Type 'string' is not assignable to 'number'`),
   )
+
+  const looseArrayInsideObject = rc_object({
+    a: rc_number,
+    b: looseArray,
+  })
+
+  const result2 = rc_parse(
+    { a: 1, b: [1, 'sdf', 3] },
+    rc_disable_loose_array(looseArrayInsideObject),
+  )
+
+  expect(result2).toEqual(
+    errorResult(`$.b[1]: Type 'string' is not assignable to 'number'`),
+  )
 })

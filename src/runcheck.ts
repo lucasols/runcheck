@@ -806,15 +806,20 @@ export function rc_array<T extends RcType<any>>(
   }
 }
 
-export function rc_disable_loose_array<T>(
-  type: RcType<T[]>,
+export function rc_disable_loose_array<T extends RcType<any>>(
+  type: T,
   { nonRecursive = false }: { nonRecursive?: boolean } = {},
-): RcType<T[]> {
-  return {
-    ...type,
-    _kind_: `${type._kind_}[]`,
-    _parse_(input, ctx) {
-      if (nonRecursive) {
+): T {
+  if (nonRecursive) {
+    if (!type._kind_.endsWith('[]')) {
+      throw new Error(
+        `rc_disable_loose_array: nonRecursive option can only be used with array types`,
+      )
+    }
+
+    return {
+      ...type,
+      _parse_(input, ctx) {
         return parse(this, input, ctx, () => {
           if (!Array.isArray(input)) return false
 
@@ -822,15 +827,20 @@ export function rc_disable_loose_array<T>(
 
           return checkArrayItems.call(this, input, type, ctx, false)
         })
-      } else {
-        const parentDisableLooseArray = ctx.noLooseArray_
+      },
+    }
+  }
 
-        ctx.noLooseArray_ = true
-        const result = type._parse_(input, ctx)
-        ctx.noLooseArray_ = parentDisableLooseArray
+  return {
+    ...type,
+    _parse_(input, ctx) {
+      const parentDisableLooseArray = ctx.noLooseArray_
 
-        return result
-      }
+      ctx.noLooseArray_ = true
+      const result = type._parse_(input, ctx)
+      ctx.noLooseArray_ = parentDisableLooseArray
+
+      return result
     },
   }
 }
