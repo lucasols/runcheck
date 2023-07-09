@@ -4,7 +4,9 @@ import {
   rc_array,
   rc_number,
   rc_parse,
+  rc_parse_json,
   rc_transform,
+  rc_unsafe_transform,
 } from '../src/runcheck'
 import { RcParser, rc_parser, rc_string, rc_object } from '../src/runcheck'
 import { errorResult, successResult } from './testUtils'
@@ -83,8 +85,8 @@ describe('transform output validation', () => {
 
     expect(parse(input)).toEqual(
       errorResult(
-        `$.str_to_arr: Type 'number' is not assignable to 'string'`,
         `$.str_to_arr|output|: Type 'number' is not assignable to 'string[]'`,
+        `$.str_to_arr: Type 'number' is not assignable to 'string'`,
       ),
     )
   })
@@ -96,9 +98,69 @@ describe('transform output validation', () => {
 
     expect(rc_parse({}, schema2)).toEqual(
       errorResult(
-        `Type 'object' is not assignable to 'string'`,
         `$|output|: Type 'object' is not assignable to 'number'`,
+        `Type 'object' is not assignable to 'string'`,
       ),
     )
+  })
+})
+
+describe('unsafe transform', () => {
+  test('valid input', () => {
+    const schema = rc_unsafe_transform(rc_string, (s) => ({
+      data: s.length,
+      ok: true,
+    }))
+
+    const parse = rc_parser(schema)
+
+    const input = 'hello'
+
+    expect(parse(input)).toEqual(successResult(input.length))
+  })
+
+  test('invalid input', () => {
+    const schema = rc_unsafe_transform(rc_string, (s) => ({
+      data: s.length,
+      ok: true,
+    }))
+
+    const parse = rc_parser(schema)
+
+    const input = 1
+
+    expect(parse(input)).toEqual(
+      errorResult(`Type 'number' is not assignable to 'string'`),
+    )
+  })
+
+  test('return error in transform', () => {
+    const schema = rc_unsafe_transform(rc_string, (input) =>
+      rc_parse_json(input, rc_number),
+    )
+
+    const parse = rc_parser(schema)
+
+    const input = 'hello'
+
+    expect(parse(input)).toEqual(
+      errorResult(
+        `json parsing error: Unexpected token h in JSON at position 0`,
+      ),
+    )
+  })
+
+  test('validate output', () => {
+    const schema = rc_unsafe_transform(
+      rc_string,
+      (input) => rc_parse_json(input, rc_number),
+      { outputSchema: rc_number },
+    )
+
+    const parse = rc_parser(schema)
+
+    const input = 2
+
+    expect(parse(input)).toEqual(successResult(2))
   })
 })

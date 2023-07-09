@@ -367,7 +367,7 @@ const result = rc_parse(
 )
 ```
 
-Use the `outputSchema` option to create a type that validates both the input and the output of the transform. So if the input type is invalid, it will assume that the input is a transformed value and the `outputSchema` will be used
+Use the `outputSchema` option to create a type that validates both the input and the output of the transform. So if the input matches the `outputSchema` the transform will be ignored.
 
 ```ts
 const input = 'hello'

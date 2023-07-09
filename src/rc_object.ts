@@ -102,10 +102,28 @@ export function rc_object<T extends RcObject>(
           return false
         }
 
-        const excessKeys =
-          this._kind_ === 'strict_obj'
-            ? new Set<string>(Object.keys(inputObj))
-            : undefined
+        const isStrict = this._kind_ === 'strict_obj'
+
+        const excessKeys = isStrict
+          ? new Set<string>(Object.keys(inputObj))
+          : undefined
+
+        if (excessKeys && this._shape_entries_.length !== excessKeys.size) {
+          for (const [key] of this._shape_entries_) {
+            excessKeys.delete(key)
+          }
+
+          ctx.objErrKeyIndex_ = -1
+          const errors: string[] = []
+
+          for (const key of excessKeys) {
+            errors.push(`Key '${key}' is not defined in the object shape`)
+          }
+          return {
+            data: undefined,
+            errors,
+          }
+        }
 
         const resultObj: Record<any, string> = {} as any
         const resultErrors: string[] = []

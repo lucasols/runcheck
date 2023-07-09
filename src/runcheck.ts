@@ -929,52 +929,54 @@ function validateTransformOutput<T>(
   ctx: ParseResultCtx,
   outputSchema: RcType<T>,
   input: any,
-  inputError: string[],
 ): InternalParseResult<T> {
   const basePath = ctx.path_
+  const currentObjErrShortCircuit = ctx.objErrShortCircuit_
 
+  ctx.objErrShortCircuit_ = true
   ctx.path_ = `${basePath}|output|`
 
-  const [outputSuccess, outputDataOrError] = outputSchema._parse_(input, ctx)
+  const result = outputSchema._parse_(input, ctx)
 
   ctx.path_ = basePath
+  ctx.objErrShortCircuit_ = currentObjErrShortCircuit
 
-  if (outputSuccess) {
-    return [true, outputDataOrError]
-  } else {
-    return [false, [...inputError, ...outputDataOrError]]
-  }
+  return result
 }
 
 /** validate a input or subset of input and transform the valid result */
 export function rc_transform<Input, Transformed>(
   type: RcType<Input>,
-  transform: (input: Input) => Transformed,
+  transform: (input: Input, inputSchema: RcType<Input>) => Transformed,
   { outputSchema }: TransformOptions<Transformed> = {},
 ): RcType<Transformed> {
   return {
     ...defaultProps,
     _kind_: `transform_from_${type._kind_}`,
     _parse_(input, ctx) {
-      const currentObjErrShortCircuit = ctx.objErrShortCircuit_
+      let outputResultErrors: string[] | null = null
 
       if (outputSchema) {
-        ctx.objErrShortCircuit_ = true
+        const [outputSuccess, dataOrError] = validateTransformOutput(
+          ctx,
+          outputSchema,
+          input,
+        )
+
+        if (outputSuccess) {
+          return [true, dataOrError]
+        } else {
+          outputResultErrors = dataOrError
+        }
       }
 
       const [success, dataOrError] = type._parse_(input, ctx)
 
-      if (outputSchema) {
-        ctx.objErrShortCircuit_ = currentObjErrShortCircuit
-      }
-
       if (success) {
-        return [true, transform(dataOrError)]
-      } else if (outputSchema) {
-        return validateTransformOutput(ctx, outputSchema, input, dataOrError)
+        return [true, transform(dataOrError, type)]
+      } else {
+        return [false, [...(outputResultErrors || []), ...dataOrError]]
       }
-
-      return [false, dataOrError]
     },
   }
 }
@@ -983,28 +985,50 @@ export function rc_unsafe_transform<Input, Transformed>(
   type: RcType<Input>,
   transform: (
     input: Input,
-  ) => { ok: true; data: Transformed } | { ok: false; errors: string[] },
+    inputSchema: RcType<Input>,
+  ) =>
+    | { ok: true; data: Transformed }
+    | { ok: false; errors: string | string[] },
   { outputSchema }: TransformOptions<Transformed> = {},
 ): RcType<Transformed> {
   return {
     ...defaultProps,
     _kind_: `transform_from_${type._kind_}`,
     _parse_(input, ctx) {
+      let outputResultErrors: string[] | null = null
+
+      if (outputSchema) {
+        const [outputSuccess, dataOrError] = validateTransformOutput(
+          ctx,
+          outputSchema,
+          input,
+        )
+
+        if (outputSuccess) {
+          return [true, dataOrError]
+        } else {
+          outputResultErrors = dataOrError
+        }
+      }
+
       const [success, dataOrError] = type._parse_(input, ctx)
 
       if (success) {
-        const transformResult = transform(dataOrError)
+        const transformResult = transform(dataOrError, type)
 
         if (transformResult.ok) {
           return [true, transformResult.data]
         } else {
-          return [false, transformResult.errors]
+          return [
+            false,
+            typeof transformResult.errors === 'string'
+              ? [transformResult.errors]
+              : transformResult.errors,
+          ]
         }
-      } else if (outputSchema) {
-        return validateTransformOutput(ctx, outputSchema, input, dataOrError)
       }
 
-      return [false, dataOrError]
+      return [false, [...(outputResultErrors || []), ...dataOrError]]
     },
   }
 }
@@ -1084,7 +1108,7 @@ export function rc_parse_json<T>(
     return {
       ok: false,
       error: true,
-      errors: [`json parse error: ${isObject(err) ? err.message : ''}`],
+      errors: [`json parsing error: ${isObject(err) ? err.message : ''}`],
     }
   }
 }
