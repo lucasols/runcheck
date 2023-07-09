@@ -685,7 +685,7 @@ describe('rc_strict_obj', () => {
     )
   })
 
-  test('use a obj type as input recursive', () => {
+  test('use a obj type as input, recursive', () => {
     const objSchema = rc_object({
       user: rc_string,
       id: rc_number,
@@ -738,6 +738,57 @@ describe('rc_strict_obj', () => {
         obj: { id: 4, user: 'hello' },
         obj2: { string: 'hello' },
       }),
+    )
+  })
+
+  test('recursive should affect objects inside arrays', () => {
+    const objSchema = rc_object({
+      array: rc_array(rc_object({ id: rc_number, user: rc_string })),
+    })
+
+    const strictObjSchema = rc_obj_strict(objSchema)
+
+    const input = {
+      array: [
+        { id: 4, user: 'hello', excess: 'world' },
+        { id: 4, user: 'hello', excess: 'world' },
+      ],
+    }
+
+    const result = rc_parse(input, strictObjSchema)
+
+    expect(result).toEqual(
+      errorResult(
+        `$.array[0]: Key 'excess' is not defined in the object shape`,
+      ),
+    )
+  })
+
+  test('input with less keys than the shape', () => {
+    const input = { id: 4 }
+
+    const result = rc_parse(
+      input,
+      rc_obj_strict({ user: rc_string, id: rc_number }),
+    )
+
+    expect(result).toEqual(errorResult(`Key 'user' is missing`))
+  })
+
+  test('missing and extra keys', () => {
+    const input = { id: 4, extra: 'hello', extra2: 'hello' }
+
+    const result = rc_parse(
+      input,
+      rc_obj_strict({ user: rc_string, id: rc_number }),
+    )
+
+    expect(result).toEqual(
+      errorResult(
+        `Key 'user' is missing`,
+        `Key 'extra' is not defined in the object shape`,
+        `Key 'extra2' is not defined in the object shape`,
+      ),
     )
   })
 })

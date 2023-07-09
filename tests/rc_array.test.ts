@@ -2,6 +2,7 @@ import { describe, expect, test } from 'vitest'
 import {
   RcParseResult,
   rc_array,
+  rc_disable_loose_array,
   rc_loose_array,
   rc_number,
   rc_object,
@@ -272,4 +273,14 @@ test('rc_object array with excess keys', () => {
   )
 
   expect(result).toEqual(successResult([{ a: 1, b: 2 }]))
+})
+
+test('rc_disable_loose_array', () => {
+  const looseArray = rc_loose_array(rc_number)
+
+  const result = rc_parse([1, 'sdf', 3], rc_disable_loose_array(looseArray))
+
+  expect(result).toEqual(
+    errorResult(`$[1]: Type 'string' is not assignable to 'number'`),
+  )
 })

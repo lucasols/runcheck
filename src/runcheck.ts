@@ -32,12 +32,14 @@ type ParseResultCtx = {
   path_: string
   objErrShortCircuit_: boolean
   objErrKeyIndex_: number
+  strictObj_: boolean
   noWarnings_: boolean
+  noLooseArray_: boolean
 }
 
 type InternalParseResult<T> =
   | [success: true, data: T]
-  | [success: false, errors: string[]]
+  | [success: false, errors: ErrorWithPath[]]
 
 type WithFallback<T> = (fallback: T | (() => T)) => RcType<T>
 
@@ -106,19 +108,22 @@ function withFallback(this: RcType<any>, fallback: any): RcType<any> {
   }
 }
 
-export function gerWarningOrErrorWithPath(
+/** @internal */
+export type ErrorWithPath = string & { __withPath: true }
+
+export function getWarningOrErrorWithPath(
   ctx: ParseResultCtx,
   message: string,
-): string {
+): ErrorWithPath {
   if (message.startsWith('$')) {
-    return message
+    return message as ErrorWithPath
   }
 
-  return `${ctx.path_ ? `$${ctx.path_}: ` : ''}${message}`
+  return `${ctx.path_ ? `$${ctx.path_}: ` : ''}${message}` as ErrorWithPath
 }
 
 function addWarning(ctx: ParseResultCtx, warning: string) {
-  ctx.warnings_.push(gerWarningOrErrorWithPath(ctx, warning))
+  ctx.warnings_.push(getWarningOrErrorWithPath(ctx, warning))
 }
 
 function addWarnings(ctx: ParseResultCtx, warnings: string[]) {
@@ -128,7 +133,7 @@ function addWarnings(ctx: ParseResultCtx, warnings: string[]) {
 type IsValid<T> =
   | boolean
   | { data: T; errors: false }
-  | { data: undefined; errors: string[] }
+  | { data: undefined; errors: ErrorWithPath[] }
 
 export function parse<T>(
   type: RcType<T>,
@@ -162,7 +167,15 @@ export function parse<T>(
 
       if (type._predicate_) {
         if (!type._predicate_(validResult)) {
-          return [false, [`Predicate failed for type '${type._kind_}'`]]
+          return [
+            false,
+            [
+              getWarningOrErrorWithPath(
+                ctx,
+                `Predicate failed for type '${type._kind_}'`,
+              ),
+            ],
+          ]
         }
       }
 
@@ -195,7 +208,12 @@ export function parse<T>(
           if (!type._predicate_(autofixed.fixed)) {
             return [
               false,
-              [`Predicate failed for autofix in type '${type._kind_}'`],
+              [
+                getWarningOrErrorWithPath(
+                  ctx,
+                  `Predicate failed for autofix in type '${type._kind_}'`,
+                ),
+              ],
             ]
           }
         }
@@ -219,7 +237,7 @@ export function parse<T>(
     false,
     isValid
       ? isValid.errors
-      : [gerWarningOrErrorWithPath(ctx, getErrorMsg(type, input))],
+      : [getWarningOrErrorWithPath(ctx, getErrorMsg(type, input))],
   ]
 }
 
@@ -442,10 +460,10 @@ export function rc_union<T extends RcType<any>[]>(
     _parse_(input, ctx) {
       return parse(this, input, ctx, () => {
         const basePath = ctx.path_
-        const shallowObjErrors: string[] = []
+        const shallowObjErrors: ErrorWithPath[] = []
         let shallowObjErrorsCount = 0
         let hasNonObjTypeMember = false
-        const nonShallowObjErrors: string[] = []
+        const nonShallowObjErrors: ErrorWithPath[] = []
 
         let i = 0
         for (const type of types) {
@@ -490,7 +508,12 @@ export function rc_union<T extends RcType<any>[]>(
             shallowObjErrorsCount > maxShallowObjErrors ||
             hasNonObjTypeMember
           ) {
-            shallowObjErrors.push('not matches any other union member')
+            shallowObjErrors.push(
+              getWarningOrErrorWithPath(
+                ctx,
+                'not matches any other union member',
+              ),
+            )
           }
 
           return {
@@ -596,7 +619,7 @@ export function rc_record<V>(
         if (!isObject(inputObj)) return false
 
         const resultObj: Record<any, string> = {} as any
-        const resultErrors: string[] = []
+        const resultErrors: ErrorWithPath[] = []
 
         const parentPath = ctx.path_
 
@@ -608,7 +631,7 @@ export function rc_record<V>(
 
           if (checkKey && !checkKey(key)) {
             resultErrors.push(
-              gerWarningOrErrorWithPath(ctx, `Key '${key}' is not allowed`),
+              getWarningOrErrorWithPath(ctx, `Key '${key}' is not allowed`),
             )
             continue
           }
@@ -625,7 +648,7 @@ export function rc_record<V>(
             const errors = result
 
             for (const subError of errors) {
-              resultErrors.push(gerWarningOrErrorWithPath(ctx, subError))
+              resultErrors.push(getWarningOrErrorWithPath(ctx, subError))
             }
 
             if (ctx.objErrShortCircuit_) {
@@ -661,10 +684,12 @@ function checkArrayItems(
   input: any[],
   types: RcType<any> | readonly RcType<any>[],
   ctx: ParseResultCtx,
-  loose = false,
+  _loose = false,
   options?: ArrayOptions<RcType<any>>,
 ): IsValid<any[]> {
-  const looseErrors: string[][] = []
+  const useLooseMode = _loose && !ctx.noWarnings_ && !ctx.noLooseArray_
+
+  const looseErrors: ErrorWithPath[][] = []
   const arrayResult: any[] = []
   const uniqueValues = new Set<any>()
 
@@ -711,7 +736,7 @@ function checkArrayItems(
         parseResult = [
           false,
           [
-            gerWarningOrErrorWithPath(
+            getWarningOrErrorWithPath(
               ctx,
               isUniqueKey
                 ? `Type '${type._obj_shape_?.[unique]?._kind_}' with value "${uniqueValueToCheck}" is not unique`
@@ -729,14 +754,14 @@ function checkArrayItems(
     const [isValid, result] = parseResult
 
     if (!isValid) {
-      if (!loose) {
+      if (!useLooseMode) {
         return {
-          errors: result.map((error) => gerWarningOrErrorWithPath(ctx, error)),
+          errors: result.map((error) => getWarningOrErrorWithPath(ctx, error)),
           data: undefined,
         }
       } else {
         looseErrors.push(
-          result.map((error) => gerWarningOrErrorWithPath(ctx, error)),
+          result.map((error) => getWarningOrErrorWithPath(ctx, error)),
         )
         continue
       }
@@ -777,6 +802,35 @@ export function rc_array<T extends RcType<any>>(
 
         return checkArrayItems.call(this, input, type, ctx, false, options)
       })
+    },
+  }
+}
+
+export function rc_disable_loose_array<T>(
+  type: RcType<T[]>,
+  { nonRecursive = false }: { nonRecursive?: boolean } = {},
+): RcType<T[]> {
+  return {
+    ...type,
+    _kind_: `${type._kind_}[]`,
+    _parse_(input, ctx) {
+      if (nonRecursive) {
+        return parse(this, input, ctx, () => {
+          if (!Array.isArray(input)) return false
+
+          if (input.length === 0) return true
+
+          return checkArrayItems.call(this, input, type, ctx, false)
+        })
+      } else {
+        const parentDisableLooseArray = ctx.noLooseArray_
+
+        ctx.noLooseArray_ = true
+        const result = type._parse_(input, ctx)
+        ctx.noLooseArray_ = parentDisableLooseArray
+
+        return result
+      }
     },
   }
 }
@@ -848,6 +902,8 @@ export function rc_parse<S>(
     objErrShortCircuit_: false,
     objErrKeyIndex_: 0,
     noWarnings_: noWarnings,
+    strictObj_: false,
+    noLooseArray_: false,
   }
 
   const [success, dataOrError] = type._parse_(input, ctx)
@@ -901,6 +957,8 @@ export function rc_is_valid<S>(input: any, type: RcType<S>): input is S {
     objErrShortCircuit_: false,
     objErrKeyIndex_: 0,
     noWarnings_: false,
+    strictObj_: false,
+    noLooseArray_: false,
   }
 
   return !!type._parse_(input, ctx)[0]
@@ -923,23 +981,34 @@ export function rc_recursive<T>(type: () => RcType<T>): RcType<T> {
 type TransformOptions<T> = {
   /** if the input type is invalid, the transform will be ignored and this schema will be used to validate the input */
   outputSchema?: RcType<T>
+  disableStrictOutputSchema?: boolean
 }
 
 function validateTransformOutput<T>(
   ctx: ParseResultCtx,
   outputSchema: RcType<T>,
   input: any,
+  disableStrictOutputSchema: boolean | undefined,
 ): InternalParseResult<T> {
-  const basePath = ctx.path_
-  const currentObjErrShortCircuit = ctx.objErrShortCircuit_
+  const parentPath = ctx.path_
+  const parentObjErrShortCircuit = ctx.objErrShortCircuit_
+  const parentStrictObj = ctx.strictObj_
+  const parentNoWarnings = ctx.noWarnings_
 
   ctx.objErrShortCircuit_ = true
-  ctx.path_ = `${basePath}|output|`
+  ctx.path_ = `${parentPath}|output|`
+
+  if (!disableStrictOutputSchema) {
+    ctx.strictObj_ = true
+    ctx.noWarnings_ = true
+  }
 
   const result = outputSchema._parse_(input, ctx)
 
-  ctx.path_ = basePath
-  ctx.objErrShortCircuit_ = currentObjErrShortCircuit
+  ctx.strictObj_ = parentStrictObj
+  ctx.noWarnings_ = parentNoWarnings
+  ctx.path_ = parentPath
+  ctx.objErrShortCircuit_ = parentObjErrShortCircuit
 
   return result
 }
@@ -948,19 +1017,23 @@ function validateTransformOutput<T>(
 export function rc_transform<Input, Transformed>(
   type: RcType<Input>,
   transform: (input: Input, inputSchema: RcType<Input>) => Transformed,
-  { outputSchema }: TransformOptions<Transformed> = {},
+  {
+    outputSchema,
+    disableStrictOutputSchema,
+  }: TransformOptions<Transformed> = {},
 ): RcType<Transformed> {
   return {
     ...defaultProps,
     _kind_: `transform_from_${type._kind_}`,
     _parse_(input, ctx) {
-      let outputResultErrors: string[] | null = null
+      let outputResultErrors: ErrorWithPath[] | null = null
 
       if (outputSchema) {
         const [outputSuccess, dataOrError] = validateTransformOutput(
           ctx,
           outputSchema,
           input,
+          disableStrictOutputSchema,
         )
 
         if (outputSuccess) {
@@ -989,19 +1062,23 @@ export function rc_unsafe_transform<Input, Transformed>(
   ) =>
     | { ok: true; data: Transformed }
     | { ok: false; errors: string | string[] },
-  { outputSchema }: TransformOptions<Transformed> = {},
+  {
+    outputSchema,
+    disableStrictOutputSchema,
+  }: TransformOptions<Transformed> = {},
 ): RcType<Transformed> {
   return {
     ...defaultProps,
     _kind_: `transform_from_${type._kind_}`,
     _parse_(input, ctx) {
-      let outputResultErrors: string[] | null = null
+      let outputResultErrors: ErrorWithPath[] | null = null
 
       if (outputSchema) {
         const [outputSuccess, dataOrError] = validateTransformOutput(
           ctx,
           outputSchema,
           input,
+          disableStrictOutputSchema,
         )
 
         if (outputSuccess) {
@@ -1022,8 +1099,10 @@ export function rc_unsafe_transform<Input, Transformed>(
           return [
             false,
             typeof transformResult.errors === 'string'
-              ? [transformResult.errors]
-              : transformResult.errors,
+              ? [getWarningOrErrorWithPath(ctx, transformResult.errors)]
+              : transformResult.errors.map((error) =>
+                  getWarningOrErrorWithPath(ctx, error),
+                ),
           ]
         }
       }

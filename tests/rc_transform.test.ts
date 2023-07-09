@@ -103,6 +103,35 @@ describe('transform output validation', () => {
       ),
     )
   })
+
+  test('outputSchema is strict by default', () => {
+    const schema2 = rc_transform(
+      rc_string,
+      (s) => ({
+        ok: s,
+      }),
+      {
+        outputSchema: rc_object({
+          ok: rc_string,
+        }),
+      },
+    )
+
+    expect(
+      rc_parse(
+        {
+          ok: 'hello',
+          not_ok: 'world',
+        },
+        schema2,
+      ),
+    ).toEqual(
+      errorResult(
+        `$|output|: Expected strict object with 1 keys but got 2`,
+        `Type 'object' is not assignable to 'string'`,
+      ),
+    )
+  })
 })
 
 describe('unsafe transform', () => {

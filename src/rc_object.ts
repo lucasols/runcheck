@@ -7,7 +7,8 @@ import {
   defaultProps,
   parse,
   snakeCase,
-  gerWarningOrErrorWithPath,
+  getWarningOrErrorWithPath,
+  ErrorWithPath,
 } from './runcheck'
 
 export function rc_rename_from_key<T extends RcType<any>>(
@@ -102,23 +103,47 @@ export function rc_object<T extends RcObject>(
           return false
         }
 
-        const isStrict = this._kind_ === 'strict_obj'
+        const isStrict = this._kind_ === 'strict_obj' || ctx.strictObj_
 
         const excessKeys = isStrict
           ? new Set<string>(Object.keys(inputObj))
           : undefined
 
         if (excessKeys && this._shape_entries_.length !== excessKeys.size) {
-          for (const [key] of this._shape_entries_) {
-            excessKeys.delete(key)
+          ctx.objErrKeyIndex_ = -1
+          const errors: ErrorWithPath[] = []
+
+          if (ctx.objErrShortCircuit_) {
+            return {
+              data: undefined,
+              errors: [
+                getWarningOrErrorWithPath(
+                  ctx,
+                  `Expected strict object with ${this._shape_entries_.length} keys but got ${excessKeys.size}`,
+                ),
+              ],
+            }
           }
 
-          ctx.objErrKeyIndex_ = -1
-          const errors: string[] = []
+          for (const [key] of this._shape_entries_) {
+            if (!excessKeys.has(key)) {
+              errors.push(
+                getWarningOrErrorWithPath(ctx, `Key '${key}' is missing`),
+              )
+            } else {
+              excessKeys.delete(key)
+            }
+          }
 
           for (const key of excessKeys) {
-            errors.push(`Key '${key}' is not defined in the object shape`)
+            errors.push(
+              getWarningOrErrorWithPath(
+                ctx,
+                `Key '${key}' is not defined in the object shape`,
+              ),
+            )
           }
+
           return {
             data: undefined,
             errors,
@@ -126,7 +151,7 @@ export function rc_object<T extends RcObject>(
         }
 
         const resultObj: Record<any, string> = {} as any
-        const resultErrors: string[] = []
+        const resultErrors: ErrorWithPath[] = []
 
         const parentPath = ctx.path_
 
@@ -172,7 +197,7 @@ export function rc_object<T extends RcObject>(
           else {
             for (const subError of result) {
               ctx.path_ = path
-              resultErrors.push(gerWarningOrErrorWithPath(ctx, subError))
+              resultErrors.push(getWarningOrErrorWithPath(ctx, subError))
             }
 
             if (ctx.objErrShortCircuit_) {
@@ -186,7 +211,10 @@ export function rc_object<T extends RcObject>(
           if (excessKeys.size > 0) {
             for (const key of excessKeys) {
               resultErrors.push(
-                `Key '${key}' is not defined in the object shape`,
+                getWarningOrErrorWithPath(
+                  ctx,
+                  `Key '${key}' is not defined in the object shape`,
+                ),
               )
             }
           }
@@ -242,33 +270,35 @@ export function rc_obj_strict(
   shape: RcObject | RcType<AnyObj>,
   options?: ObjOptions & { nonRecursive?: boolean },
 ): RcType<any> {
-  const objShape = ((): RcObject => {
-    if (isRcType(shape)) {
-      if (!shape._obj_shape_) {
-        throw new Error(`rc_strict_obj: expected an object type`)
-      }
-
-      if (options?.nonRecursive) {
-        return shape._obj_shape_
-      } else {
-        const objShape: RcObject = {}
-
-        for (const [key, value] of Object.entries(shape._obj_shape_)) {
-          objShape[key] = value._obj_shape_
-            ? rc_obj_strict(value, options)
-            : value
-        }
-
-        return objShape
-      }
+  if (isRcType(shape)) {
+    if (!shape._obj_shape_) {
+      throw new Error(`rc_obj_strict: expected an object type`)
     }
 
-    return shape as RcObject
-  })()
+    const objType = rc_object(shape._obj_shape_, options)
 
-  return {
-    ...rc_object(objShape, options),
-    _kind_: `strict_obj`,
+    return {
+      ...objType,
+      _kind_: `strict_obj`,
+      _parse_(input, ctx) {
+        const parentStrictObj = ctx.strictObj_
+        if (!options?.nonRecursive) {
+          ctx.strictObj_ = true
+        }
+        const result = objType._parse_(input, ctx)
+
+        if (!options?.nonRecursive) {
+          ctx.strictObj_ = parentStrictObj
+        }
+
+        return result
+      },
+    }
+  } else {
+    return {
+      ...rc_object(shape as RcObject, options),
+      _kind_: `strict_obj`,
+    }
   }
 }
 
