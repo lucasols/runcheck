@@ -1,4 +1,3 @@
-import { z as zod } from 'zod'
 import {
   rc_array,
   rc_boolean,
@@ -9,6 +8,7 @@ import {
   rc_string,
   rc_union,
 } from '../src/runcheck.js'
+import * as test from '../dist-test/runcheck.js'
 import { generateProfile } from './profileUtils'
 
 const validateData = Object.freeze({
@@ -34,51 +34,49 @@ const largeArray = Array.from({ length: 100 }, (_, i) => ({
   union: i % 2 === 0 ? 'foo' : { type: 'qux', baz: 'qux', num: i },
 }))
 
-const objDataType = zod.object({
-  number: zod.number(),
-  negNumber: zod.number(),
-  maxNumber: zod.number(),
-  string: zod.string(),
-  longString: zod.string(),
-  boolean: zod.boolean(),
-  deeplyNested: zod.object({
-    foo: zod.string(),
-    num: zod.number(),
-    bool: zod.boolean(),
+const testObjShape = test.rc_object({
+  number: test.rc_number,
+  negNumber: test.rc_number,
+  maxNumber: test.rc_number,
+  string: test.rc_string,
+  longString: test.rc_string,
+  boolean: test.rc_boolean,
+  deeplyNested: test.rc_object({
+    foo: test.rc_string,
+    num: test.rc_number,
+    bool: test.rc_boolean,
   }),
 })
 
-const dataType2 = zod.array(
-  zod.object({
-    string: zod.string(),
-    number: zod.number(),
-    array: zod.array(zod.number()),
-    obj: objDataType,
-    union: zod.union([
-      zod.string(),
-      zod.discriminatedUnion('type', [
-        zod.object({
-          type: zod.literal('bar'),
-          baz: zod.string(),
-          num: zod.number(),
-        }),
-        zod.object({
-          type: zod.literal('baz'),
-          baz: zod.string(),
-          num: zod.number(),
-        }),
-        zod.object({
-          type: zod.literal('bazs'),
-          baz: zod.string(),
-          num: zod.number(),
-        }),
-        zod.object({
-          type: zod.literal('qux'),
-          baz: zod.string(),
-          num: zod.number(),
-        }),
-      ]),
-    ]),
+const testSchema = test.rc_array(
+  test.rc_object({
+    string: test.rc_string,
+    number: test.rc_number,
+    array: test.rc_array(test.rc_number),
+    obj: testObjShape,
+    union: test.rc_union(
+      test.rc_string,
+      test.rc_object({
+        type: test.rc_literals('bar'),
+        baz: test.rc_string,
+        num: test.rc_number,
+      }),
+      test.rc_object({
+        type: test.rc_literals('baz'),
+        baz: test.rc_string,
+        num: test.rc_number,
+      }),
+      test.rc_object({
+        type: test.rc_literals('bazs'),
+        baz: test.rc_string,
+        num: test.rc_number,
+      }),
+      test.rc_object({
+        type: test.rc_literals('qux'),
+        baz: test.rc_string,
+        num: test.rc_number,
+      }),
+    ),
   }),
 )
 
@@ -129,9 +127,9 @@ generateProfile(
 )
 
 generateProfile(
-  'zod',
+  'runcheck test',
   () => {
-    dataType2.parse(largeArray)
+    test.rc_parse(largeArray, testSchema)
   },
   { heatup: 1000 },
 )

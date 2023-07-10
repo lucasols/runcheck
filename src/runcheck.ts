@@ -110,20 +110,19 @@ function withFallback(this: RcType<any>, fallback: any): RcType<any> {
 
 /** @internal */
 export type ErrorWithPath = string & { __withPath: true }
+type ErrorWithouPath = string & { __withPath?: never }
 
 export function getWarningOrErrorWithPath(
   ctx: ParseResultCtx,
-  message: string & { __withPath?: never },
+  message: ErrorWithouPath,
 ): ErrorWithPath {
-  if (message.startsWith('$')) {
-    return message as unknown as ErrorWithPath
-  }
-
   return `${ctx.path_ ? `$${ctx.path_}: ` : ''}${message}` as ErrorWithPath
 }
 
 function addWarning(ctx: ParseResultCtx, warning: string) {
-  ctx.warnings_.push(getWarningOrErrorWithPath(ctx, warning))
+  ctx.warnings_.push(
+    warning.startsWith('$') ? warning : getWarningOrErrorWithPath(ctx, warning),
+  )
 }
 
 function addWarnings(ctx: ParseResultCtx, warnings: string[]) {
@@ -1131,8 +1130,10 @@ export function rc_unsafe_transform<Input, Transformed>(
 }
 
 function normalizedTypeOf(input: unknown, showValueInError: boolean): string {
+  const typeOf = typeof input
+
   const type = ((): string => {
-    if (typeof input === 'object') {
+    if (typeOf === 'object') {
       if (Array.isArray(input)) {
         return 'array'
       }
@@ -1142,7 +1143,7 @@ function normalizedTypeOf(input: unknown, showValueInError: boolean): string {
       }
     }
 
-    return typeof input
+    return typeOf
   })()
 
   return showValueInError &&
