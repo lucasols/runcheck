@@ -415,9 +415,9 @@ export function rc_instanceof<T extends Function>(classToCheck: T): RcType<T> {
   }
 }
 
-export function rc_literals<T extends (string | number | boolean)>(
-  ...literals: T[]
-): RcType<T> {
+export function rc_literals<T extends (string | number | boolean)[]>(
+  ...literals: T
+): RcType<T[number]> {
   if (literals.length === 0) {
     throw new Error('rc_literal requires at least one literal')
   }
