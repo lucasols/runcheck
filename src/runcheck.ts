@@ -7,6 +7,7 @@ export {
   rc_obj_pick,
   rc_obj_strict,
   rc_object,
+  rc_enable_obj_strict,
   rc_rename_from_key,
 } from './rc_object'
 
