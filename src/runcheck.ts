@@ -688,10 +688,11 @@ function checkArrayItems(
   options?: ArrayOptions<RcType<any>>,
 ): IsValid<any[]> {
   const useLooseMode = _loose && !ctx.noWarnings_ && !ctx.noLooseArray_
+  const unique = options?.unique
 
   const looseErrors: ErrorWithPath[][] = []
   const arrayResult: any[] = []
-  const uniqueValues = new Set<any>()
+  const uniqueValues = unique ? new Set<any>() : undefined
 
   const parentPath = ctx.path_
 
@@ -714,9 +715,7 @@ function checkArrayItems(
 
     ctx.path_ = path
 
-    const unique = options?.unique
-
-    if (initialIsValid && unique) {
+    if (initialIsValid && uniqueValues) {
       let uniqueValueToCheck = initialResult
 
       const isUniqueKey = typeof unique === 'string'

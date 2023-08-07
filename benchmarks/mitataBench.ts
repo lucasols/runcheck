@@ -282,165 +282,161 @@ addGroup('large array with union', () => {
   })
 })
 
-addGroup(
-  'discriminated union',
-  () => {
-    const largeArray = Array.from({ length: 100 }, (_, i) => ({
-      string: `string${i}`,
-      number: i,
-      array: [1, 2, 3],
-      obj: JSON.parse(JSON.stringify(validateData)),
-      union: i % 2 === 0 ? 'foo' : { type: 'qux', baz: 'qux', num: i },
-    }))
+addGroup('discriminated union', () => {
+  const largeArray = Array.from({ length: 100 }, (_, i) => ({
+    string: `string${i}`,
+    number: i,
+    array: [1, 2, 3],
+    obj: JSON.parse(JSON.stringify(validateData)),
+    union: i % 2 === 0 ? 'foo' : { type: 'qux', baz: 'qux', num: i },
+  }))
 
-    const dataType2 = zod.array(
-      zod.object({
-        string: zod.string(),
-        number: zod.number(),
-        array: zod.array(zod.number()),
-        obj: objDataType,
-        union: zod.union([
-          zod.string(),
-          zod.discriminatedUnion('type', [
-            zod.object({
-              type: zod.literal('bar'),
-              baz: zod.string(),
-              num: zod.number(),
-            }),
-            zod.object({
-              type: zod.literal('baz'),
-              baz: zod.string(),
-              num: zod.number(),
-            }),
-            zod.object({
-              type: zod.literal('bazs'),
-              baz: zod.string(),
-              num: zod.number(),
-            }),
-            zod.object({
-              type: zod.literal('qux'),
-              baz: zod.string(),
-              num: zod.number(),
-            }),
-          ]),
+  const dataType2 = zod.array(
+    zod.object({
+      string: zod.string(),
+      number: zod.number(),
+      array: zod.array(zod.number()),
+      obj: objDataType,
+      union: zod.union([
+        zod.string(),
+        zod.discriminatedUnion('type', [
+          zod.object({
+            type: zod.literal('bar'),
+            baz: zod.string(),
+            num: zod.number(),
+          }),
+          zod.object({
+            type: zod.literal('baz'),
+            baz: zod.string(),
+            num: zod.number(),
+          }),
+          zod.object({
+            type: zod.literal('bazs'),
+            baz: zod.string(),
+            num: zod.number(),
+          }),
+          zod.object({
+            type: zod.literal('qux'),
+            baz: zod.string(),
+            num: zod.number(),
+          }),
         ]),
-      }),
-    )
+      ]),
+    }),
+  )
 
-    const schema = rc_array(
-      rc_object({
-        string: rc_string,
-        number: rc_number,
-        array: rc_array(rc_number),
-        obj: objShape,
-        union: rc_union(
-          rc_string,
-          rc_object({
-            type: rc_literals('bar'),
-            baz: rc_string,
-            num: rc_number,
-          }),
-          rc_object({
-            type: rc_literals('baz'),
-            baz: rc_string,
-            num: rc_number,
-          }),
-          rc_object({
-            type: rc_literals('bazs'),
-            baz: rc_string,
-            num: rc_number,
-          }),
-          rc_object({
-            type: rc_literals('qux'),
-            baz: rc_string,
-            num: rc_number,
-          }),
-        ),
-      }),
-    )
+  const schema = rc_array(
+    rc_object({
+      string: rc_string,
+      number: rc_number,
+      array: rc_array(rc_number),
+      obj: objShape,
+      union: rc_union(
+        rc_string,
+        rc_object({
+          type: rc_literals('bar'),
+          baz: rc_string,
+          num: rc_number,
+        }),
+        rc_object({
+          type: rc_literals('baz'),
+          baz: rc_string,
+          num: rc_number,
+        }),
+        rc_object({
+          type: rc_literals('bazs'),
+          baz: rc_string,
+          num: rc_number,
+        }),
+        rc_object({
+          type: rc_literals('qux'),
+          baz: rc_string,
+          num: rc_number,
+        }),
+      ),
+    }),
+  )
 
-    const oldSchema = old.rc_array(
-      old.rc_object({
-        string: old.rc_string,
-        number: old.rc_number,
-        array: old.rc_array(old.rc_number),
-        obj: oldObjShape,
-        union: old.rc_union(
-          old.rc_string,
-          old.rc_object({
-            type: old.rc_literals('bar'),
-            baz: old.rc_string,
-            num: old.rc_number,
-          }),
-          old.rc_object({
-            type: old.rc_literals('baz'),
-            baz: old.rc_string,
-            num: old.rc_number,
-          }),
-          old.rc_object({
-            type: old.rc_literals('bazs'),
-            baz: old.rc_string,
-            num: old.rc_number,
-          }),
-          old.rc_object({
-            type: old.rc_literals('qux'),
-            baz: old.rc_string,
-            num: old.rc_number,
-          }),
-        ),
-      }),
-    )
+  const oldSchema = old.rc_array(
+    old.rc_object({
+      string: old.rc_string,
+      number: old.rc_number,
+      array: old.rc_array(old.rc_number),
+      obj: oldObjShape,
+      union: old.rc_union(
+        old.rc_string,
+        old.rc_object({
+          type: old.rc_literals('bar'),
+          baz: old.rc_string,
+          num: old.rc_number,
+        }),
+        old.rc_object({
+          type: old.rc_literals('baz'),
+          baz: old.rc_string,
+          num: old.rc_number,
+        }),
+        old.rc_object({
+          type: old.rc_literals('bazs'),
+          baz: old.rc_string,
+          num: old.rc_number,
+        }),
+        old.rc_object({
+          type: old.rc_literals('qux'),
+          baz: old.rc_string,
+          num: old.rc_number,
+        }),
+      ),
+    }),
+  )
 
-    const distSchema = dist.rc_array(
-      dist.rc_object({
-        string: dist.rc_string,
-        number: dist.rc_number,
-        array: dist.rc_array(dist.rc_number),
-        obj: oldObjShape,
-        union: dist.rc_union(
-          dist.rc_string,
-          dist.rc_object({
-            type: dist.rc_literals('bar'),
-            baz: dist.rc_string,
-            num: dist.rc_number,
-          }),
-          dist.rc_object({
-            type: dist.rc_literals('baz'),
-            baz: dist.rc_string,
-            num: dist.rc_number,
-          }),
-          dist.rc_object({
-            type: dist.rc_literals('bazs'),
-            baz: dist.rc_string,
-            num: dist.rc_number,
-          }),
-          dist.rc_object({
-            type: dist.rc_literals('qux'),
-            baz: dist.rc_string,
-            num: dist.rc_number,
-          }),
-        ),
-      }),
-    )
+  const distSchema = dist.rc_array(
+    dist.rc_object({
+      string: dist.rc_string,
+      number: dist.rc_number,
+      array: dist.rc_array(dist.rc_number),
+      obj: oldObjShape,
+      union: dist.rc_union(
+        dist.rc_string,
+        dist.rc_object({
+          type: dist.rc_literals('bar'),
+          baz: dist.rc_string,
+          num: dist.rc_number,
+        }),
+        dist.rc_object({
+          type: dist.rc_literals('baz'),
+          baz: dist.rc_string,
+          num: dist.rc_number,
+        }),
+        dist.rc_object({
+          type: dist.rc_literals('bazs'),
+          baz: dist.rc_string,
+          num: dist.rc_number,
+        }),
+        dist.rc_object({
+          type: dist.rc_literals('qux'),
+          baz: dist.rc_string,
+          num: dist.rc_number,
+        }),
+      ),
+    }),
+  )
 
-    baseline('runcheck', () => {
-      throwIfError(rc_parse(largeArray, schema))
-    })
+  baseline('runcheck', () => {
+    throwIfError(rc_parse(largeArray, schema))
+  })
 
-    bench('zod', () => {
-      dataType2.parse(largeArray)
-    })
+  bench('zod', () => {
+    dataType2.parse(largeArray)
+  })
 
-    bench(`runcheck (${oldVersionToLoad})`, () => {
-      throwIfError(old.rc_parse(largeArray, oldSchema))
-    })
+  bench(`runcheck (${oldVersionToLoad})`, () => {
+    throwIfError(old.rc_parse(largeArray, oldSchema))
+  })
 
-    bench(`runcheck (dist)`, () => {
-      throwIfError(dist.rc_parse(largeArray, distSchema))
-    })
-  },
-  true,
-)
+  bench(`runcheck (dist)`, () => {
+    throwIfError(dist.rc_parse(largeArray, distSchema))
+  })
+})
 
 for (const [name, fn] of onlyGroups.size ? onlyGroups : groups) {
   group(name, fn)
