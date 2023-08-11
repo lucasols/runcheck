@@ -2,10 +2,12 @@ import { describe, expect, test } from 'vitest'
 import {
   RcType,
   rc_array,
+  rc_narrow,
   rc_number,
   rc_parse,
   rc_parse_json,
   rc_transform,
+  rc_union,
   rc_unsafe_transform,
 } from '../src/runcheck'
 import { RcParser, rc_parser, rc_string, rc_object } from '../src/runcheck'
@@ -191,5 +193,40 @@ describe('unsafe transform', () => {
     const input = 2
 
     expect(parse(input)).toEqual(successResult(2))
+  })
+})
+
+describe('rc_narrow', () => {
+  test('types are narrowed', () => {
+    const stringOrArrayOfStrings = rc_union(rc_string, rc_array(rc_string))
+
+    const schema = rc_narrow(stringOrArrayOfStrings, (input) =>
+      Array.isArray(input) ? input : [input],
+    )
+
+    const parse = rc_parser(schema)
+
+    const parseResult = parse('hello')
+
+    expect(parseResult).toEqual(successResult(['hello']))
+
+    if (!parseResult.ok) {
+      throw new Error('parseResult should be ok')
+    }
+
+    const parsedData = parseResult.data
+
+    const parsedDataResult = rc_parse(parsedData, schema)
+
+    expect(parsedDataResult).toEqual(successResult(['hello']))
+  })
+
+  test('invalid narrowing is not allowed', () => {
+    const stringOrArrayOfStrings = rc_union(rc_string, rc_array(rc_string))
+
+    rc_narrow(stringOrArrayOfStrings, (input) =>
+      // @ts-expect-error -- invalid narrowing
+      Array.isArray(input) ? input : [[input]],
+    )
   })
 })
