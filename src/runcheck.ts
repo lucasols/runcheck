@@ -1071,7 +1071,7 @@ export function rc_transform<Input, Transformed>(
   }
 }
 
-/** Create transforms compatible with the base schema */
+/** Create transforms which result can be validated with the same schema */
 export function rc_narrow<Input, Narrowed extends Input>(
   type: RcType<Input>,
   narrow: (input: Input, inputSchema: RcType<Input>) => Narrowed,
