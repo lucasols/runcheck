@@ -405,6 +405,25 @@ const schema = rc_transform(
 )
 ```
 
+## Tranformed types which result can be validated with same schema
+
+You may want to create a transformed type which result can be validated with the same schema. For this you can use the `rc_narrow` type. Example:
+
+```ts
+const stringOrArrayOfStrings = rc_union(rc_string, rc_array(rc_string))
+
+const schema = rc_narrow(stringOrArrayOfStrings, (input) =>
+  Array.isArray(input) ? input : [input],
+)
+
+const result = rc_parse('hello', schema)
+
+if (result.ok) {
+  // the schema can safely be used to validate the result too
+  const transformedResult = rc_parse(result.data, schema)
+}
+```
+
 # Default types
 
 You can use `rc_default` to provide a default value if the input is `undefined`.
