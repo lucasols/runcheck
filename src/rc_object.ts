@@ -382,18 +382,24 @@ export function rc_obj_omit<O extends AnyObj, K extends keyof O>(
   return rc_object(shape) as any
 }
 
+type RcTypeWithSquemaEqualTo<T> = { __rc_type: T }
+
 type StricTypeToRcType<T> = [T] extends [any[]]
-  ? RcType<T>
+  ? RcTypeWithSquemaEqualTo<T>
   : [T] extends [Record<string, any>]
   ?
-      | ({
+      | {
           [K in keyof T]-?: StricTypeToRcType<T[K]>
-        } & Partial<Record<keyof RcType<any>, never>>)
-      | RcType<T>
-  : RcType<T>
+        }
+      | RcTypeWithSquemaEqualTo<T>
+  : RcTypeWithSquemaEqualTo<T>
+
+type StricTypeToRcTypeBase<T extends Record<string, any>> = {
+  [K in keyof T]-?: StricTypeToRcType<T[K]>
+}
 
 export function rc_obj_builder<T extends Record<string, any>>() {
-  return <S extends StricTypeToRcType<T>>(
+  return <S extends StricTypeToRcTypeBase<T>>(
     schema: {
       [K in keyof S]: K extends keyof T ? S[K] : never
     },
