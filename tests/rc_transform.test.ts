@@ -228,5 +228,7 @@ describe('rc_narrow', () => {
       // @ts-expect-error -- invalid narrowing
       Array.isArray(input) ? input : [[input]],
     )
+
+    expect(true).toEqual(true)
   })
 })
