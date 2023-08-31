@@ -543,27 +543,31 @@ export function rc_default<T>(
     _orNull_: false,
     _parse_(input, ctx) {
       return parse(this, input, ctx, () => {
-        const result = schema._parse_(input, ctx)
-        const [ok, value] = result
-
-        if (ok) {
-          if (value !== undefined) {
-            return true
-          }
-
-          return {
-            data: isFn(defaultValue) ? defaultValue() : defaultValue,
-            errors: false,
-          }
+        if (input === undefined) {
+          return getDefaultResult()
         }
 
-        return {
-          data: undefined,
-          errors: value,
+        const [ok, value] = schema._parse_(input, ctx)
+
+        if (ok) {
+          if (value === undefined) {
+            return getDefaultResult()
+          }
+
+          return { data: value as NotUndefined<T>, errors: false }
+        } else {
+          return { data: undefined, errors: value }
         }
       })
     },
     _kind_: `${schema._kind_}_default`,
+  }
+
+  function getDefaultResult(): IsValid<NotUndefined<T>> {
+    return {
+      data: isFn(defaultValue) ? defaultValue() : defaultValue,
+      errors: false,
+    }
   }
 }
 
@@ -580,28 +584,31 @@ export function rc_nullish_default<T>(
     _orNull_: false,
     _parse_(input, ctx) {
       return parse(this, input, ctx, () => {
-        const result = schema._parse_(input, ctx)
-
-        const [ok, value] = result
-
-        if (ok) {
-          if (value !== null && value !== undefined) {
-            return true
-          }
-
-          return {
-            data: isFn(defaultValue) ? defaultValue() : defaultValue,
-            errors: false,
-          }
+        if (input === null || input === undefined) {
+          return getDefaultResult()
         }
 
-        return {
-          data: undefined,
-          errors: value,
+        const [ok, value] = schema._parse_(input, ctx)
+
+        if (ok) {
+          if (value === null || value === undefined) {
+            return getDefaultResult()
+          }
+
+          return { data: value as NotNullish<T>, errors: false }
+        } else {
+          return { data: undefined, errors: value }
         }
       })
     },
     _kind_: `${schema._kind_}_nullish_default`,
+  }
+
+  function getDefaultResult(): IsValid<NotNullish<T>> {
+    return {
+      data: isFn(defaultValue) ? defaultValue() : defaultValue,
+      errors: false,
+    }
   }
 }
 

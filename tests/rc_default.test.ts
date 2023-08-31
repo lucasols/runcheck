@@ -8,6 +8,7 @@ import {
   rc_object,
   rc_parser,
   rc_string,
+  rc_transform,
 } from '../src/runcheck'
 
 describe('default', () => {
@@ -58,7 +59,7 @@ describe('default obj property', () => {
 })
 
 describe('nullish default', () => {
-  const schema = rc_nullish_default(rc_number.orNullish(), 0)
+  const schema = rc_nullish_default(rc_number.orNull(), 0)
 
   const parse = rc_parser(schema)
 
@@ -66,4 +67,43 @@ describe('nullish default', () => {
     expect(parse(undefined)).toEqual(successResult(0))
     expect(parse(null)).toEqual(successResult(0))
   })
+})
+
+test('make schema optional', () => {
+  const schema: RcType<number> = rc_default(rc_number, 0)
+
+  const parse = rc_parser(schema)
+
+  expect(parse(undefined)).toEqual(successResult(0))
+})
+
+test('make nullish default nulish', () => {
+  const schema: RcType<number> = rc_nullish_default(rc_number, 0)
+
+  const parse = rc_parser(schema)
+
+  expect(parse(undefined)).toEqual(successResult(0))
+  expect(parse(null)).toEqual(successResult(0))
+})
+
+test('keep transformed value', () => {
+  const schema: RcType<number> = rc_default(
+    rc_transform(rc_number, (n) => n + 1),
+    0,
+  )
+
+  const parse = rc_parser(schema)
+
+  expect(parse(1)).toEqual(successResult(2))
+})
+
+test('use default on transformed values', () => {
+  const schema: RcType<number> = rc_default(
+    rc_transform(rc_number, (number) => (number === 1 ? undefined : number)),
+    0,
+  )
+
+  const parse = rc_parser(schema)
+
+  expect(parse(1)).toEqual(successResult(0))
 })
