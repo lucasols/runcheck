@@ -382,7 +382,7 @@ export function rc_obj_omit<O extends AnyObj, K extends keyof O>(
   return rc_object(shape) as any
 }
 
-type RcTypeWithSquemaEqualTo<T> = { __rc_type: T }
+type RcTypeWithSquemaEqualTo<T> = { __rc_type: RcType<T> }
 
 type StricTypeToRcType<T> = [T] extends [any[]]
   ? RcTypeWithSquemaEqualTo<T>

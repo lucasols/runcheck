@@ -19,6 +19,8 @@ import {
   rc_obj_strict,
   rc_string,
   rc_transform,
+  rc_union,
+  rc_null,
 } from '../src/runcheck'
 import { errorResult, successResult } from './testUtils'
 import { rc_enable_obj_strict } from '../src/rc_object'
@@ -796,4 +798,24 @@ describe('rc_strict_obj', () => {
       ),
     )
   })
+})
+
+test('rc_obj_builder should return error for wrong schema', () => {
+  rc_obj_builder<{ a: string }>()({
+    a: rc_string,
+    // @ts-expect-error - should return a excess key error
+    b: rc_number,
+  })
+
+  // @ts-expect-error - should return a missing key error
+  rc_obj_builder<{ a: string; b: number }>()({
+    a: rc_string,
+  })
+
+  rc_obj_builder<{ a: 'ok' | 'wrong' | null }>()({
+    // @ts-expect-error - should return a invalid schema error
+    a: rc_literals('ok', 'wrong'),
+  })
+
+  expect(true).toEqual(true)
 })

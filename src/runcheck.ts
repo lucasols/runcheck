@@ -49,7 +49,7 @@ export type RcOptionalKeyType<T> = RcBase<T, true>
 export type RcType<T> = RcBase<T, false>
 
 export type RcBase<T, RequiredKey extends boolean> = {
-  __rc_type: T
+  __rc_type: RcType<T>
   readonly withFallback: WithFallback<T>
   readonly where: (predicate: (input: T) => boolean) => RcType<T>
   /** RcType | undefined */
@@ -304,7 +304,7 @@ function orNullish(this: RcType<any>): RcType<any> {
 }
 
 export const defaultProps: Omit<RcType<any>, '_parse_' | '_kind_'> = {
-  __rc_type: undefined,
+  __rc_type: undefined as any,
   withFallback,
   where,
   optional,
