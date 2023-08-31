@@ -1,29 +1,27 @@
 import { describe, expect, test } from 'vitest'
+import { rc_enable_obj_strict } from '../src/rc_object'
 import {
   RcParseResult,
   rc_array,
   rc_assert_is_valid,
-  rc_obj_extends,
   rc_get_obj_schema,
   rc_literals,
   rc_loose_array,
   rc_number,
   rc_obj_builder,
+  rc_obj_extends,
   rc_obj_merge,
   rc_obj_omit,
   rc_obj_pick,
+  rc_obj_strict,
   rc_object,
   rc_parse,
   rc_parser,
   rc_rename_from_key,
-  rc_obj_strict,
   rc_string,
   rc_transform,
-  rc_union,
-  rc_null,
 } from '../src/runcheck'
 import { errorResult, successResult } from './testUtils'
-import { rc_enable_obj_strict } from '../src/rc_object'
 
 describe('rc_object', () => {
   test('pass', () => {
