@@ -11,13 +11,17 @@ import {
   ErrorWithPath,
 } from './runcheck'
 
-export function rc_rename_from_key<T extends RcType<any>>(
-  alternativeNames: string,
+/**
+ * If the schema key value is undefined uses a value from the fallback key as a safe value
+ * Can be used to rename keys from input
+ */
+export function rc_get_from_key_as_fallback<T extends RcType<any>>(
+  fallbackKey: string,
   type: T,
 ): RcType<RcInferType<T>> {
   return {
     ...type,
-    _alternative_key_: alternativeNames,
+    _alternative_key_: fallbackKey,
   }
 }
 

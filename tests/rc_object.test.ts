@@ -18,7 +18,7 @@ import {
   rc_object,
   rc_parse,
   rc_parser,
-  rc_rename_from_key,
+  rc_get_from_key_as_fallback,
   rc_string,
   rc_transform,
 } from '../src/runcheck'
@@ -259,10 +259,10 @@ describe('rc_obj_merges', () => {
   })
 })
 
-describe('rc_rename_key', () => {
+describe('rc_get_from_key_as_fallback', () => {
   const objSchema = {
-    id: rc_rename_from_key('user_id', rc_number),
-    renamed: rc_rename_from_key('old_name', rc_number),
+    id: rc_get_from_key_as_fallback('user_id', rc_number),
+    renamed: rc_get_from_key_as_fallback('old_name', rc_number),
     name: rc_string,
   }
 
@@ -339,7 +339,7 @@ describe('rc_rename_key', () => {
     const helloParser = rc_parser(
       rc_array(
         rc_object({
-          id: rc_rename_from_key('oldKey', rc_number),
+          id: rc_get_from_key_as_fallback('oldKey', rc_number),
         }),
         { unique: 'id' },
       ),
@@ -367,12 +367,12 @@ describe('rc_rename_key', () => {
     })
   })
 
-  test('a value parsed with rc_rename_key can be validated back with the same schema', () => {
+  test('a value parsed with rc_get_from_key_as_fallback can be validated back with the same schema', () => {
     const input = { user_id: 1, excess: 2, name: 'hello' }
 
     const schema = rc_object({
-      id: rc_rename_from_key('user_id', rc_number),
-      id_copy: rc_rename_from_key('user_id', rc_number),
+      id: rc_get_from_key_as_fallback('user_id', rc_number),
+      id_copy: rc_get_from_key_as_fallback('user_id', rc_number),
       name: rc_string,
     })
 
@@ -463,9 +463,9 @@ describe('rc_extends_obj', () => {
     )
   })
 
-  test('extends object with rc_rename_key response', () => {
+  test('extends object with rc_get_from_key_as_fallback response', () => {
     const schema = rc_obj_extends({
-      newKeyName: rc_rename_from_key('name', rc_number),
+      newKeyName: rc_get_from_key_as_fallback('name', rc_number),
     })
 
     expect(rc_parse({ name: 1, a: 2, c: 3 }, schema)).toEqual(
@@ -887,7 +887,7 @@ test('reproduce bug in rc_rename_from_key: return validation error on parsed JSO
 
   const userDataSchema = rc_object({
     plan_seat_permissions: planSeatPermissionsSchema.optional(),
-    legacy_plan_permissions: rc_rename_from_key(
+    legacy_plan_permissions: rc_get_from_key_as_fallback(
       'plan_seat_permissions',
       newPlanSeatPermissionsSchema.optional(),
     ),

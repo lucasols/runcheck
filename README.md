@@ -450,13 +450,15 @@ If you need to use default in nullish values you can use `rc_nullish_default`.
 
 # Advanced object types
 
-## `rc_rename_from_key`
+## `rc_get_from_key_as_fallback`
 
 Allows to rename a key in a object. Example:
 
 ```ts
 const shape = rc_object({
-  name: rc_rename_from_key('oldName', rc_string), // oldName will be renamed to name
+  // name will use the value of oldName if name is not present in input
+  // which will rename `oldName` to `name` in the result
+  name: rc_get_from_key_as_fallback('oldName', rc_string),
   age: rc_number,
   isCool: rc_boolean,
 })
