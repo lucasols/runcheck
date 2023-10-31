@@ -532,6 +532,7 @@ export function rc_union<T extends RcType<any>[]>(
 
 type NotUndefined<T> = T extends undefined ? never : T
 
+/** Generate a schema with valid fallback value for undefined inputs */
 export function rc_default<T>(
   schema: RcType<T>,
   defaultValue: NotUndefined<T> | (() => NotUndefined<T>),

@@ -2,8 +2,10 @@ import { describe, expect, test } from 'vitest'
 import { rc_enable_obj_strict } from '../src/rc_object'
 import {
   RcParseResult,
+  RcType,
   rc_array,
   rc_assert_is_valid,
+  rc_boolean,
   rc_get_obj_schema,
   rc_literals,
   rc_loose_array,
@@ -20,6 +22,7 @@ import {
   rc_rename_from_key,
   rc_string,
   rc_transform,
+  rc_unknown,
 } from '../src/runcheck'
 import { errorResult, successResult } from './testUtils'
 
@@ -364,6 +367,40 @@ describe('rc_rename_key', () => {
         successResult([{ id: 1 }, { id: 2 }, { id: 3 }]),
       )
     })
+  })
+
+  test('a value parsed with rc_rename_key can be validated back with the same schema', () => {
+    const input = { user_id: 1, excess: 2, name: 'hello' }
+
+    const schema = rc_object({
+      id: rc_rename_from_key('user_id', rc_number),
+      id_copy: rc_rename_from_key('user_id', rc_number),
+      name: rc_string,
+    })
+
+    const result = rc_parse(input, schema)
+
+    if (result.error) {
+      throw new Error('unexpected error')
+    }
+
+    expect(result).toEqual(
+      successResult({
+        id: 1,
+        id_copy: 1,
+        name: 'hello',
+      }),
+    )
+
+    const result2 = rc_parse(result.data, schema)
+
+    expect(result2).toEqual(
+      successResult({
+        id: 1,
+        id_copy: 1,
+        name: 'hello',
+      }),
+    )
   })
 })
 
@@ -816,4 +853,104 @@ test('rc_obj_builder should return error for wrong schema', () => {
   })
 
   expect(true).toEqual(true)
+})
+
+test('reproduce bug in rc_rename_from_key: return validation error on parsed JSON', () => {
+  type LegacyPlanSeatPermissions = {
+    current_plan: string
+    exceded_actions: boolean
+    has_access_pages: boolean
+    payment_expired: boolean
+    plan_level: string
+    can_access_lowcode: boolean
+  }
+
+  const planSeatPermissionsSchema = rc_obj_builder<LegacyPlanSeatPermissions>()(
+    {
+      current_plan: rc_string,
+      exceded_actions: rc_boolean,
+      has_access_pages: rc_boolean,
+      payment_expired: rc_boolean,
+      plan_level: rc_string,
+      can_access_lowcode: rc_boolean,
+    },
+  )
+
+  type NewLegacyPlanSeatPermissions = {
+    can_create_premium_fields: boolean
+    can_create_premium_blocks: boolean
+  }
+
+  const newPlanSeatPermissionsSchema =
+    rc_obj_builder<NewLegacyPlanSeatPermissions>()({
+      can_create_premium_fields: rc_boolean,
+      can_create_premium_blocks: rc_boolean,
+    })
+
+  const userDataSchema = rc_object({
+    plan_seat_permissions: planSeatPermissionsSchema.optional(),
+    legacy_plan_permissions: rc_rename_from_key(
+      'plan_seat_permissions',
+      newPlanSeatPermissionsSchema.optional(),
+    ),
+  })
+
+  const inputJSON =
+    '{"data":{"plan_seat_permissions":{"current_plan":"developer","exceded_actions":false,"has_access_pages":true,"payment_expired":false,"plan_level":"developer","can_access_lowcode":true},"legacy_plan_permissions":{"can_create_premium_fields":true,"can_create_premium_blocks":true}},"timestamp":1698724504554,"version":"0","kb":1.6640625}'
+
+  const parsedJSON = JSON.parse(inputJSON)
+
+  expect(parsedJSON).toMatchInlineSnapshot(`
+    {
+      "data": {
+        "legacy_plan_permissions": {
+          "can_create_premium_blocks": true,
+          "can_create_premium_fields": true,
+        },
+        "plan_seat_permissions": {
+          "can_access_lowcode": true,
+          "current_plan": "developer",
+          "exceded_actions": false,
+          "has_access_pages": true,
+          "payment_expired": false,
+          "plan_level": "developer",
+        },
+      },
+      "kb": 1.6640625,
+      "timestamp": 1698724504554,
+      "version": "0",
+    }
+  `)
+
+  const result = rc_parse(
+    JSON.parse(inputJSON),
+    rc_object({
+      data: userDataSchema,
+      timestamp: rc_number,
+      version: rc_string,
+      kb: rc_number,
+    }),
+  )
+
+  expect(result.ok && result.data).toMatchInlineSnapshot(`
+    {
+      "data": {
+        "legacy_plan_permissions": {
+          "can_create_premium_blocks": true,
+          "can_create_premium_fields": true,
+        },
+        "plan_seat_permissions": {
+          "can_access_lowcode": true,
+          "current_plan": "developer",
+          "exceded_actions": false,
+          "has_access_pages": true,
+          "payment_expired": false,
+          "plan_level": "developer",
+        },
+      },
+      "kb": 1.6640625,
+      "timestamp": 1698724504554,
+      "version": "0",
+    }
+  `)
 })

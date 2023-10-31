@@ -176,7 +176,7 @@ describe('unsafe transform', () => {
 
     expect(parse(input)).toEqual(
       errorResult(
-        `json parsing error: Unexpected token h in JSON at position 0`,
+        `json parsing error: Unexpected token 'h', "hello" is not valid JSON`,
       ),
     )
   })

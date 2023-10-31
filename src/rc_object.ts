@@ -166,17 +166,12 @@ export function rc_object<T extends RcObject>(
 
           ctx.path_ = path
 
-          let input
+          let input = inputObj[key]
           let keyToDeleteFromExcessKeys = key
 
-          if (type._alternative_key_) {
+          if (input === undefined && type._alternative_key_) {
             input = inputObj[type._alternative_key_]
             keyToDeleteFromExcessKeys = type._alternative_key_
-          }
-
-          if (input === undefined) {
-            input = inputObj[key]
-            keyToDeleteFromExcessKeys = key
           }
 
           if (input === undefined && normalizeKeysFrom === 'snake_case') {
