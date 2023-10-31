@@ -19,7 +19,6 @@
   "files": [
     "dist"
   ],
-  "packageManager": "^pnpm@7.6.0",
   "repository": "github:lucasols/runcheck",
   "author": "Lucas Santos",
   "type": "module",
