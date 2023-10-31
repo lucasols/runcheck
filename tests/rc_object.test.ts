@@ -2,7 +2,6 @@ import { describe, expect, test } from 'vitest'
 import { rc_enable_obj_strict } from '../src/rc_object'
 import {
   RcParseResult,
-  RcType,
   rc_array,
   rc_assert_is_valid,
   rc_boolean,
@@ -22,7 +21,6 @@ import {
   rc_rename_from_key,
   rc_string,
   rc_transform,
-  rc_unknown,
 } from '../src/runcheck'
 import { errorResult, successResult } from './testUtils'
 
