@@ -1,10 +1,16 @@
 import { describe, expect, test } from 'vitest'
-import { rc_loose_parse, rc_number, rc_object, rc_parse } from '../src/runcheck'
+import {
+  rc_loose_parse,
+  rc_number,
+  rc_object,
+  rc_parse,
+  rc_unwrap_or_null,
+} from '../src/runcheck'
 import { errorResult, successResult } from './testUtils'
 
 describe('loose parsing', () => {
   test('pass', () => {
-    const result = rc_loose_parse(1, rc_number)
+    const result = rc_unwrap_or_null(rc_parse(1, rc_number))
 
     expect(result).toEqual({
       data: 1,
@@ -14,7 +20,7 @@ describe('loose parsing', () => {
   })
 
   test('fail', () => {
-    const result = rc_loose_parse('1', rc_number)
+    const result = rc_unwrap_or_null(rc_parse('1', rc_number))
 
     expect(result).toEqual({
       data: null,
@@ -49,7 +55,7 @@ describe('strict parsing', () => {
     )
   })
 
-  test('do not pass with strict: true', () => {
+  test('do not pass with noWarnings: true', () => {
     const result = rc_parse(
       {
         withAutofix: '1',

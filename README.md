@@ -235,7 +235,7 @@ const input = JSON.parse(jsonInput)
 
 const result = rc_parse(input, rc_array(rc_string))
 
-rc_assert_is_valid(result, rc_array(rc_string))
+rc_assert_is_valid(result)
 // will throw an error if the result is invalid, otherwise will narrow the result type to a valid result
 ```
 

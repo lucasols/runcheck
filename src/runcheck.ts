@@ -16,6 +16,7 @@ export type RcParseResult<T> =
       error: false
       ok: true
       data: T
+      value: T
       warnings: string[] | false
     }
   | {
@@ -939,6 +940,7 @@ export function rc_parse<S>(
       error: false,
       ok: true,
       data: dataOrError,
+      value: dataOrError,
       warnings: ctx.warnings_.length > 0 ? ctx.warnings_ : false,
     }
   }
@@ -973,11 +975,11 @@ export function rc_loose_parse<S>(
     }
   }
 
-  return { data: result.data, errors: false, warnings: result.warnings }
+  return { data: result.value, errors: false, warnings: result.warnings }
 }
 
 export function rc_unwrap_or_null<R>(result: RcParseResult<R>): {
-  data: R | null
+  value: R | null
   errors: string[] | false
   warnings: string[] | false
 } {
@@ -988,19 +990,19 @@ export function rc_unwrap_or<R, F>(
   result: RcParseResult<R>,
   fallback: F,
 ): {
-  data: R | F
+  value: R | F
   errors: string[] | false
   warnings: string[] | false
 } {
   if (result.error) {
     return {
-      data: fallback,
+      value: fallback,
       errors: result.errors,
       warnings: false,
     }
   }
 
-  return { data: result.data, errors: false, warnings: result.warnings }
+  return { value: result.value, errors: false, warnings: result.warnings }
 }
 
 export class RcValidationError extends Error {
@@ -1009,12 +1011,15 @@ export class RcValidationError extends Error {
   }
 }
 
-export function rc_unwrap<R>(result: RcParseResult<R>) {
+export function rc_unwrap<R>(result: RcParseResult<R>): {
+  value: R
+  warnings: string[] | false
+} {
   if (result.error) {
     throw new RcValidationError(result.errors)
   }
 
-  return result.data
+  return result
 }
 
 export function rc_is_valid<S>(input: any, type: RcType<S>): input is S {
@@ -1221,6 +1226,7 @@ export function rc_assert_is_valid<S>(
   ok: true
   error: false
   data: S
+  value: S
   warnings: string[] | false
 } {
   if (result.error) {
