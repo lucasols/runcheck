@@ -1,6 +1,5 @@
 import { describe, expect, test } from 'vitest'
 import {
-  rc_loose_parse,
   rc_number,
   rc_object,
   rc_parse,
