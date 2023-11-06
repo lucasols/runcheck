@@ -13,7 +13,7 @@ describe('loose parsing', () => {
     const result = rc_unwrap_or_null(rc_parse(1, rc_number))
 
     expect(result).toEqual({
-      data: 1,
+      value: 1,
       errors: false,
       warnings: false,
     })
@@ -23,7 +23,7 @@ describe('loose parsing', () => {
     const result = rc_unwrap_or_null(rc_parse('1', rc_number))
 
     expect(result).toEqual({
-      data: null,
+      value: null,
       errors: ["Type 'string' is not assignable to 'number'"],
       warnings: false,
     })

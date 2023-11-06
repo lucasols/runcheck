@@ -15,6 +15,7 @@ export type RcParseResult<T> =
   | {
       error: false
       ok: true
+      /** @deprecated use value instead */
       data: T
       value: T
       warnings: string[] | false

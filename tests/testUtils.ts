@@ -104,7 +104,7 @@ export function expectParse<T extends RcType<any>>({
 }
 
 export function successResult(data: any, warnings: string[] | false = false) {
-  return { error: false, data, warnings, ok: true }
+  return { error: false, value: data, data, warnings, ok: true }
 }
 
 export function errorResult(...errorMsg: string[]) {
