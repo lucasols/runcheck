@@ -957,7 +957,7 @@ export function rc_parser<S>(type: RcType<S>): RcParser<S> {
   return (input: any) => rc_parse(input, type)
 }
 
-/** does the same as `rc_parse` but without requiring to check for errors before using the parsed data */
+/** @deprecated use rc_unwrap_or_null instead */
 export function rc_loose_parse<S>(
   input: any,
   type: RcType<S>,
@@ -974,6 +974,47 @@ export function rc_loose_parse<S>(
   }
 
   return { data: result.data, errors: false, warnings: result.warnings }
+}
+
+export function rc_unwrap_or_null<R>(result: RcParseResult<R>): {
+  data: R | null
+  errors: string[] | false
+  warnings: string[] | false
+} {
+  return rc_unwrap_or(result, null)
+}
+
+export function rc_unwrap_or<R, F>(
+  result: RcParseResult<R>,
+  fallback: F,
+): {
+  data: R | F
+  errors: string[] | false
+  warnings: string[] | false
+} {
+  if (result.error) {
+    return {
+      data: fallback,
+      errors: result.errors,
+      warnings: false,
+    }
+  }
+
+  return { data: result.data, errors: false, warnings: result.warnings }
+}
+
+export class RcValidationError extends Error {
+  constructor(public readonly errors: string[]) {
+    super(errors.join(', '))
+  }
+}
+
+export function rc_unwrap<R>(result: RcParseResult<R>) {
+  if (result.error) {
+    throw new RcValidationError(result.errors)
+  }
+
+  return result.data
 }
 
 export function rc_is_valid<S>(input: any, type: RcType<S>): input is S {

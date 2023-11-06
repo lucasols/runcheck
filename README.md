@@ -241,16 +241,36 @@ rc_assert_is_valid(result, rc_array(rc_string))
 
 # Loose parsing
 
-Use `rc_parse_loose` to parse a input and returning null if the input is invalid.
+Use `rc_unwrap_or` and `rc_unwrap_or_null` to do a loose parsing.
 
 ```ts
-import { rc_loose_parse } from 'runcheck'
+import { rc_unwrap_or, rc_unwrap_or_null } from 'runcheck'
 
 const input = JSON.parse(jsonInput)
 
-const result = rc_loose_parse(input, rc_array(rc_string)).data
+const result = rc_unwrap_or(input, rc_array(rc_string), [])
+// will fallback to [] if the input is invalid
 
-result // string[] | null
+const result2 = rc_unwrap_or_null(input, rc_array(rc_string))
+// will fallback to null if the input is invalid
+```
+
+# Strict parsing
+
+Use `rc_unwrap` to throw an `RcValidationError` error if the input is invalid.
+
+```ts
+import { rc_unwrap, RcValidationError } from 'runcheck'
+
+const input = JSON.parse(jsonInput)
+
+try {
+  const result = rc_unwrap(input, rc_array(rc_string))
+} catch (error) {
+  if (error instanceof RcValidationError) {
+    // handle error
+  }
+}
 ```
 
 # Autofixing and fallback values in parsing
