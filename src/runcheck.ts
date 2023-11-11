@@ -1008,7 +1008,7 @@ export function rc_unwrap_or<R, F>(
 
 export class RcValidationError extends Error {
   constructor(public readonly errors: string[]) {
-    super(errors.join(', '))
+    super(errors.join('\n'))
   }
 }
 
@@ -1235,6 +1235,7 @@ export function rc_assert_is_valid<S>(
   }
 }
 
+/** @internal */
 export function isObject(value: any): value is NonArrayObject {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
