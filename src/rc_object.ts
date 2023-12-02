@@ -31,10 +31,10 @@ export type RcObject = {
   [key: string]:
     | RcBase<any, any>
     | RcObject
-    | ['optional', RcObject]
-    | ['nullish_or', RcObject]
-    | ['null_or', RcObject]
-    | ['array' | 'loose_array', RcObject | RcBase<any, any>]
+    | [
+        'optional' | 'nullish_or' | 'null_or' | 'array' | 'loose_array',
+        RcObject,
+      ]
 }
 
 export type TypeOfObjectType<T extends RcObject> = Flatten<
@@ -409,9 +409,10 @@ type StrictObjTypeToRcType<T> = {
 }
 
 type StricTypeToRcType<T> =
-  [T] extends [any[]] ?
+  [T] extends [Record<string, any>[]] ?
     | RcTypeWithSquemaEqualTo<T>
-    | ['array' | 'loose_array', StricTypeToRcType<T[number]>]
+    | ['array' | 'loose_array', StrictObjTypeToRcType<T[number]>]
+  : [T] extends [any[]] ? RcTypeWithSquemaEqualTo<T>
   : [T] extends [Record<string, any>] ?
     StrictObjTypeToRcType<T> | RcTypeWithSquemaEqualTo<T>
   : [T] extends [Record<string, any> | null] ?
