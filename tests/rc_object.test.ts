@@ -1093,14 +1093,14 @@ describe('rc_obj_builder modifiers', () => {
     })
 
     test('pass', () => {
-      expect(rc_parse({ array: ['a', 'b'] }, shape)).toEqual(
-        successResult({ array: ['a', 'b'] }),
+      expect(rc_parse({ array: [{ a: 'a' }] }, shape)).toEqual(
+        successResult({ array: [{ a: 'a' }] }),
       )
     })
 
     test('fail', () => {
       expect(rc_parse({ array: 'a' }, shape)).toEqual(
-        errorResult(`$.array: Type 'string' is not assignable to 'array'`),
+        errorResult(`$.array: Type 'string' is not assignable to 'object[]'`),
       )
     })
   })
