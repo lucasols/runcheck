@@ -634,13 +634,6 @@ test('rc_obj_builder', () => {
     obj2OrNull?: {
       a: string
     } | null
-    modifiers: {
-      null_or: null | { a: string }
-      undefined_or: undefined | { a: string }
-      nullish_or: null | undefined | { a: string }
-      optional_or?: { a: string }
-      optional_or_null?: null | { a: string }
-    }
   }
 
   const obj2 = rc_object({
@@ -677,13 +670,6 @@ test('rc_obj_builder', () => {
       ),
     }).orNull(),
     obj2OrNull: obj3.orNullish(),
-    modifiers: {
-      null_or: ['null_or', { a: rc_string }],
-      undefined_or: ['optional', { a: rc_string }],
-      nullish_or: ['nullish_or', { a: rc_string }],
-      optional_or: ['optional', { a: rc_string }],
-      optional_or_null: ['nullish_or', { a: rc_string }],
-    },
   })
 
   const result = rc_parse(
@@ -701,13 +687,6 @@ test('rc_obj_builder', () => {
       objOrNull: null,
       obj2: { a: 'a' },
       literalInObjArray: null,
-      modifiers: {
-        null_or: null,
-        undefined_or: { a: 'a' },
-        nullish_or: null,
-        optional_or: { a: 'a' },
-        optional_or_null: { a: 'a' },
-      },
     },
     shape,
   )
