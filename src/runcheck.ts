@@ -1,9 +1,4 @@
-import {
-  RcObject,
-  TypeOfObjectType,
-  rc_obj_merge,
-  rc_object,
-} from './rc_object'
+import { RcObject, TypeOfObjectType, rc_object } from './rc_object'
 
 export {
   rc_enable_obj_strict,

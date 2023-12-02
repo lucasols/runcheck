@@ -34,6 +34,7 @@ export type RcObject = {
     | ['optional', RcObject]
     | ['nullish_or', RcObject]
     | ['null_or', RcObject]
+    | ['array' | 'loose_array', RcObject | RcBase<any, any>]
 }
 
 export type TypeOfObjectType<T extends RcObject> = Flatten<

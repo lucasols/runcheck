@@ -1,6 +1,5 @@
 import { describe, expect, test } from 'vitest'
 import {
-  RcInferType,
   RcType,
   rc_boolean,
   rc_discriminated_union,
