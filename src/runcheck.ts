@@ -11,6 +11,7 @@ export {
   rc_obj_pick,
   rc_obj_strict,
   rc_object,
+  rc_object_fast,
 } from './rc_object'
 
 export type RcParseResult<T> =
@@ -42,8 +43,8 @@ type ParseResultCtx = {
 }
 
 type InternalParseResult<T> =
-  | [success: true, data: T]
-  | [success: false, errors: ErrorWithPath[]]
+  | { ok: true; data: T; errors: undefined }
+  | { ok: false; errors: ErrorWithPath[]; data: undefined }
 
 type WithFallback<T> = (fallback: T | (() => T)) => RcType<T>
 
@@ -94,8 +95,6 @@ export type RcBase<T, RequiredKey extends boolean> = {
   readonly _is_extend_obj_: boolean
   /** @internal */
   readonly _is_object_: boolean
-  /** @internal */
-  readonly _shape_entries_: [string, RcType<any>][]
   /** @internal */
   readonly _array_item_type_: RcType<any> | undefined
   /** @internal */
@@ -149,19 +148,19 @@ export function parse<T>(
 ): InternalParseResult<T> {
   if (type._optional_) {
     if (input === undefined) {
-      return [true, input as T]
+      return { ok: true, data: input as T, errors: undefined }
     }
   }
 
   if (type._orNullish_) {
     if (input === null || input === undefined) {
-      return [true, input as T]
+      return { ok: true, data: input as T, errors: undefined }
     }
   }
 
   if (type._orNull_) {
     if (input === null) {
-      return [true, input as T]
+      return { ok: true, data: input as T, errors: undefined }
     }
   }
 
@@ -173,19 +172,20 @@ export function parse<T>(
 
       if (type._predicate_) {
         if (!type._predicate_(validResult)) {
-          return [
-            false,
-            [
+          return {
+            ok: false,
+            data: undefined,
+            errors: [
               getWarningOrErrorWithPath(
                 ctx,
                 `Predicate failed for type '${type._kind_}'`,
               ),
             ],
-          ]
+          }
         }
       }
 
-      return [true, validResult]
+      return { ok: true, data: validResult, errors: undefined }
     }
   }
 
@@ -203,7 +203,7 @@ export function parse<T>(
         )}`,
       )
 
-      return [true, isFn(fb) ? fb() : fb]
+      return { ok: true, data: isFn(fb) ? fb() : fb, errors: undefined }
     }
 
     if (type._useAutFix_ && type._autoFix_) {
@@ -212,15 +212,16 @@ export function parse<T>(
       if (autofixed) {
         if (type._predicate_) {
           if (!type._predicate_(autofixed.fixed)) {
-            return [
-              false,
-              [
+            return {
+              ok: false,
+              data: undefined,
+              errors: [
                 getWarningOrErrorWithPath(
                   ctx,
                   `Predicate failed for autofix in type '${type._kind_}'`,
                 ),
               ],
-            ]
+            }
           }
         }
 
@@ -234,17 +235,19 @@ export function parse<T>(
           )}"`,
         )
 
-        return [true, autofixed.fixed]
+        return { ok: true, data: autofixed.fixed, errors: undefined }
       }
     }
   }
 
-  return [
-    false,
-    isValid ?
-      isValid.errors
-    : [getWarningOrErrorWithPath(ctx, getErrorMsg(type, input))],
-  ]
+  return {
+    ok: false,
+    data: undefined,
+    errors:
+      isValid ?
+        isValid.errors
+      : [getWarningOrErrorWithPath(ctx, getErrorMsg(type, input))],
+  }
 }
 
 function getResultErrors(
@@ -314,6 +317,12 @@ export const defaultProps: Omit<RcType<any>, '_parse_' | '_kind_'> = {
   __rc_type: undefined as any,
   withFallback,
   where,
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- perf improvement to avoid polymorphic deoptimaztions
+  // @ts-ignore
+  _parse_: undefined as any,
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment  -- perf improvement to avoid polymorphic deoptimaztions
+  // @ts-ignore
+  _kind_: undefined as any,
   optional,
   optionalKey: optional as any,
   orNullish,
@@ -332,7 +341,6 @@ export const defaultProps: Omit<RcType<any>, '_parse_' | '_kind_'> = {
   _obj_shape_: undefined,
   _is_object_: false,
   _is_extend_obj_: false,
-  _shape_entries_: [],
 }
 
 export const rc_undefined: RcType<undefined> = {
@@ -482,21 +490,21 @@ export function rc_union<T extends RcType<any>[]>(
           ctx.objErrShortCircuit_ = true
           ctx.objErrKeyIndex_ = 0
 
-          const [ok, result] = type._parse_(input, ctx)
+          const parseResult = type._parse_(input, ctx)
 
           const objErrIndex = ctx.objErrKeyIndex_
 
           ctx.objErrShortCircuit_ = currentObjErrShortCircuit
           ctx.objErrKeyIndex_ = 0
 
-          if (ok) {
+          if (parseResult.ok) {
             return true
           } else if (type._is_object_ && objErrIndex !== -1) {
             if (objErrIndex > 0) {
-              nonShallowObjErrors.push(...result)
+              nonShallowObjErrors.push(...parseResult.errors)
             } else {
               if (shallowObjErrorsCount < maxShallowObjErrors) {
-                shallowObjErrors.push(...result)
+                shallowObjErrors.push(...parseResult.errors)
               }
 
               shallowObjErrorsCount += 1
@@ -552,16 +560,16 @@ export function rc_default<T>(
           return getDefaultResult()
         }
 
-        const [ok, value] = schema._parse_(input, ctx)
+        const parseResult = schema._parse_(input, ctx)
 
-        if (ok) {
-          if (value === undefined) {
+        if (parseResult.ok) {
+          if (parseResult.data === undefined) {
             return getDefaultResult()
           }
 
-          return { data: value as NotUndefined<T>, errors: false }
+          return { data: parseResult.data as NotUndefined<T>, errors: false }
         } else {
-          return { data: undefined, errors: value }
+          return { data: undefined, errors: parseResult.errors }
         }
       })
     },
@@ -593,16 +601,16 @@ export function rc_nullish_default<T>(
           return getDefaultResult()
         }
 
-        const [ok, value] = schema._parse_(input, ctx)
+        const parseResult = schema._parse_(input, ctx)
 
-        if (ok) {
-          if (value === null || value === undefined) {
+        if (parseResult.ok) {
+          if (parseResult.data === null || parseResult.data === undefined) {
             return getDefaultResult()
           }
 
-          return { data: value as NotNullish<T>, errors: false }
+          return { data: parseResult.data as NotNullish<T>, errors: false }
         } else {
-          return { data: undefined, errors: value }
+          return { data: undefined, errors: parseResult.errors }
         }
       })
     },
@@ -651,14 +659,14 @@ export function rc_record<V>(
 
           const input = inputObj[key]
 
-          const [isValid, result] = valueType._parse_(inputValue, ctx)
+          const parseResult = valueType._parse_(inputValue, ctx)
 
-          if (isValid) {
+          if (parseResult.ok) {
             resultObj[key] = input
           }
           //
           else {
-            const errors = result
+            const errors = parseResult.errors
 
             for (const subError of errors) {
               resultErrors.push(subError)
@@ -734,16 +742,16 @@ export function rc_discriminated_union<
 
         ctx.path_ = `${ctx.path_}|${discriminator}|`
 
-        const [isValid, result] = type._parse_(input, ctx)
+        const parseResult = type._parse_(input, ctx)
 
-        if (!isValid) {
-          return { errors: result, data: undefined }
+        if (!parseResult.ok) {
+          return { errors: parseResult.errors, data: undefined }
         }
 
         // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-        result[discriminatorKey] = discriminator
+        parseResult.data[discriminatorKey] = discriminator
 
-        return { errors: false, data: result }
+        return { errors: false, data: parseResult.data }
       })
     },
   }
@@ -789,20 +797,19 @@ function checkArrayItems(
     ctx.path_ = path
 
     let parseResult = type._parse_(_item, ctx)
-    const [initialIsValid, initialResult] = parseResult
 
     ctx.path_ = path
 
-    if (initialIsValid && uniqueValues) {
-      let uniqueValueToCheck = initialResult
+    if (parseResult.ok && uniqueValues) {
+      let uniqueValueToCheck = parseResult.data
 
       const isUniqueKey = typeof unique === 'string'
 
       if (isUniqueKey) {
         // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-        uniqueValueToCheck = initialResult[unique]
+        uniqueValueToCheck = parseResult.data[unique]
       } else if (typeof unique === 'function') {
-        uniqueValueToCheck = unique(initialResult)
+        uniqueValueToCheck = unique(parseResult.data)
       }
 
       if (uniqueValues.has(uniqueValueToCheck)) {
@@ -810,9 +817,10 @@ function checkArrayItems(
           ctx.path_ = `${parentPath}${subPath}.${unique}`
         }
 
-        parseResult = [
-          false,
-          [
+        parseResult = {
+          ok: false,
+          data: undefined,
+          errors: [
             getWarningOrErrorWithPath(
               ctx,
               isUniqueKey ?
@@ -822,26 +830,24 @@ function checkArrayItems(
               : `${type._kind_} value is not unique`,
             ),
           ],
-        ]
+        }
       } else {
         uniqueValues.add(uniqueValueToCheck)
       }
     }
 
-    const [isValid, result] = parseResult
-
-    if (!isValid) {
+    if (!parseResult.ok) {
       if (!useLooseMode) {
         return {
-          errors: result,
+          errors: parseResult.errors,
           data: undefined,
         }
       } else {
-        looseErrors.push(result)
+        looseErrors.push(parseResult.errors)
         continue
       }
     } else {
-      arrayResult.push(result)
+      arrayResult.push(parseResult.data)
     }
   }
 
@@ -1001,14 +1007,14 @@ export function rc_parse<S>(
     noLooseArray_: false,
   }
 
-  const [success, dataOrError] = type._parse_(input, ctx)
+  const parseResult = type._parse_(input, ctx)
 
-  if (success) {
+  if (parseResult.ok) {
     return {
       error: false,
       ok: true,
-      data: dataOrError,
-      value: dataOrError,
+      data: parseResult.data,
+      value: parseResult.data,
       warnings: ctx.warnings_.length > 0 ? ctx.warnings_ : false,
     }
   }
@@ -1016,7 +1022,7 @@ export function rc_parse<S>(
   return {
     ok: false,
     error: true,
-    errors: dataOrError,
+    errors: parseResult.errors,
   }
 }
 
@@ -1101,7 +1107,7 @@ export function rc_is_valid<S>(input: any, type: RcType<S>): input is S {
     noLooseArray_: false,
   }
 
-  return !!type._parse_(input, ctx)[0]
+  return type._parse_(input, ctx).ok
 }
 
 export function rc_validator<S>(type: RcType<S>) {
@@ -1169,26 +1175,34 @@ export function rc_transform<Input, Transformed>(
       let outputResultErrors: ErrorWithPath[] | null = null
 
       if (outputSchema) {
-        const [outputSuccess, dataOrError] = validateTransformOutput(
+        const parseResult = validateTransformOutput(
           ctx,
           outputSchema,
           input,
           disableStrictOutputSchema,
         )
 
-        if (outputSuccess) {
-          return [true, dataOrError]
+        if (parseResult.ok) {
+          return parseResult
         } else {
-          outputResultErrors = dataOrError
+          outputResultErrors = parseResult.errors
         }
       }
 
-      const [success, dataOrError] = type._parse_(input, ctx)
+      const parseResult = type._parse_(input, ctx)
 
-      if (success) {
-        return [true, transform(dataOrError, type)]
+      if (parseResult.ok) {
+        return {
+          ok: true,
+          data: transform(parseResult.data, type),
+          errors: undefined,
+        }
       } else {
-        return [false, [...(outputResultErrors || []), ...dataOrError]]
+        return {
+          ok: false,
+          errors: [...(outputResultErrors || []), ...parseResult.errors],
+          data: undefined,
+        }
       }
     },
   }
@@ -1222,40 +1236,46 @@ export function rc_unsafe_transform<Input, Transformed>(
       let outputResultErrors: ErrorWithPath[] | null = null
 
       if (outputSchema) {
-        const [outputSuccess, dataOrError] = validateTransformOutput(
+        const parseResult = validateTransformOutput(
           ctx,
           outputSchema,
           input,
           disableStrictOutputSchema,
         )
 
-        if (outputSuccess) {
-          return [true, dataOrError]
+        if (parseResult.ok) {
+          return parseResult
         } else {
-          outputResultErrors = dataOrError
+          outputResultErrors = parseResult.errors
         }
       }
 
-      const [success, dataOrError] = type._parse_(input, ctx)
+      const parseResult = type._parse_(input, ctx)
 
-      if (success) {
-        const transformResult = transform(dataOrError, type)
+      if (parseResult.ok) {
+        const transformResult = transform(parseResult.data, type)
 
         if (transformResult.ok) {
-          return [true, transformResult.data]
+          return { ok: true, data: transformResult.data, errors: undefined }
         } else {
-          return [
-            false,
-            typeof transformResult.errors === 'string' ?
-              [getWarningOrErrorWithPath(ctx, transformResult.errors)]
-            : transformResult.errors.map((error) =>
-                getWarningOrErrorWithPath(ctx, error),
-              ),
-          ]
+          return {
+            ok: false,
+            errors:
+              typeof transformResult.errors === 'string' ?
+                [getWarningOrErrorWithPath(ctx, transformResult.errors)]
+              : transformResult.errors.map((error) =>
+                  getWarningOrErrorWithPath(ctx, error),
+                ),
+            data: undefined,
+          }
         }
       }
 
-      return [false, [...(outputResultErrors || []), ...dataOrError]]
+      return {
+        ok: false,
+        errors: [...(outputResultErrors || []), ...parseResult.errors],
+        data: undefined,
+      }
     },
   }
 }

@@ -1,16 +1,14 @@
 import {
-  RcType,
-  RcInferType,
+  ErrorWithPath,
   RcBase,
+  RcInferType,
   RcOptionalKeyType,
-  isObject,
+  RcType,
   defaultProps,
+  getWarningOrErrorWithPath,
+  isObject,
   parse,
   snakeCase,
-  getWarningOrErrorWithPath,
-  ErrorWithPath,
-  rc_array,
-  rc_loose_array,
 } from './runcheck'
 
 /**
@@ -104,12 +102,15 @@ export function rc_object<T extends RcObject>(
     objShape[key] = unwrapToObjSchema(value)
   }
 
+  const shapeEntries = Object.entries(objShape).map(([key, type]) => {
+    return { key, type }
+  })
+
   return {
     ...defaultProps,
     _obj_shape_: objShape,
     _kind_: 'object',
     _is_object_: true,
-    _shape_entries_: Object.entries(objShape),
     _parse_(inputObj, ctx) {
       return parse<TypeOfObjectType<T>>(this, inputObj, ctx, () => {
         if (!isObject(inputObj)) {
@@ -122,7 +123,7 @@ export function rc_object<T extends RcObject>(
         const excessKeys =
           isStrict ? new Set<string>(Object.keys(inputObj)) : undefined
 
-        if (excessKeys && excessKeys.size > this._shape_entries_.length) {
+        if (excessKeys && excessKeys.size > shapeEntries.length) {
           ctx.objErrKeyIndex_ = -1
           const errors: ErrorWithPath[] = []
 
@@ -132,13 +133,13 @@ export function rc_object<T extends RcObject>(
               errors: [
                 getWarningOrErrorWithPath(
                   ctx,
-                  `Expected strict object with ${this._shape_entries_.length} keys but got ${excessKeys.size}`,
+                  `Expected strict object with ${shapeEntries.length} keys but got ${excessKeys.size}`,
                 ),
               ],
             }
           }
 
-          for (const [key] of this._shape_entries_) {
+          for (const { key } of shapeEntries) {
             if (!excessKeys.has(key)) {
               errors.push(
                 getWarningOrErrorWithPath(ctx, `Key '${key}' is missing`),
@@ -169,7 +170,10 @@ export function rc_object<T extends RcObject>(
         const parentPath = ctx.path_
 
         let i = -1
-        for (const [key, type] of this._shape_entries_) {
+        for (const shapeEntry of shapeEntries) {
+          const key = shapeEntry.key
+          const type = shapeEntry.type
+
           const typekey = key as keyof T
           i += 1
 
@@ -196,14 +200,14 @@ export function rc_object<T extends RcObject>(
 
           excessKeys?.delete(keyToDeleteFromExcessKeys)
 
-          const [isValid, result] = type._parse_(input, ctx)
+          const parseResult = type._parse_(input, ctx)
 
-          if (isValid) {
-            resultObj[typekey] = result
+          if (parseResult.ok) {
+            resultObj[typekey] = parseResult.data
           }
           //
           else {
-            for (const subError of result) {
+            for (const subError of parseResult.errors) {
               ctx.path_ = path
               resultErrors.push(subError)
             }
@@ -245,6 +249,82 @@ export function rc_object<T extends RcObject>(
         }
 
         return { errors: false, data: resultObj as any }
+      })
+    },
+  }
+}
+
+export function rc_object_fast<T extends RcObject>(
+  shape: T,
+): RcObjTypeReturn<T> {
+  const objShape: Record<string, RcType<any>> = {}
+
+  for (const [key, value] of Object.entries(shape)) {
+    objShape[key] = unwrapToObjSchema(value)
+  }
+
+  const shapeEntries = Object.entries(objShape).map(([key, type]) => {
+    return { key, type }
+  })
+
+  return {
+    ...defaultProps,
+    _obj_shape_: objShape,
+    _kind_: 'object',
+    _is_object_: true,
+    _parse_(inputObj, ctx) {
+      return parse<TypeOfObjectType<T>>(this, inputObj, ctx, () => {
+        if (!isObject(inputObj)) {
+          ctx.objErrKeyIndex_ = -1
+          return false
+        }
+
+        const resultErrors: ErrorWithPath[] = []
+
+        const parentPath = ctx.path_
+
+        let i = -1
+        for (const shapeEntry of shapeEntries) {
+          const key = shapeEntry.key
+          const type = shapeEntry.type
+
+          i += 1
+
+          const subPath = `.${key}`
+
+          const path = `${parentPath}${subPath}`
+
+          ctx.path_ = path
+
+          const input = inputObj[key]
+
+          const { ok, data, errors } = type._parse_(input, ctx)
+
+          if (!ok) {
+            for (const subError of errors) {
+              ctx.path_ = path
+              resultErrors.push(subError)
+            }
+
+            if (ctx.objErrShortCircuit_) {
+              ctx.objErrKeyIndex_ = i
+              break
+            }
+          } else if (data !== input) {
+            resultErrors.push(
+              getWarningOrErrorWithPath(
+                ctx,
+                `Key '${key}' is being transformed which is not allowed in fast mode`,
+              ),
+            )
+          }
+        }
+
+        if (resultErrors.length > 0) {
+          return { errors: resultErrors, data: undefined }
+        }
+
+        return true
       })
     },
   }

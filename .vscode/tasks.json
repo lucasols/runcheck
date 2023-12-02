@@ -15,9 +15,9 @@
       "problemMatcher": []
     },
     {
-      "label": "run v8 profiler",
+      "label": "run deopt explorer",
       "type": "shell",
-      "command": "pnpx dexnode --out ./benchmarks/${input:fileName}.log ./benchmarks/deopt-test.js -p .",
+      "command": "pnpx dexnode --out ./benchmarks/profiles/${input:fileName}.log ./benchmarks/deopt-test.js -p .",
       "problemMatcher": []
     },
     {
@@ -25,13 +25,21 @@
       "type": "shell",
       "command": "pnpm benchmark",
       "problemMatcher": []
+    },
+    {
+      "type": "npm",
+      "script": "deopt-exp",
+      "problemMatcher": [],
+      "label": "npm: deopt-exp",
+      "detail": "dexnode benchmarks/deopt-test.js"
     }
   ],
   "inputs": [
     {
       "id": "fileName",
       "type": "promptString",
-      "description": "Enter the file name"
+      "description": "Enter the file name",
+      "default": "deopt"
     },
     {
       "id": "version",

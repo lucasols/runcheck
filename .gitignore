@@ -4,6 +4,7 @@ dist*
 cache.json
 .DS_Store
 benchmarks/profiles/*.cpuprofile
+benchmarks/profiles/*.log
 dist-test
 v8*.log
 last-build-version.txt

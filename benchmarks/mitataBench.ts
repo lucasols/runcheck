@@ -3,6 +3,7 @@ import { baseline, bench, group, run } from 'mitata'
 import { z as zod } from 'zod'
 import * as dist from '../dist/runcheck.js'
 import {
+  rc_any,
   rc_array,
   rc_boolean,
   rc_discriminated_union,
@@ -14,6 +15,7 @@ import {
   rc_union,
   rc_unwrap,
 } from '../src/runcheck.js'
+import { rc_object_fast } from '../src/rc_object.js'
 
 const validateData = Object.freeze({
   number: 1,
@@ -126,8 +128,9 @@ addGroup('object', () => {
 })
 
 addGroup('string', () => {
+  const dataType = zod.string()
+
   bench('zod', () => {
-    const dataType = zod.string()
     dataType.parse(validateData.string)
   })
 
@@ -136,9 +139,61 @@ addGroup('string', () => {
   })
 })
 
-addGroup('number', () => {
+addGroup.only('string in obj', () => {
+  const valueToCheck = { string: validateData.string }
+
+  const rcSchema = rc_object({ string: rc_string })
+
+  baseline('runcheck', () => {
+    rc_unwrap(rc_parse(valueToCheck, rcSchema))
+  })
+
+  const rcDistSchema = dist.rc_object({ string: dist.rc_string })
+
+  bench('runcheck dist', () => {
+    dist.rc_unwrap(dist.rc_parse(valueToCheck, rcDistSchema))
+  })
+
+  const rcObjFast = rc_object_fast({ string: rc_string })
+
+  bench('runcheck rc_object_fast', () => {
+    rc_unwrap(rc_parse(valueToCheck, rcObjFast))
+  })
+
+  bench('rc_any', () => {
+    rc_unwrap(rc_parse(valueToCheck, rc_any))
+  })
+
+  bench('vanilla js', () => {
+    const value = valueToCheck as unknown
+
+    if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+      throw new Error('invalid obj')
+    }
+
+    if (!('string' in value)) {
+      throw new Error('missing string')
+    }
+
+    if (typeof value.string !== 'string') {
+      throw new Error('invalid string')
+    }
+
+    value
+    // ^?
+  })
+
+  const zodSchema = zod.object({ string: zod.string() })
+
   bench('zod', () => {
-    const dataType = zod.number()
+    zodSchema.parse(valueToCheck)
+  })
+})
+
+addGroup('number', () => {
+  const dataType = zod.number()
+
+  bench('zod', () => {
     dataType.parse(validateData.number)
   })
 
@@ -148,8 +203,9 @@ addGroup('number', () => {
 })
 
 addGroup('boolean', () => {
+  const dataType = zod.boolean()
+
   bench('zod', () => {
-    const dataType = zod.boolean()
     dataType.parse(validateData.boolean)
   })
 
