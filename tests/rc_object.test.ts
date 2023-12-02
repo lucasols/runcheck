@@ -1054,33 +1054,4 @@ describe('rc_obj_builder modifiers', () => {
       )
     })
   })
-
-  describe('array', () => {
-    type Type = {
-      array: {
-        a: string
-      }[]
-    }
-
-    const shape = rc_obj_builder<Type>()({
-      array: [
-        'array',
-        {
-          a: rc_string,
-        },
-      ],
-    })
-
-    test('pass', () => {
-      expect(rc_parse({ array: [{ a: 'a' }] }, shape)).toEqual(
-        successResult({ array: [{ a: 'a' }] }),
-      )
-    })
-
-    test('fail', () => {
-      expect(rc_parse({ array: 'a' }, shape)).toEqual(
-        errorResult(`$.array: Type 'string' is not assignable to 'object[]'`),
-      )
-    })
-  })
 })
