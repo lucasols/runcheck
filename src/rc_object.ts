@@ -28,13 +28,7 @@ export function rc_get_from_key_as_fallback<T extends RcType<any>>(
 }
 
 export type RcObject = {
-  [key: string]:
-    | RcBase<any, any>
-    | RcObject
-    | [
-        'optional' | 'nullish_or' | 'null_or' | 'array' | 'loose_array',
-        RcObject,
-      ]
+  [key: string]: RcBase<any, any> | RcObject
 }
 
 export type TypeOfObjectType<T extends RcObject> = Flatten<
@@ -90,10 +84,6 @@ function unwrapToObjSchema(input: unknown): RcType<any> {
         return unwrapToObjSchema(value).orNullish()
       case 'null_or':
         return unwrapToObjSchema(value).orNull()
-      case 'array':
-        return rc_array(unwrapToObjSchema(value))
-      case 'loose_array':
-        return rc_loose_array(unwrapToObjSchema(value))
     }
   }
 
@@ -409,10 +399,7 @@ type StrictObjTypeToRcType<T> = {
 }
 
 type StricTypeToRcType<T> =
-  [T] extends [Record<string, any>[]] ?
-    | RcTypeWithSquemaEqualTo<T>
-    | ['array' | 'loose_array', StrictObjTypeToRcType<T[number]>]
-  : [T] extends [any[]] ? RcTypeWithSquemaEqualTo<T>
+  [T] extends [any[]] ? RcTypeWithSquemaEqualTo<T>
   : [T] extends [Record<string, any>] ?
     StrictObjTypeToRcType<T> | RcTypeWithSquemaEqualTo<T>
   : [T] extends [Record<string, any> | null] ?
