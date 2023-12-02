@@ -5,12 +5,14 @@ import * as dist from '../dist/runcheck.js'
 import {
   rc_array,
   rc_boolean,
+  rc_discriminated_union,
   rc_literals,
   rc_number,
   rc_object,
   rc_parse,
   rc_string,
   rc_union,
+  rc_unwrap,
 } from '../src/runcheck.js'
 
 const validateData = Object.freeze({
@@ -107,6 +109,10 @@ function addGroup(name: string, fn: () => void, only = false) {
   } else {
     groups.set(name, fn)
   }
+}
+
+addGroup.only = (name: string, fn: () => void) => {
+  addGroup(name, fn, true)
 }
 
 addGroup('object', () => {
@@ -282,7 +288,7 @@ addGroup('large array with union', () => {
   })
 })
 
-addGroup('discriminated union', () => {
+addGroup('zod with discriminated union vs rc_union', () => {
   const largeArray = Array.from({ length: 100 }, (_, i) => ({
     string: `string${i}`,
     number: i,
@@ -435,6 +441,112 @@ addGroup('discriminated union', () => {
 
   bench(`runcheck (dist)`, () => {
     throwIfError(dist.rc_parse(largeArray, distSchema))
+  })
+})
+
+addGroup('discriminated union', () => {
+  const largeArray = Array.from({ length: 100 }, (_, i) => ({
+    string: `string${i}`,
+    number: i,
+    array: [1, 2, 3],
+    obj: JSON.parse(JSON.stringify(validateData)),
+    union: i % 2 === 0 ? 'foo' : { type: 'qux', baz: 'qux', str: i.toString() },
+  }))
+
+  const dataType2 = zod.array(
+    zod.object({
+      string: zod.string(),
+      number: zod.number(),
+      array: zod.array(zod.number()),
+      obj: objDataType,
+      union: zod.union([
+        zod.string(),
+        zod.discriminatedUnion('type', [
+          zod.object({
+            type: zod.literal('bar'),
+            baz: zod.string(),
+            num: zod.number(),
+          }),
+          zod.object({
+            type: zod.literal('baz'),
+            baz: zod.string(),
+            num: zod.number(),
+          }),
+          zod.object({
+            type: zod.literal('bazs'),
+            baz: zod.string(),
+            num: zod.number(),
+          }),
+          zod.object({
+            type: zod.literal('qux'),
+            baz: zod.string(),
+            str: zod.string(),
+          }),
+        ]),
+      ]),
+    }),
+  )
+
+  const schema = rc_array(
+    rc_object({
+      string: rc_string,
+      number: rc_number,
+      array: rc_array(rc_number),
+      obj: objShape,
+      union: rc_union(
+        rc_string,
+        rc_discriminated_union('type', {
+          bar: { baz: rc_string, num: rc_number },
+          baz: { baz: rc_string, num: rc_number },
+          bazs: { baz: rc_string, num: rc_number },
+          qux: { baz: rc_string, str: rc_string },
+        }),
+      ),
+    }),
+  )
+
+  const schemaWithUnion = rc_array(
+    rc_object({
+      string: rc_string,
+      number: rc_number,
+      array: rc_array(rc_number),
+      obj: objShape,
+      union: rc_union(
+        rc_string,
+        rc_object({
+          type: rc_literals('bar'),
+          baz: rc_string,
+          num: rc_number,
+        }),
+        rc_object({
+          type: rc_literals('baz'),
+          baz: rc_string,
+          num: rc_number,
+        }),
+        rc_object({
+          type: rc_literals('bazs'),
+          baz: rc_string,
+          num: rc_number,
+        }),
+        rc_object({
+          type: rc_literals('qux'),
+          baz: rc_string,
+          str: rc_string,
+        }),
+      ),
+    }),
+  )
+
+  baseline('runcheck', () => {
+    rc_unwrap(rc_parse(largeArray, schema))
+  })
+
+  bench('runcheck with union', () => {
+    rc_unwrap(rc_parse(largeArray, schemaWithUnion))
+  })
+
+  bench('zod', () => {
+    dataType2.parse(largeArray)
   })
 })
 

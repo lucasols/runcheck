@@ -9,6 +9,8 @@ import {
   snakeCase,
   getWarningOrErrorWithPath,
   ErrorWithPath,
+  rc_array,
+  rc_loose_array,
 } from './runcheck'
 
 /**
@@ -25,23 +27,26 @@ export function rc_get_from_key_as_fallback<T extends RcType<any>>(
   }
 }
 
-type RcObject = {
-  [key: string]: RcBase<any, any> | RcObject
+export type RcObject = {
+  [key: string]:
+    | RcBase<any, any>
+    | RcObject
+    | ['optional', RcObject]
+    | ['nullish_or', RcObject]
+    | ['null_or', RcObject]
+    | ['array' | 'loose_array', RcObject | RcBase<any, any>]
 }
 
 export type TypeOfObjectType<T extends RcObject> = Flatten<
   AddQuestionMarks<{
-    [K in keyof T]: T[K] extends RcType<infer U>
-      ? RequiredKey<U>
-      : T[K] extends RcOptionalKeyType<infer W>
-      ? W
-      : T[K] extends RcObject
-      ? RequiredKey<TypeOfObjectType<T[K]>>
-      : never
+    [K in keyof T]: T[K] extends RcType<infer U> ? RequiredKey<U>
+    : T[K] extends RcOptionalKeyType<infer W> ? W
+    : T[K] extends RcObject ? RequiredKey<TypeOfObjectType<T[K]>>
+    : never
   }>
 >
 
-type RcObjTypeReturn<T extends RcObject> = RcType<TypeOfObjectType<T>>
+export type RcObjTypeReturn<T extends RcObject> = RcType<TypeOfObjectType<T>>
 
 type RequiredKey<T> = { _required_key_: T }
 
@@ -75,6 +80,21 @@ function unwrapToObjSchema(input: unknown): RcType<any> {
     }
 
     return rc_object(objSchema)
+  } else if (Array.isArray(input)) {
+    const [type, value] = input
+
+    switch (type) {
+      case 'optional':
+        return unwrapToObjSchema(value).optional()
+      case 'nullish_or':
+        return unwrapToObjSchema(value).orNullish()
+      case 'null_or':
+        return unwrapToObjSchema(value).orNull()
+      case 'array':
+        return rc_array(unwrapToObjSchema(value))
+      case 'loose_array':
+        return rc_loose_array(unwrapToObjSchema(value))
+    }
   }
 
   throw new Error(`invalid schema: ${input}`)
@@ -109,9 +129,8 @@ export function rc_object<T extends RcObject>(
 
         const isStrict = this._kind_ === 'strict_obj' || ctx.strictObj_
 
-        const excessKeys = isStrict
-          ? new Set<string>(Object.keys(inputObj))
-          : undefined
+        const excessKeys =
+          isStrict ? new Set<string>(Object.keys(inputObj)) : undefined
 
         if (excessKeys && excessKeys.size > this._shape_entries_.length) {
           ctx.objErrKeyIndex_ = -1
@@ -381,16 +400,26 @@ export function rc_obj_omit<O extends AnyObj, K extends keyof O>(
   return rc_object(shape) as any
 }
 
-type RcTypeWithSquemaEqualTo<T> = { __rc_type: RcType<T> }
+type ExpectedSchema<T> = (t: T) => void
 
-type StricTypeToRcType<T> = [T] extends [any[]]
-  ? RcTypeWithSquemaEqualTo<T>
-  : [T] extends [Record<string, any>]
-  ?
-      | {
-          [K in keyof T]-?: StricTypeToRcType<T[K]>
-        }
-      | RcTypeWithSquemaEqualTo<T>
+type RcTypeWithSquemaEqualTo<T> = { __rc_type: ExpectedSchema<T> }
+
+type StrictObjTypeToRcType<T> = {
+  [K in keyof T]-?: StricTypeToRcType<T[K]>
+}
+
+type StricTypeToRcType<T> =
+  [T] extends [any[]] ?
+    | RcTypeWithSquemaEqualTo<T>
+    | ['array' | 'loose_array', StricTypeToRcType<T[number]>]
+  : [T] extends [Record<string, any>] ?
+    StrictObjTypeToRcType<T> | RcTypeWithSquemaEqualTo<T>
+  : [T] extends [Record<string, any> | null] ?
+    ['null_or', StrictObjTypeToRcType<T>] | RcTypeWithSquemaEqualTo<T>
+  : [T] extends [Record<string, any> | undefined] ?
+    ['optional', StrictObjTypeToRcType<T>] | RcTypeWithSquemaEqualTo<T>
+  : [T] extends [Record<string, any> | null | undefined] ?
+    ['nullish_or', StrictObjTypeToRcType<T>] | RcTypeWithSquemaEqualTo<T>
   : RcTypeWithSquemaEqualTo<T>
 
 type StricTypeToRcTypeBase<T extends Record<string, any>> = {

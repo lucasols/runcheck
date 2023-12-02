@@ -94,8 +94,9 @@ describe('rc_object', () => {
       }),
     )
 
-    type Prettify<T> = T extends Record<string, any>
-      ? {
+    type Prettify<T> =
+      T extends Record<string, any> ?
+        {
           [K in keyof T]: Prettify<T[K]>
         }
       : T
@@ -951,4 +952,135 @@ test('reproduce bug in rc_rename_from_key: return validation error on parsed JSO
       "version": "0",
     }
   `)
+})
+
+describe('rc_obj_builder modifiers', () => {
+  describe('optional', () => {
+    type Type = {
+      obj: undefined | { a: string }
+      obj2?: { a: string }
+    }
+
+    const shape = rc_obj_builder<Type>()({
+      obj: ['optional', { a: rc_string }],
+      obj2: ['optional', { a: rc_string }],
+    })
+
+    test('pass', () => {
+      expect(rc_parse({ obj: { a: 'a' }, obj2: { a: 'a' } }, shape)).toEqual(
+        successResult({ obj: { a: 'a' }, obj2: { a: 'a' } }),
+      )
+
+      expect(rc_parse({ obj: undefined, obj2: undefined }, shape)).toEqual(
+        successResult({}),
+      )
+
+      expect(rc_parse({ obj: { a: 'a' } }, shape)).toEqual(
+        successResult({ obj: { a: 'a' } }),
+      )
+    })
+
+    test('fail', () => {
+      expect(rc_parse({ obj: null }, shape)).toEqual(
+        errorResult(
+          `$.obj: Type 'null' is not assignable to 'object_optional'`,
+        ),
+      )
+    })
+  })
+
+  describe('nullish_or', () => {
+    type Type = {
+      obj: null | undefined | { a: string; b: number }
+      obj2?: null | { a: string }
+    }
+
+    const shape = rc_obj_builder<Type>()({
+      obj: ['nullish_or', { a: rc_string, b: rc_number }],
+      obj2: ['nullish_or', { a: rc_string }],
+    })
+
+    test('pass', () => {
+      expect(
+        rc_parse({ obj: { a: 'a', b: 1 }, obj2: { a: 'a' } }, shape),
+      ).toEqual(successResult({ obj: { a: 'a', b: 1 }, obj2: { a: 'a' } }))
+
+      expect(rc_parse({ obj: undefined, obj2: undefined }, shape)).toEqual(
+        successResult({}),
+      )
+
+      expect(rc_parse({ obj: null, obj2: null }, shape)).toEqual(
+        successResult({ obj: null, obj2: null }),
+      )
+
+      expect(rc_parse({ obj: { a: 'a', b: 2 } }, shape)).toEqual(
+        successResult({ obj: { a: 'a', b: 2 } }),
+      )
+    })
+
+    test('fail', () => {
+      expect(rc_parse({ obj: 1 }, shape)).toEqual(
+        errorResult(
+          `$.obj: Type 'number' is not assignable to 'object_or_nullish'`,
+        ),
+      )
+    })
+  })
+
+  describe('null_or', () => {
+    type Type = {
+      obj: null | { a: string }
+    }
+
+    const shape = rc_obj_builder<Type>()({
+      obj: ['null_or', { a: rc_string }],
+    })
+
+    test('pass', () => {
+      expect(rc_parse({ obj: { a: 'a' } }, shape)).toEqual(
+        successResult({ obj: { a: 'a' } }),
+      )
+
+      expect(rc_parse({ obj: null }, shape)).toEqual(
+        successResult({ obj: null }),
+      )
+    })
+
+    test('fail', () => {
+      expect(rc_parse({ obj: undefined }, shape)).toEqual(
+        errorResult(
+          `$.obj: Type 'undefined' is not assignable to 'object_or_null'`,
+        ),
+      )
+    })
+  })
+
+  describe('array', () => {
+    type Type = {
+      array: {
+        a: string
+      }[]
+    }
+
+    const shape = rc_obj_builder<Type>()({
+      array: [
+        'array',
+        {
+          a: rc_string,
+        },
+      ],
+    })
+
+    test('pass', () => {
+      expect(rc_parse({ array: [{ a: 'a' }] }, shape)).toEqual(
+        successResult({ array: [{ a: 'a' }] }),
+      )
+    })
+
+    test('fail', () => {
+      expect(rc_parse({ array: 'a' }, shape)).toEqual(
+        errorResult(`$.array: Type 'string' is not assignable to 'object[]'`),
+      )
+    })
+  })
 })
