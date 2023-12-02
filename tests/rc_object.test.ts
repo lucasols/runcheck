@@ -1012,7 +1012,7 @@ describe('rc_obj_builder modifiers', () => {
 
   describe('nullish_or', () => {
     type Type = {
-      obj: null | undefined | { a: string; b?: number }
+      obj: null | undefined | { a: string; b: number }
       obj2?: null | { a: string }
     }
 
@@ -1072,6 +1072,35 @@ describe('rc_obj_builder modifiers', () => {
         errorResult(
           `$.obj: Type 'undefined' is not assignable to 'object_or_null'`,
         ),
+      )
+    })
+  })
+
+  describe('array', () => {
+    type Type = {
+      array: {
+        a: string
+      }[]
+    }
+
+    const shape = rc_obj_builder<Type>()({
+      array: [
+        'array',
+        {
+          a: rc_string,
+        },
+      ],
+    })
+
+    test('pass', () => {
+      expect(rc_parse({ array: ['a', 'b'] }, shape)).toEqual(
+        successResult({ array: ['a', 'b'] }),
+      )
+    })
+
+    test('fail', () => {
+      expect(rc_parse({ array: 'a' }, shape)).toEqual(
+        errorResult(`$.array: Type 'string' is not assignable to 'array'`),
       )
     })
   })

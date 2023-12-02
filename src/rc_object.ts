@@ -9,6 +9,8 @@ import {
   snakeCase,
   getWarningOrErrorWithPath,
   ErrorWithPath,
+  rc_array,
+  rc_loose_array,
 } from './runcheck'
 
 /**
@@ -87,6 +89,10 @@ function unwrapToObjSchema(input: unknown): RcType<any> {
         return unwrapToObjSchema(value).orNullish()
       case 'null_or':
         return unwrapToObjSchema(value).orNull()
+      case 'array':
+        return rc_array(unwrapToObjSchema(value))
+      case 'loose_array':
+        return rc_loose_array(unwrapToObjSchema(value))
     }
   }
 
@@ -402,7 +408,9 @@ type StrictObjTypeToRcType<T> = {
 }
 
 type StricTypeToRcType<T> =
-  [T] extends [any[]] ? RcTypeWithSquemaEqualTo<T>
+  [T] extends [any[]] ?
+    | RcTypeWithSquemaEqualTo<T>
+    | ['array' | 'loose_array', StricTypeToRcType<T[number]>]
   : [T] extends [Record<string, any>] ?
     StrictObjTypeToRcType<T> | RcTypeWithSquemaEqualTo<T>
   : [T] extends [Record<string, any> | null] ?
