@@ -26,7 +26,7 @@ describe('default', () => {
 
   test('invalid inputs', () => {
     expect(parse('1')).toEqual(
-      errorResult(`Type 'string' is not assignable to 'number'`),
+      errorResult(`Type 'string' is not assignable to 'number_optional'`),
     )
   })
 

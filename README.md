@@ -576,6 +576,18 @@ type SchemaType = {
       }
     }
   }
+  optionalObj?: {
+    a: string
+  }
+  objOrNull: null | {
+    a: string
+  }
+  objOrNullish:
+    | null
+    | undefined
+    | {
+        a: string
+      }
 }
 
 const schema = rc_obj_builder<SchemaType>()({
@@ -589,5 +601,48 @@ const schema = rc_obj_builder<SchemaType>()({
       },
     },
   },
+  optionalObj: [
+    'optional',
+    {
+      a: rc_string,
+      // better error here and autocompletion :)
+    },
+  ],
+  objOrNull: [
+    'null_or',
+    {
+      a: rc_string,
+    },
+  ],
+  objOrNullish: [
+    'nullish_or',
+    {
+      a: rc_string,
+    },
+  ],
 })
+```
+
+# `rc_discriminated_union`
+
+Creates a discriminated union type with faster check performance compared to `rc_union`.
+
+```ts
+const networkState = rc_discriminated_union('state', {
+  loading: {},
+  success: {
+    response: rc_string,
+  },
+  error: {
+    code: rc_number,
+  },
+})
+
+const result = rc_unwrap(
+  rc_parse({ state: 'success', response: 'hello' }, networkState),
+)
+// result will be inferred as:
+// | { state: 'loading' }
+// | { state: 'success', response: string }
+// | { state: 'error', code: number }
 ```

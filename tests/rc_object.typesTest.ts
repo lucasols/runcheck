@@ -5,6 +5,7 @@ import {
   RcInferType,
   RcType,
   rc_array,
+  rc_obj_builder,
   rc_obj_extends,
   rc_object,
   rc_parse,
@@ -42,8 +43,9 @@ const type2 = rc_object({
   },
 })
 
-type Prettify<T> = T extends Record<string, any>
-  ? {
+type Prettify<T> =
+  T extends Record<string, any> ?
+    {
       [K in keyof T]: Prettify<T[K]>
     }
   : T
@@ -73,4 +75,18 @@ function test<T>(schema: RcType<T>): T | null {
 const extends_obj = rc_obj_extends({
   a: rc_string.optionalKey(),
   c: rc_string.optional(),
+})
+
+const objBuilderWithOptional = rc_obj_builder<{
+  orNull: null | { a: string }
+  orUndefined: undefined | { a: string }
+  orNullish: null | undefined | { a: string }
+  optional?: { a: string }
+  optionalNullish?: null | { a: string }
+}>()({
+  orNull: ['null_or:', { a: rc_string }],
+  orUndefined: ['optional', { a: rc_string }],
+  orNullish: ['nullish_or:', { a: rc_string }],
+  optional: ['optional', { a: rc_string }],
+  optionalNullish: ['nullish_or:', { a: rc_string }],
 })

@@ -1,4 +1,13 @@
+import {
+  RcObject,
+  TypeOfObjectType,
+  rc_obj_merge,
+  rc_object,
+} from './rc_object'
+
 export {
+  rc_enable_obj_strict,
+  rc_get_from_key_as_fallback,
   rc_get_obj_shape as rc_get_obj_schema,
   rc_obj_builder,
   rc_obj_extends,
@@ -7,8 +16,6 @@ export {
   rc_obj_pick,
   rc_obj_strict,
   rc_object,
-  rc_enable_obj_strict,
-  rc_get_from_key_as_fallback,
 } from './rc_object'
 
 export type RcParseResult<T> =
@@ -26,9 +33,8 @@ export type RcParseResult<T> =
       errors: string[]
     }
 
-export type RcInferType<T extends RcType<any>> = T extends RcType<infer U>
-  ? U
-  : never
+export type RcInferType<T extends RcType<any>> =
+  T extends RcType<infer U> ? U : never
 
 type ParseResultCtx = {
   warnings_: string[]
@@ -50,8 +56,10 @@ export type RcOptionalKeyType<T> = RcBase<T, true>
 
 export type RcType<T> = RcBase<T, false>
 
+type Schema<T> = (t: T) => void
+
 export type RcBase<T, RequiredKey extends boolean> = {
-  __rc_type: RcType<T>
+  __rc_type: Schema<T>
   readonly withFallback: WithFallback<T>
   readonly where: (predicate: (input: T) => boolean) => RcType<T>
   /** RcType | undefined */
@@ -238,9 +246,9 @@ export function parse<T>(
 
   return [
     false,
-    isValid
-      ? isValid.errors
-      : [getWarningOrErrorWithPath(ctx, getErrorMsg(type, input))],
+    isValid ?
+      isValid.errors
+    : [getWarningOrErrorWithPath(ctx, getErrorMsg(type, input))],
   ]
 }
 
@@ -250,8 +258,8 @@ function getResultErrors(
   type: RcType<any>,
   input: unknown,
 ) {
-  return isValid
-    ? isValid.errors.map((err) => err.replace(ctx.path_, '')).join('; ')
+  return isValid ?
+      isValid.errors.map((err) => err.replace(ctx.path_, '')).join('; ')
     : getErrorMsg(type, input)
 }
 
@@ -280,6 +288,7 @@ function optional(this: RcType<any>): RcType<any> {
   return {
     ...this,
     _optional_: true,
+    _kind_: `${this._kind_}_optional`,
   }
 }
 
@@ -441,11 +450,9 @@ export function rc_literals<T extends (string | number | boolean)[]>(
     },
     _show_value_in_error_: true,
     _kind_:
-      literals.length == 1
-        ? normalizedTypeOf(literals[0], true)
-        : literals
-            .map((literal) => normalizedTypeOf(literal, true))
-            .join(' | '),
+      literals.length == 1 ?
+        normalizedTypeOf(literals[0], true)
+      : literals.map((literal) => normalizedTypeOf(literal, true)).join(' | '),
   }
 }
 
@@ -682,6 +689,71 @@ export function rc_record<V>(
   }
 }
 
+export function rc_discriminated_union<
+  K extends string,
+  T extends Record<string, RcObject>,
+>(
+  discriminatorKey: K,
+  types: T,
+): RcType<
+  Prettify<
+    { [P in keyof T]: { [Q in K]: P } & TypeOfObjectType<T[P]> }[keyof T]
+  >
+> {
+  const preComputedTypesShape = {} as Record<string, RcType<any>>
+
+  for (const [key, type] of Object.entries(types)) {
+    preComputedTypesShape[key] = rc_object(type) as any
+  }
+
+  return {
+    ...defaultProps,
+    _kind_: `discriminated_union`,
+    _is_object_: true,
+    _parse_(input, ctx) {
+      return parse<any>(this, input, ctx, () => {
+        if (!isObject(input)) {
+          ctx.objErrKeyIndex_ = -1
+          return false
+        }
+
+        const discriminator = input[discriminatorKey]
+
+        ctx.path_ = `${ctx.path_}.${discriminatorKey}`
+
+        const type = preComputedTypesShape[discriminator]
+
+        if (!type) {
+          const invalidValueType = normalizedTypeOf(discriminator, true)
+
+          return {
+            errors: [
+              getWarningOrErrorWithPath(
+                ctx,
+                `Type '${invalidValueType}' is not a valid discriminator`,
+              ),
+            ],
+            data: undefined,
+          }
+        }
+
+        ctx.path_ = `${ctx.path_}|${discriminator}|`
+
+        const [isValid, result] = type._parse_(input, ctx)
+
+        if (!isValid) {
+          return { errors: result, data: undefined }
+        }
+
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+        result[discriminatorKey] = discriminator
+
+        return { errors: false, data: result }
+      })
+    },
+  }
+}
+
 /** instead of returning a general error, rejects invalid keys and returns warnings for these items */
 export function rc_loose_record<V>(
   valueType: RcType<V>,
@@ -748,11 +820,11 @@ function checkArrayItems(
           [
             getWarningOrErrorWithPath(
               ctx,
-              isUniqueKey
-                ? `Type '${type._obj_shape_?.[unique]?._kind_}' with value "${uniqueValueToCheck}" is not unique`
-                : typeof unique === 'function'
-                ? `Type '${type._kind_}' unique fn return with value "${uniqueValueToCheck}" is not unique`
-                : `${type._kind_} value is not unique`,
+              isUniqueKey ?
+                `Type '${type._obj_shape_?.[unique]?._kind_}' with value "${uniqueValueToCheck}" is not unique`
+              : typeof unique === 'function' ?
+                `Type '${type._kind_}' unique fn return with value "${uniqueValueToCheck}" is not unique`
+              : `${type._kind_} value is not unique`,
             ),
           ],
         ]
@@ -790,9 +862,9 @@ function checkArrayItems(
 }
 
 type ArrayOptions<T extends RcType<any>> = {
-  unique?: RcInferType<T> extends Record<string, any>
-    ? keyof RcInferType<T> | ((parsedItem: RcInferType<T>) => any)
-    : boolean | ((parsedItem: RcInferType<T>) => any)
+  unique?: RcInferType<T> extends Record<string, any> ?
+    keyof RcInferType<T> | ((parsedItem: RcInferType<T>) => any)
+  : boolean | ((parsedItem: RcInferType<T>) => any)
 }
 
 export function rc_array<T extends RcType<any>>(
@@ -1179,11 +1251,11 @@ export function rc_unsafe_transform<Input, Transformed>(
         } else {
           return [
             false,
-            typeof transformResult.errors === 'string'
-              ? [getWarningOrErrorWithPath(ctx, transformResult.errors)]
-              : transformResult.errors.map((error) =>
-                  getWarningOrErrorWithPath(ctx, error),
-                ),
+            typeof transformResult.errors === 'string' ?
+              [getWarningOrErrorWithPath(ctx, transformResult.errors)]
+            : transformResult.errors.map((error) =>
+                getWarningOrErrorWithPath(ctx, error),
+              ),
           ]
         }
       }
@@ -1210,9 +1282,11 @@ function normalizedTypeOf(input: unknown, showValueInError: boolean): string {
     return typeOf
   })()
 
-  return showValueInError &&
-    (type === 'string' || type === 'number' || type === 'boolean')
-    ? `${type}(${input})`
+  return (
+      showValueInError &&
+        (type === 'string' || type === 'number' || type === 'boolean')
+    ) ?
+      `${type}(${input})`
     : type
 }
 
@@ -1281,8 +1355,9 @@ function isFn(value: any): value is () => any {
   return typeof value === 'function'
 }
 
-type Prettify<T> = T extends Record<string, any>
-  ? {
+type Prettify<T> =
+  T extends Record<string, any> ?
+    {
       [K in keyof T]: Prettify<T[K]>
     }
   : T
