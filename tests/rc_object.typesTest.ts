@@ -84,9 +84,9 @@ const objBuilderWithOptional = rc_obj_builder<{
   optional?: { a: string }
   optionalNullish?: null | { a: string }
 }>()({
-  orNull: ['null_or:', { a: rc_string }],
+  orNull: ['null_or', { a: rc_string }],
   orUndefined: ['optional', { a: rc_string }],
-  orNullish: ['nullish_or:', { a: rc_string }],
+  orNullish: ['nullish_or', { a: rc_string }],
   optional: ['optional', { a: rc_string }],
-  optionalNullish: ['nullish_or:', { a: rc_string }],
+  optionalNullish: ['nullish_or', { a: rc_string }],
 })
