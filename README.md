@@ -2,10 +2,6 @@
 
 A lib for js/typescript runtime type checks with autofix support. Runcheck has the goal of being very lightweight and fast ⚡. Because of that, it has only around [2.9kb Gzipped](https://bundlephobia.com/package/runcheck) (at v0.30), has no dependencies and is tree-shakeable!
 
-Benchmarks:
-
-![Benchmarks](imgs/image.png)
-
 Obs: Runcheck is in Beta and it's api can still change
 
 # Installation
