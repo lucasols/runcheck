@@ -8,6 +8,7 @@ export default defineConfig({
   entry: ['src/runcheck.ts', 'src/autofixable.ts'],
   clean: true,
   format: ['cjs', 'esm'],
+  sourcemap: true,
   esbuildOptions(options) {
     options.mangleProps = /[^_]_$/
   },

@@ -377,11 +377,11 @@ group('large array with union', { it: 500 }, () => {
   })
 
   bench(`runcheck (dist)`, () => {
-    rc_unwrap(dist.rc_parse(largeArray, distSchema))
+    dist.rc_unwrap(dist.rc_parse(largeArray, distSchema))
   })
 })
 
-group('zod with discriminated union vs rc_union', { it: 500 }, () => {
+group.only('zod with discriminated union vs rc_union', { it: 500 }, () => {
   const largeArray = Array.from({ length: 100 }, (_, i) => ({
     string: `string${i}`,
     number: i,
@@ -493,7 +493,7 @@ group('zod with discriminated union vs rc_union', { it: 500 }, () => {
       string: dist.rc_string,
       number: dist.rc_number,
       array: dist.rc_array(dist.rc_number),
-      obj: oldObjShape,
+      obj: distObjShape,
       union: dist.rc_union(
         dist.rc_string,
         dist.rc_object({
@@ -529,11 +529,15 @@ group('zod with discriminated union vs rc_union', { it: 500 }, () => {
   })
 
   bench(`runcheck (${oldVersionToLoad})`, () => {
-    rc_unwrap(old.rc_parse(largeArray, oldSchema))
+    const result = old.rc_parse(largeArray, oldSchema)
+
+    if (result.error) {
+      throw result.error
+    }
   })
 
   bench(`runcheck (dist)`, () => {
-    rc_unwrap(dist.rc_parse(largeArray, distSchema))
+    dist.rc_unwrap(dist.rc_parse(largeArray, distSchema))
   })
 })
 

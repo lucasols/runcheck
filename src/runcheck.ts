@@ -1061,8 +1061,6 @@ export function rc_parse<S>(
     noLooseArray_: false,
   }
 
-  // return { error: false }
-
   const parseResult = type._parse_(input, ctx)
 
   if (parseResult.ok) {
