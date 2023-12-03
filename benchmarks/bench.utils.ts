@@ -3,6 +3,8 @@ function getPreciseTimeMs() {
   return seconds * 1_000 + nanoseconds / 1_000_000
 }
 
+type AvaialableStats = 'min' | 'median' | 'total' | '95p'
+
 let toRun: (() => void)[] = []
 let onlyRun: (() => void)[] = []
 let skippedRuns = 0
@@ -59,7 +61,7 @@ export function baseline(id: string, fn: () => void) {
 
 type GroupConfig = {
   it?: number
-  statToUse?: 'min' | 'median'
+  stat?: AvaialableStats
   warmup?: number
   noRandomize?: boolean
 }
@@ -83,9 +85,9 @@ function groupBase({
 }) {
   const {
     it = 1_000,
-    warmup = 10_000,
+    warmup = it * 5,
     noRandomize: noRandomize,
-    statToUse,
+    stat: statToUse,
   } = options
 
   if (skip) {
@@ -142,7 +144,7 @@ function groupBase({
       ([id, timings]) => [id, getStats(timings)] as const,
     )
 
-    const refStat: keyof (typeof stats)[0][1] = statToUse || 'min'
+    const refStat: AvaialableStats = statToUse || 'min'
 
     let sortedTimings = sortBy(
       stats,
@@ -153,7 +155,15 @@ function groupBase({
     )
 
     console.log(
-      `\n${id}${color('gray', ` (iterations: ${it.toLocaleString()}):`)}`,
+      `\n${id}${color(
+        'gray',
+        joinStrings(
+          ` (`,
+          `iter: ${simplifyNumber(it)}`,
+          statToUse && statToUse !== 'min' && `, stat: ${statToUse}`,
+          `):`,
+        ),
+      )}`,
     )
 
     const longestVariation = variations.reduce(
@@ -187,7 +197,7 @@ function groupBase({
           dots,
           ' ',
           formatTime(time),
-          color('gray', '/iter'),
+          refStat !== 'total' && color('gray', '/iter'),
           ' ',
           id !== baseline &&
             color(
@@ -302,17 +312,18 @@ export function sortBy<T>(
   })
 }
 
-function getStats(timings: number[]): {
-  min: number
-  median: number
-} {
+function getStats(timings: number[]): Record<AvaialableStats, number> {
   const sortedTimings = sortBy(timings, (time) => time, { order: 'asc' })
 
   const min = sortedTimings[sortedTimings.findIndex((time) => time !== 0)]!
 
   const median = sortedTimings[Math.floor(sortedTimings.length / 2)]!
 
-  return { min, median }
+  const total = sortedTimings.reduce((acc, curr) => acc + curr, 0)
+
+  const percentile95 = sortedTimings[Math.floor(sortedTimings.length * 0.95)]!
+
+  return { min, median, total, '95p': percentile95 }
 }
 
 function formatTime(ms: number) {
@@ -346,4 +357,20 @@ export function joinStrings(...args: (Arg | Arg[])[]) {
   }
 
   return strings.join('')
+}
+
+function simplifyNumber(num: number) {
+  if (num < 1_000) {
+    return num.toLocaleString()
+  }
+
+  if (num < 1_000_000) {
+    return `${(num / 1_000).toLocaleString()}k`
+  }
+
+  if (num < 1_000_000_000) {
+    return `${(num / 1_000_000).toLocaleString()}M`
+  }
+
+  return `${(num / 1_000_000_000).toLocaleString()}G`
 }
