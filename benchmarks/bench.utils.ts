@@ -138,9 +138,13 @@ function groupBase({
 
     const refStat: keyof (typeof stats)[0][1] = 'min'
 
-    const sortedTimings = sortBy(stats, ([_, stats]) => stats[refStat], {
-      order: 'asc',
-    })
+    let sortedTimings = sortBy(
+      stats,
+      ([id, stats]) => stats[refStat] + (id === baseline ? 0 : 0.000000001),
+      {
+        order: 'asc',
+      },
+    )
 
     console.log(
       `\n${id}${color('gray', ` (iterations: ${it.toLocaleString()}):`)}`,
@@ -165,12 +169,21 @@ function groupBase({
         timesSlower < 1 ? 1 / timesSlower : timesSlower,
       ).toFixed(2)
 
+      const nameAndDots = id.padEnd(longestVariation + 3, '.')
+
+      const name = color('cyan', nameAndDots.slice(0, id.length))
+      const dots = color('gray', nameAndDots.slice(id.length))
+
       console.log(
-        `${id === baseline ? color('cyan', '>> ') : '   '}${color(
-          'cyan',
-          id.padEnd(longestVariation + 3, '.'),
-        )} ${formatTime(time)}${color('gray', '/iter')} ${
-          id !== baseline ?
+        joinStrings(
+          id === baseline ? bold(color('cyan', '>> ')) : '   ',
+          id === baseline ? bold(name) : name,
+          dots,
+          ' ',
+          formatTime(time),
+          color('gray', '/iter'),
+          ' ',
+          id !== baseline &&
             color(
               timesSlower < 1 ? 'red' : 'green',
               `${
@@ -180,9 +193,8 @@ function groupBase({
                   }`
                 )
               }`,
-            )
-          : ''
-        }`,
+            ),
+        ),
       )
     }
   })
@@ -253,6 +265,10 @@ function color(color: keyof typeof consoleColors, text: string) {
   return `${consoleColors[color]}${text}\x1b[0m`
 }
 
+function bold(text: string) {
+  return `\x1b[1m${text}\x1b[0m`
+}
+
 type Options = {
   order?: 'asc' | 'desc'
 }
@@ -311,4 +327,25 @@ function formatTime(ms: number) {
   }
 
   return `${(ms / 1000).toFixed(2)}s`
+}
+
+type Arg = string | false | undefined | null
+
+export function joinStrings(...args: (Arg | Arg[])[]) {
+  const strings: string[] = []
+
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i]
+
+    if (!arg) continue
+
+    if (Array.isArray(arg)) {
+      strings.push(joinStrings(...arg))
+      continue
+    }
+
+    strings.push(arg)
+  }
+
+  return strings.join('')
 }
