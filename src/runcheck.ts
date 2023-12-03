@@ -11,7 +11,6 @@ export {
   rc_obj_pick,
   rc_obj_strict,
   rc_object,
-  rc_object_fast,
 } from './rc_object'
 
 export type RcParseResult<T> =
@@ -361,16 +360,16 @@ export const rc_null: RcType<null> = {
 
 export const rc_any: RcType<any> = {
   ...defaultProps,
-  _parse_(input, ctx) {
-    return parse(this, input, ctx, () => true)
+  _parse_(input) {
+    return { ok: true, data: input, errors: undefined }
   },
   _kind_: 'any',
 }
 
 export const rc_unknown: RcType<unknown> = {
   ...defaultProps,
-  _parse_(input, ctx) {
-    return parse(this, input, ctx, () => true)
+  _parse_(input) {
+    return { ok: true, data: input, errors: undefined }
   },
   _kind_: 'unknown',
 }
@@ -796,6 +795,25 @@ function checkArrayItems(
 
     ctx.path_ = path
 
+    if (options?.filter) {
+      const filterResult = options.filter(_item)
+
+      if (typeof filterResult === 'boolean') {
+        if (!filterResult) {
+          continue
+        }
+      } else if ('errors' in filterResult) {
+        if (!useLooseMode) {
+          return { errors: filterResult.errors, data: undefined }
+        } else {
+          looseErrors.push(filterResult.errors)
+          continue
+        }
+      }
+
+      ctx.path_ = path
+    }
+
     let parseResult = type._parse_(_item, ctx)
 
     ctx.path_ = path
@@ -866,6 +884,7 @@ type ArrayOptions<T extends RcType<any>> = {
   unique?: RcInferType<T> extends Record<string, any> ?
     keyof RcInferType<T> | ((parsedItem: RcInferType<T>) => any)
   : boolean | ((parsedItem: RcInferType<T>) => any)
+  filter?: (item: RcInferType<T>) => boolean | { errors: ErrorWithPath[] }
 }
 
 export function rc_array<T extends RcType<any>>(
@@ -956,6 +975,41 @@ export function rc_loose_array<T extends RcType<any>>(
   }
 }
 
+export function rc_array_filter_from_schema<B, T>(
+  filterSchema: RcType<B>,
+  filterFn: (item: B) => boolean,
+  type: RcType<T>,
+  options?: Omit<ArrayOptions<RcType<any>>, 'filter'> & {
+    loose?: boolean
+  },
+): RcType<T[]> {
+  return {
+    ...defaultProps,
+    _array_item_type_: type,
+    _kind_: `${type._kind_}[]`,
+    _parse_(input, ctx) {
+      return parse(this, input, ctx, () => {
+        if (!Array.isArray(input)) return false
+
+        if (input.length === 0) return true
+
+        return checkArrayItems.call(this, input, type, ctx, options?.loose, {
+          ...options,
+          filter(item) {
+            const filterResult = filterSchema._parse_(item, ctx)
+
+            if (!filterResult.ok) {
+              return { errors: filterResult.errors }
+            }
+
+            return filterFn(filterResult.data)
+          },
+        })
+      })
+    },
+  }
+}
+
 type MapTupleToTypes<T extends readonly [...any[]]> = {
   -readonly [K in keyof T]: RcInferType<T[K]>
 }
@@ -1006,6 +1060,8 @@ export function rc_parse<S>(
     strictObj_: false,
     noLooseArray_: false,
   }
+
+  // return { error: false }
 
   const parseResult = type._parse_(input, ctx)
 
@@ -1216,6 +1272,7 @@ export function rc_narrow<Input, Narrowed extends Input>(
   return rc_transform(type, narrow)
 }
 
+/** Allows the transform function to return a error if transformation is invalid */
 export function rc_unsafe_transform<Input, Transformed>(
   type: RcType<Input>,
   transform: (

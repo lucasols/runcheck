@@ -1,7 +1,4 @@
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
-import { baseline, bench, group, run } from 'mitata'
 import { z as zod } from 'zod'
-import * as dist from '../dist/runcheck.js'
 import {
   rc_any,
   rc_array,
@@ -15,7 +12,14 @@ import {
   rc_union,
   rc_unwrap,
 } from '../src/runcheck.js'
-import { rc_object_fast } from '../src/rc_object.js'
+import * as dist from '../dist/runcheck.js'
+import { group, baseline, bench, run } from './bench.utils.js'
+
+const oldVersionToLoad = '0.38.1'
+
+const old = (await import(
+  `../dist-old/dist.${oldVersionToLoad}/runcheck.js`
+)) as typeof import('../dist/runcheck.js')
 
 const validateData = Object.freeze({
   number: 1,
@@ -32,6 +36,87 @@ const validateData = Object.freeze({
   },
 })
 
+group('boolean', { warmup: 100_000 }, (i) => {
+  const valueToTest = i % 2 === 0
+
+  const dataType = zod.boolean()
+
+  baseline('runcheck', () => {
+    rc_unwrap(rc_parse(valueToTest, rc_boolean))
+  })
+
+  bench('zod', () => {
+    dataType.parse(valueToTest)
+  })
+
+  bench('runcheck dist', () => {
+    dist.rc_unwrap(dist.rc_parse(valueToTest, dist.rc_boolean))
+  })
+})
+
+group('string', (i) => {
+  const dataType = zod.string()
+
+  bench('zod', () => {
+    dataType.parse(i.toString())
+  })
+
+  baseline('runcheck', () => {
+    rc_unwrap(rc_parse(i.toString(), rc_string))
+  })
+})
+
+function checkObjVanillaJs(valueToCheck: unknown) {
+  const value = valueToCheck as unknown
+  let newObj: { string: string }
+
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    throw new Error('invalid obj')
+  }
+
+  if (!('string' in value)) {
+    throw new Error('missing string')
+  }
+
+  if (typeof value.string !== 'string') {
+    throw new Error('invalid string')
+  }
+
+  newObj = { string: value.string }
+  return newObj
+}
+
+group('rc_any vs vanilla js object check', (i) => {
+  const valueToCheck = () => ({
+    string: i.toString(),
+    [`k${i}`]: i,
+  })
+
+  baseline('rc_any', () => {
+    rc_unwrap(rc_parse(valueToCheck(), rc_any))
+  })
+
+  bench('vanilla js', () => {
+    checkObjVanillaJs(valueToCheck())
+  })
+
+  bench('no check', () => {
+    valueToCheck()
+  })
+})
+
+group('number', (i) => {
+  const dataType = zod.number()
+
+  bench('zod', () => {
+    dataType.parse(i)
+  })
+
+  baseline('runcheck', () => {
+    rc_unwrap(rc_parse(i, rc_number))
+  })
+})
+
 const objDataType = zod.object({
   number: zod.number(),
   negNumber: zod.number(),
@@ -43,26 +128,6 @@ const objDataType = zod.object({
     foo: zod.string(),
     num: zod.number(),
     bool: zod.boolean(),
-  }),
-})
-
-const oldVersionToLoad = '0.38.1'
-
-const old = (await import(
-  `../dist-old/dist.${oldVersionToLoad}/runcheck.js`
-)) as typeof import('../dist/runcheck.js')
-
-const oldObjShape = old.rc_object({
-  number: old.rc_number,
-  negNumber: old.rc_number,
-  maxNumber: old.rc_number,
-  string: old.rc_string,
-  longString: old.rc_string,
-  boolean: old.rc_boolean,
-  deeplyNested: old.rc_object({
-    foo: old.rc_string,
-    num: old.rc_number,
-    bool: old.rc_boolean,
   }),
 })
 
@@ -94,32 +159,23 @@ const objShape = rc_object({
   }),
 })
 
-function throwIfError(
-  result: { error: true; errors: string[] } | { error: false },
-) {
-  if (result.error) {
-    throw new Error(result.errors.join('\n'))
-  }
-}
+const oldObjShape = old.rc_object({
+  number: old.rc_number,
+  negNumber: old.rc_number,
+  maxNumber: old.rc_number,
+  string: old.rc_string,
+  longString: old.rc_string,
+  boolean: old.rc_boolean,
+  deeplyNested: old.rc_object({
+    foo: old.rc_string,
+    num: old.rc_number,
+    bool: old.rc_boolean,
+  }),
+})
 
-const groups = new Map<string, () => void>()
-const onlyGroups = new Map<string, () => void>()
-
-function addGroup(name: string, fn: () => void, only = false) {
-  if (only) {
-    onlyGroups.set(name, fn)
-  } else {
-    groups.set(name, fn)
-  }
-}
-
-addGroup.only = (name: string, fn: () => void) => {
-  addGroup(name, fn, true)
-}
-
-addGroup('object', () => {
+group('object', () => {
   baseline('runcheck', () => {
-    throwIfError(rc_parse(validateData, objShape))
+    rc_unwrap(rc_parse(validateData, objShape))
   })
 
   bench('zod', () => {
@@ -127,94 +183,75 @@ addGroup('object', () => {
   })
 })
 
-addGroup('string', () => {
-  const dataType = zod.string()
+group('string in obj', (i) => {
+  function getValueToCheck() {
+    return { string: i.toString() }
+  }
 
-  bench('zod', () => {
-    dataType.parse(validateData.string)
-  })
+  const rcSchema = rc_object({ string: rc_string })
+
+  const rcDistSchema = dist.rc_object({ string: dist.rc_string })
 
   baseline('runcheck', () => {
-    throwIfError(rc_parse(validateData.string, rc_string))
+    rc_unwrap(rc_parse(getValueToCheck(), rcSchema))
+  })
+
+  bench('vanilla js', () => {
+    return checkObjVanillaJs(getValueToCheck())
+  })
+
+  bench('runcheck dist', () => {
+    dist.rc_unwrap(dist.rc_parse(getValueToCheck(), rcDistSchema))
+  })
+
+  const oldSchema = old.rc_object({ string: old.rc_string })
+
+  const zodSchema = zod.object({ string: zod.string() })
+
+  bench('zod', () => {
+    zodSchema.parse(getValueToCheck())
+  })
+
+  bench('runcheck (0.38.1)', () => {
+    rc_unwrap(old.rc_parse(getValueToCheck(), oldSchema))
   })
 })
 
-addGroup.only('string in obj', () => {
-  const valueToCheck = { string: validateData.string }
+group('string in obj, no v8 optimization', (i) => {
+  function getValueToCheck() {
+    return { string: i.toString(), [`k${i}`]: 1 }
+  }
 
   const rcSchema = rc_object({ string: rc_string })
 
   baseline('runcheck', () => {
-    rc_unwrap(rc_parse(valueToCheck, rcSchema))
+    rc_unwrap(rc_parse(getValueToCheck(), rcSchema))
+  })
+
+  bench('vanilla js', () => {
+    return checkObjVanillaJs(getValueToCheck())
   })
 
   const rcDistSchema = dist.rc_object({ string: dist.rc_string })
 
   bench('runcheck dist', () => {
-    dist.rc_unwrap(dist.rc_parse(valueToCheck, rcDistSchema))
+    dist.rc_unwrap(dist.rc_parse(getValueToCheck(), rcDistSchema))
   })
 
-  const rcObjFast = rc_object_fast({ string: rc_string })
+  const oldSchema = old.rc_object({ string: old.rc_string })
 
-  bench('runcheck rc_object_fast', () => {
-    rc_unwrap(rc_parse(valueToCheck, rcObjFast))
-  })
-
-  bench('rc_any', () => {
-    rc_unwrap(rc_parse(valueToCheck, rc_any))
-  })
-
-  bench('vanilla js', () => {
-    const value = valueToCheck as unknown
-
-    if (typeof value !== 'object' || value === null || Array.isArray(value)) {
-      throw new Error('invalid obj')
-    }
-
-    if (!('string' in value)) {
-      throw new Error('missing string')
-    }
-
-    if (typeof value.string !== 'string') {
-      throw new Error('invalid string')
-    }
-
-    value
-    // ^?
+  bench('runcheck (0.38.1)', () => {
+    rc_unwrap(old.rc_parse(getValueToCheck(), oldSchema))
   })
 
   const zodSchema = zod.object({ string: zod.string() })
 
   bench('zod', () => {
-    zodSchema.parse(valueToCheck)
+    zodSchema.parse(getValueToCheck())
   })
 })
 
-addGroup('number', () => {
-  const dataType = zod.number()
-
-  bench('zod', () => {
-    dataType.parse(validateData.number)
-  })
-
-  baseline('runcheck', () => {
-    throwIfError(rc_parse(validateData.number, rc_number))
-  })
-})
-
-addGroup('boolean', () => {
-  const dataType = zod.boolean()
-
-  bench('zod', () => {
-    dataType.parse(validateData.boolean)
-  })
-
-  baseline('runcheck', () => {
-    throwIfError(rc_parse(validateData.boolean, rc_boolean))
-  })
-})
-
-addGroup('large array', () => {
+group('large array', { it: 500 }, () => {
   const largeArray = Array.from({ length: 100 }, (_, i) => ({
     string: `string${i}`,
     number: i,
@@ -245,7 +282,7 @@ addGroup('large array', () => {
   )
 
   baseline('runcheck', () => {
-    throwIfError(rc_parse(largeArray, schema))
+    rc_unwrap(rc_parse(largeArray, schema))
   })
 
   const oldSchema = old.rc_array(
@@ -258,7 +295,7 @@ addGroup('large array', () => {
   )
 
   bench(`runcheck (${oldVersionToLoad})`, () => {
-    throwIfError(old.rc_parse(largeArray, oldSchema))
+    rc_unwrap(old.rc_parse(largeArray, oldSchema))
   })
 
   const distSchema = dist.rc_array(
@@ -271,11 +308,11 @@ addGroup('large array', () => {
   )
 
   bench(`runcheck (dist)`, () => {
-    throwIfError(dist.rc_parse(largeArray, distSchema))
+    dist.rc_unwrap(dist.rc_parse(largeArray, distSchema))
   })
 })
 
-addGroup('large array with union', () => {
+group('large array with union', { it: 500 }, () => {
   const largeArray = Array.from({ length: 100 }, (_, i) => ({
     string: `string${i}`,
     number: i,
@@ -309,7 +346,7 @@ addGroup('large array with union', () => {
   )
 
   baseline('runcheck', () => {
-    throwIfError(rc_parse(largeArray, schema))
+    rc_unwrap(rc_parse(largeArray, schema))
   })
 
   const oldSchema = old.rc_array(
@@ -336,20 +373,20 @@ addGroup('large array with union', () => {
   )
 
   bench(`runcheck (${oldVersionToLoad})`, () => {
-    throwIfError(old.rc_parse(largeArray, oldSchema))
+    rc_unwrap(old.rc_parse(largeArray, oldSchema))
   })
 
   bench(`runcheck (dist)`, () => {
-    throwIfError(dist.rc_parse(largeArray, distSchema))
+    rc_unwrap(dist.rc_parse(largeArray, distSchema))
   })
 })
 
-addGroup('zod with discriminated union vs rc_union', () => {
+group('zod with discriminated union vs rc_union', { it: 500 }, () => {
   const largeArray = Array.from({ length: 100 }, (_, i) => ({
     string: `string${i}`,
     number: i,
     array: [1, 2, 3],
-    obj: JSON.parse(JSON.stringify(validateData)),
+    obj: structuredClone(validateData),
     union: i % 2 === 0 ? 'foo' : { type: 'qux', baz: 'qux', num: i },
   }))
 
@@ -484,7 +521,7 @@ addGroup('zod with discriminated union vs rc_union', () => {
   )
 
   baseline('runcheck', () => {
-    throwIfError(rc_parse(largeArray, schema))
+    rc_unwrap(rc_parse(largeArray, schema))
   })
 
   bench('zod', () => {
@@ -492,20 +529,20 @@ addGroup('zod with discriminated union vs rc_union', () => {
   })
 
   bench(`runcheck (${oldVersionToLoad})`, () => {
-    throwIfError(old.rc_parse(largeArray, oldSchema))
+    rc_unwrap(old.rc_parse(largeArray, oldSchema))
   })
 
   bench(`runcheck (dist)`, () => {
-    throwIfError(dist.rc_parse(largeArray, distSchema))
+    rc_unwrap(dist.rc_parse(largeArray, distSchema))
   })
 })
 
-addGroup('discriminated union', () => {
+group('discriminated union', { it: 500 }, () => {
   const largeArray = Array.from({ length: 100 }, (_, i) => ({
     string: `string${i}`,
     number: i,
     array: [1, 2, 3],
-    obj: JSON.parse(JSON.stringify(validateData)),
+    obj: structuredClone(validateData),
     union: i % 2 === 0 ? 'foo' : { type: 'qux', baz: 'qux', str: i.toString() },
   }))
 
@@ -606,8 +643,4 @@ addGroup('discriminated union', () => {
   })
 })
 
-for (const [name, fn] of onlyGroups.size ? onlyGroups : groups) {
-  group(name, fn)
-}
-
-await run()
+run()

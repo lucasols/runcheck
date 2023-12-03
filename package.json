@@ -8,13 +8,13 @@
     "test:run": "vitest run",
     "lint": "pnpm tsc && pnpm eslint",
     "tsc": "tsc -p tsconfig.prod.json",
-    "benchmark": "tsm benchmarks/mitataBench.ts",
+    "benchmark": "tsm --no-warnings benchmarks/bench.ts",
     "benchmark:generate-profile": "tsm benchmarks/generateProfiles.ts",
     "eslint": "CI=true eslint --color --ext .jsx,.js,.ts,.tsx src/ tests/",
     "build": "pnpm test:run && pnpm lint && pnpm build:no-test",
     "build:no-test": "tsup --minify --dts",
     "build-test": "tsup --config tsup.test.config.ts",
-    "pre-publish": "./scripts/check-if-is-sync.sh && pnpm build "
+    "pre-publish": "./scripts/check-if-is-sync.sh && pnpm build"
   },
   "files": [
     "dist"

@@ -1,7 +1,10 @@
 import { describe, expect, test } from 'vitest'
 import {
   RcParseResult,
+  RcType,
   rc_array,
+  rc_array_filter_from_schema,
+  rc_boolean,
   rc_disable_loose_array,
   rc_loose_array,
   rc_number,
@@ -297,4 +300,150 @@ test('rc_disable_loose_array', () => {
   expect(result2).toEqual(
     errorResult(`$.b[1]: Type 'string' is not assignable to 'number'`),
   )
+})
+
+describe('rc_array_filter_from_schema', () => {
+  const schema: RcType<{ value: string }[]> = rc_array_filter_from_schema(
+    rc_object({
+      deleted: rc_boolean,
+    }),
+    (item) => !item.deleted,
+    rc_object({
+      value: rc_string,
+    }),
+  )
+
+  test('pass', () => {
+    const values = [
+      { value: 'hello', deleted: false },
+      { value: 'world', deleted: true },
+      { value: 'test', deleted: false },
+    ]
+
+    const result = rc_parse(values, schema)
+
+    expect(result).toEqual(
+      successResult([{ value: 'hello' }, { value: 'test' }]),
+    )
+  })
+
+  test('fail at filter schema', () => {
+    const values = [
+      { value: 'hello', deleted: false },
+      { value: 'world', deleted: 'true' },
+      { value: 'test', deleted: false },
+    ]
+
+    const result = rc_parse(values, schema)
+
+    expect(result).toEqual(
+      errorResult(`$[1].deleted: Type 'string' is not assignable to 'boolean'`),
+    )
+  })
+
+  test('fail at type schema', () => {
+    const values = [
+      { value: 'hello', deleted: false },
+      { value: 'world', deleted: true },
+      { value: 1, deleted: false },
+    ]
+
+    const result = rc_parse(values, schema)
+
+    expect(result).toEqual(
+      errorResult(`$[2].value: Type 'number' is not assignable to 'string'`),
+    )
+  })
+
+  test('warning at filter schema', () => {
+    const values = [
+      { value: 'hello', deleted: false },
+      { value: 'world', deleted: 'true' },
+      { value: 'test', deleted: false },
+    ]
+
+    const result = rc_parse(
+      values,
+      rc_array_filter_from_schema(
+        rc_object({
+          deleted: rc_boolean.withFallback(false),
+        }),
+        (item) => !item.deleted,
+        rc_object({
+          value: rc_string,
+        }),
+      ),
+    )
+
+    expect(result).toEqual(
+      successResult(
+        [{ value: 'hello' }, { value: 'world' }, { value: 'test' }],
+        [
+          `$[1].deleted: Fallback used, errors -> Type 'string' is not assignable to 'boolean'`,
+        ],
+      ),
+    )
+  })
+
+  describe('loose mode', () => {
+    const looseSchema: RcType<{ value: string }[]> =
+      rc_array_filter_from_schema(
+        rc_object({
+          deleted: rc_boolean,
+        }),
+        (item) => !item.deleted,
+        rc_object({
+          value: rc_string,
+        }),
+        { loose: true },
+      )
+
+    test('pass', () => {
+      const values = [
+        { value: 'hello', deleted: false },
+        { value: 'world', deleted: true },
+        { value: 'test', deleted: false },
+      ]
+
+      const result = rc_parse(values, looseSchema)
+
+      expect(result).toEqual(
+        successResult([{ value: 'hello' }, { value: 'test' }]),
+      )
+    })
+
+    test('fail at filter schema', () => {
+      const values = [
+        { value: 'hello', deleted: false },
+        { value: 'world', deleted: 'true' },
+        { value: 'test', deleted: false },
+      ]
+
+      const result = rc_parse(values, looseSchema)
+
+      expect(result).toEqual(
+        successResult(
+          [{ value: 'hello' }, { value: 'test' }],
+          [`$[1].deleted: Type 'string' is not assignable to 'boolean'`],
+        ),
+      )
+    })
+
+    test('fail at type schema', () => {
+      const values = [
+        { value: 'hello', deleted: false },
+        { value: 'world', deleted: true },
+        { value: 1, deleted: false },
+      ]
+
+      const result = rc_parse(values, looseSchema)
+
+      expect(result).toEqual(
+        successResult(
+          [{ value: 'hello' }],
+          [`$[2].value: Type 'number' is not assignable to 'string'`],
+        ),
+      )
+    })
+  })
 })
