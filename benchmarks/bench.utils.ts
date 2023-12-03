@@ -59,6 +59,7 @@ export function baseline(id: string, fn: () => void) {
 
 type GroupConfig = {
   it?: number
+  statToUse?: 'min' | 'median'
   warmup?: number
   noRandomize?: boolean
 }
@@ -80,7 +81,12 @@ function groupBase({
   only?: boolean
   skip?: boolean
 }) {
-  const { it = 1_000, warmup = 10_000, noRandomize: noRandomize } = options
+  const {
+    it = 1_000,
+    warmup = 10_000,
+    noRandomize: noRandomize,
+    statToUse,
+  } = options
 
   if (skip) {
     skippedRuns++
@@ -136,7 +142,7 @@ function groupBase({
       ([id, timings]) => [id, getStats(timings)] as const,
     )
 
-    const refStat: keyof (typeof stats)[0][1] = 'min'
+    const refStat: keyof (typeof stats)[0][1] = statToUse || 'min'
 
     let sortedTimings = sortBy(
       stats,
@@ -298,28 +304,20 @@ export function sortBy<T>(
 
 function getStats(timings: number[]): {
   min: number
-  max: number
-  avg: number
+  median: number
 } {
   const sortedTimings = sortBy(timings, (time) => time, { order: 'asc' })
 
-  const calcAvgBasedOn = sortedTimings.slice(
-    0,
-    Math.floor(sortedTimings.length * 0.5),
-  )
+  const min = sortedTimings[sortedTimings.findIndex((time) => time !== 0)]!
 
-  const min = calcAvgBasedOn[sortedTimings.findIndex((time) => time !== 0)]!
-  const max = calcAvgBasedOn.at(-1)!
+  const median = sortedTimings[Math.floor(sortedTimings.length / 2)]!
 
-  const avg =
-    calcAvgBasedOn.reduce((acc, curr) => acc + curr, 0) / calcAvgBasedOn.length
-
-  return { min, max, avg }
+  return { min, median }
 }
 
 function formatTime(ms: number) {
   if (ms < 1) {
-    return `${(ms * 1000).toFixed(3)}μs`
+    return `${(ms * 1000).toFixed(2)}μs`
   }
 
   if (ms < 1000) {

@@ -36,7 +36,7 @@ const validateData = Object.freeze({
   },
 })
 
-group('boolean', { warmup: 100_000 }, (i) => {
+group('boolean', (i) => {
   const valueToTest = i % 2 === 0
 
   const dataType = zod.boolean()
@@ -63,6 +63,10 @@ group('string', (i) => {
 
   baseline('runcheck', () => {
     rc_unwrap(rc_parse(i.toString(), rc_string))
+  })
+
+  bench('runcheck dist', () => {
+    dist.rc_unwrap(dist.rc_parse(i.toString(), dist.rc_string))
   })
 })
 
@@ -105,7 +109,7 @@ group('rc_any vs vanilla js object check', (i) => {
   })
 })
 
-group('number', (i) => {
+group.only('number', { it: 100_000, statToUse: 'median' }, (i) => {
   const dataType = zod.number()
 
   bench('zod', () => {
@@ -114,6 +118,10 @@ group('number', (i) => {
 
   baseline('runcheck', () => {
     rc_unwrap(rc_parse(i, rc_number))
+  })
+
+  bench('runcheck dist', () => {
+    dist.rc_unwrap(dist.rc_parse(i, dist.rc_number))
   })
 })
 
