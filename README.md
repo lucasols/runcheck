@@ -655,3 +655,33 @@ const result = rc_unwrap(
 // | { state: 'success', response: string }
 // | { state: 'error', code: number }
 ```
+
+# `rc_array_filter_from_schema`
+
+Creates a two passes array validation. The first will validate the items against the filter schema and filter the item. The second will perform the type check against the filtered items.
+
+```ts
+const schema = rc_array_filter_from_schema(
+  // 1 validate the items against a filter schema
+  rc_object({
+    deleted: rc_boolean,
+  }),
+  // Then filter the items based on the filter schema result
+  (item) => !item.deleted,
+
+  // 2 validate the filtered items
+  rc_object({
+    value: rc_string,
+  }),
+)
+
+const result = rc_parse(
+  [
+    { deleted: false, value: 'hello' },
+    { deleted: true, value: 'world' },
+  ],
+  schema,
+)
+
+// result.value === [{ value: 'hello' }]
+```
