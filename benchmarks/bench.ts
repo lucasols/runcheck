@@ -109,7 +109,7 @@ group('rc_any vs vanilla js object check', (i) => {
   })
 })
 
-group.only('number', { it: 100_000, statToUse: 'median' }, (i) => {
+group('number', { it: 100_000, statToUse: 'median' }, (i) => {
   const dataType = zod.number()
 
   bench('zod', () => {
