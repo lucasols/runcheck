@@ -19,7 +19,7 @@ const oldVersionToLoad = '0.38.1'
 
 const old = (await import(
   `../dist-old/dist.${oldVersionToLoad}/runcheck.js`
-)) as typeof import('../dist/runcheck.js')
+)) as typeof import('../dist-old/dist.0.38.1/runcheck.js')
 
 const validateData = Object.freeze({
   number: 1,
@@ -173,6 +173,14 @@ const oldObjShape = old.rc_object({
   }),
 })
 
+function oldThrowIfError<T>(result: any) {
+  if (result.error) {
+    throw result.error
+  }
+
+  return result.data
+}
+
 group('object', () => {
   baseline('runcheck', () => {
     rc_unwrap(rc_parse(validateData, objShape))
@@ -241,7 +249,7 @@ group('string in obj, no v8 optimization', (i) => {
   const oldSchema = old.rc_object({ string: old.rc_string })
 
   bench('runcheck (0.38.1)', () => {
-    rc_unwrap(old.rc_parse(getValueToCheck(), oldSchema))
+    oldThrowIfError(old.rc_parse(getValueToCheck(), oldSchema))
   })
 
   const zodSchema = zod.object({ string: zod.string() })
@@ -295,7 +303,7 @@ group('large array', { it: 500 }, () => {
   )
 
   bench(`runcheck (${oldVersionToLoad})`, () => {
-    rc_unwrap(old.rc_parse(largeArray, oldSchema))
+    oldThrowIfError(old.rc_parse(largeArray, oldSchema))
   })
 
   const distSchema = dist.rc_array(
@@ -373,7 +381,7 @@ group('large array with union', { it: 500 }, () => {
   )
 
   bench(`runcheck (${oldVersionToLoad})`, () => {
-    rc_unwrap(old.rc_parse(largeArray, oldSchema))
+    oldThrowIfError(old.rc_parse(largeArray, oldSchema))
   })
 
   bench(`runcheck (dist)`, () => {
@@ -381,7 +389,7 @@ group('large array with union', { it: 500 }, () => {
   })
 })
 
-group.only('zod with discriminated union vs rc_union', { it: 500 }, () => {
+group('zod with discriminated union vs rc_union', { it: 500 }, () => {
   const largeArray = Array.from({ length: 100 }, (_, i) => ({
     string: `string${i}`,
     number: i,
