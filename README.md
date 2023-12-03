@@ -4,6 +4,19 @@ A lib for js/typescript runtime type checks with autofix support. Runcheck has t
 
 Obs: Runcheck is in Beta and it's api can still change
 
+# Benchmarks
+
+One of the goals of runcheck is to be blazing fast. Here are some benchmarks:
+
+<details>
+<summary>Click to see the benchmarks</summary>
+
+> `runcheck dist` is the same version as `runcheck` in the benchmarks but bundled
+
+![Benchmarks](imgs/benchmarks.png)
+
+</details>
+
 # Installation
 
 ```bash

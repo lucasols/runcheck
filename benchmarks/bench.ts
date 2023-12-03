@@ -90,24 +90,28 @@ function checkObjVanillaJs(valueToCheck: unknown) {
   return newObj
 }
 
-group('rc_any vs vanilla js object check', (i) => {
-  const valueToCheck = () => ({
-    string: i.toString(),
-    [`k${i}`]: i,
-  })
+group(
+  'rc_any vs vanilla js object check',
+  { it: 100_000, stat: 'total' },
+  (i) => {
+    const valueToCheck = () => ({
+      string: i.toString(),
+      [`k${i}`]: i,
+    })
 
-  baseline('rc_any', () => {
-    rc_unwrap(rc_parse(valueToCheck(), rc_any))
-  })
+    baseline('rc_any', () => {
+      rc_unwrap(rc_parse(valueToCheck(), rc_any))
+    })
 
-  bench('vanilla js', () => {
-    checkObjVanillaJs(valueToCheck())
-  })
+    bench('vanilla js', () => {
+      checkObjVanillaJs(valueToCheck())
+    })
 
-  bench('no check', () => {
-    valueToCheck()
-  })
-})
+    bench('no check', () => {
+      valueToCheck()
+    })
+  },
+)
 
 group('number', { it: 100_000, stat: 'total' }, (i) => {
   const dataType = zod.number()
