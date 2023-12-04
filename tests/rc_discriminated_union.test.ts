@@ -49,7 +49,7 @@ describe('rc_discriminated_union', () => {
   test('value fail', () => {
     expect(rc_parse({ type: 'a', value: 1 }, shape)).toEqual(
       errorResult(
-        "$.type|a|.value: Type 'number' is not assignable to 'string'",
+        "$|type: a|.value: Type 'number' is not assignable to 'string'",
       ),
     )
   })
@@ -80,7 +80,7 @@ describe('rc_discriminated_union', () => {
 
     expect(rc_parse({ type: 'a', value: 1 }, shapeInUnion)).toEqual(
       errorResult(
-        "$|union 2|.type|a|.value: Type 'number' is not assignable to 'string'",
+        "$|union 2||type: a|.value: Type 'number' is not assignable to 'string'",
         'not matches any other union member',
       ),
     )

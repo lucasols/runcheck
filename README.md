@@ -25,20 +25,21 @@ pnpm add runcheck
 
 # Basic types:
 
-| runcheck type                   | ts type equivalent                                |
-| ------------------------------- | ------------------------------------------------- |
-| `rc_string`                     | `string`                                          |
-| `rc_number`                     | `number`                                          |
-| `rc_boolean`                    | `boolean`                                         |
-| `rc_any`                        | `any`                                             |
-| `rc_null`                       | `null`                                            |
-| `rc_undefined`                  | `undefined`                                       |
-| `rc_date`                       | `Date`                                            |
-| `rc_intanceof(instance: T)`     | Classes typecheck in general                      |
-| `rc_literals(...literals: T[])` | Type literal in general like `hello`, `true`, `1` |
-| `rc_union(...types: T[])`       | Union types in general like `string \| 1`         |
-| `rc_array<T>(type: T)`          | `T[]`                                             |
-| `rc_tuple<T>(...types: T[])`    | `[T, T]`                                          |
+| runcheck type                    | ts type equivalent                                |
+| -------------------------------- | ------------------------------------------------- |
+| `rc_string`                      | `string`                                          |
+| `rc_number`                      | `number`                                          |
+| `rc_boolean`                     | `boolean`                                         |
+| `rc_any`                         | `any`                                             |
+| `rc_null`                        | `null`                                            |
+| `rc_undefined`                   | `undefined`                                       |
+| `rc_date`                        | `Date`                                            |
+| `rc_intanceof(instance: T)`      | Classes typecheck in general                      |
+| `rc_literals(...literals: T[])`  | Type literal in general like `hello`, `true`, `1` |
+| `rc_union(...types: T[])`        | Union types in general like `string \| 1`         |
+| `rc_array<T>(type: T)`           | `T[]`                                             |
+| `rc_tuple<T>(...types: T[])`     | `[T, T]`                                          |
+| `rc_intersection(...types: T[])` | Intersection types like `{a:string} & {b:string}` |
 
 # Array types:
 

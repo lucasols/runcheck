@@ -12,6 +12,7 @@ export {
   rc_obj_strict,
   rc_object,
 } from './rc_object'
+export { rc_intersection } from './rc_intersection'
 
 export type RcParseResult<T> =
   | {
@@ -118,7 +119,7 @@ export type ErrorWithPath = string & { __withPath: true }
 type ErrorWithouPath = string & { __withPath?: never }
 
 export function getWarningOrErrorWithPath(
-  ctx: ParseResultCtx,
+  ctx: { path_: string },
   message: ErrorWithouPath,
 ): ErrorWithPath {
   return `${ctx.path_ ? `$${ctx.path_}: ` : ''}${message}` as ErrorWithPath
@@ -634,6 +635,7 @@ export function rc_record<V>(
   return {
     ...defaultProps,
     _kind_: `record<string, ${valueType._kind_}>`,
+    _is_object_: true,
     _parse_(inputObj, ctx) {
       return parse<Record<string, V>>(this, inputObj, ctx, () => {
         if (!isObject(inputObj)) return false
@@ -685,6 +687,8 @@ export function rc_record<V>(
           }
         }
 
+        ctx.path_ = parentPath
+
         return { errors: false, data: resultObj as any }
       })
     },
@@ -721,7 +725,7 @@ export function rc_discriminated_union<
 
         const discriminator = input[discriminatorKey]
 
-        ctx.path_ = `${ctx.path_}.${discriminatorKey}`
+        const parentPath = ctx.path_
 
         const type = preComputedTypesShape[discriminator]
 
@@ -731,7 +735,7 @@ export function rc_discriminated_union<
           return {
             errors: [
               getWarningOrErrorWithPath(
-                ctx,
+                { path_: `${parentPath}.${discriminatorKey}` },
                 `Type '${invalidValueType}' is not a valid discriminator`,
               ),
             ],
@@ -739,9 +743,11 @@ export function rc_discriminated_union<
           }
         }
 
-        ctx.path_ = `${ctx.path_}|${discriminator}|`
+        ctx.path_ = `${parentPath}|${discriminatorKey}: ${discriminator}|`
 
         const parseResult = type._parse_(input, ctx)
+
+        ctx.path_ = parentPath
 
         if (!parseResult.ok) {
           return { errors: parseResult.errors, data: undefined }

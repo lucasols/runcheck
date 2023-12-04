@@ -238,6 +238,8 @@ export function rc_object<T extends RcObject>(
           return { errors: resultErrors, data: undefined }
         }
 
+        ctx.path_ = parentPath
+
         if (this._is_extend_obj_) {
           return {
             errors: false,
