@@ -7,6 +7,7 @@ import {
   defaultProps,
   getWarningOrErrorWithPath,
   isObject,
+  isRcType,
   parse,
   snakeCase,
 } from './runcheck'
@@ -56,10 +57,6 @@ type Identity<T> = T
 type Flatten<T> = Identity<{
   [k in keyof T]: T[k] extends RequiredKey<infer U> ? U : T[k]
 }>
-
-function isRcType(value: any): value is RcType<any> {
-  return isObject(value) && '__rc_type' in value
-}
 
 function unwrapToObjSchema(input: unknown): RcType<any> {
   if (isRcType(input)) {

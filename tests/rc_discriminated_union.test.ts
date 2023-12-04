@@ -2,39 +2,32 @@ import { describe, expect, test } from 'vitest'
 import {
   RcType,
   rc_boolean,
-  rc_discriminated_union,
   rc_null,
   rc_number,
+  rc_object,
   rc_parse,
   rc_string,
   rc_union,
+  rc_discriminated_union,
 } from '../src/runcheck'
-import { errorResult, successResult } from './testUtils'
+import { errorResult, successResult, typeIsValid } from './testUtils'
 
 describe('rc_discriminated_union', () => {
-  const shape: RcType<
-    | {
-        type: 'a'
-        value: string
-      }
-    | {
-        type: 'b'
-        value: number
-      }
-    | {
-        type: 'c'
-        value: boolean
-      }
-    | {
-        type: 'd'
-        value: null
-      }
-  > = rc_discriminated_union('type', {
+  const shape = rc_discriminated_union('type', {
     a: { value: rc_string },
     b: { value: rc_number },
     c: { value: rc_boolean },
     d: { value: rc_null },
   })
+
+  typeIsValid<
+    RcType<
+      | { type: 'a'; value: string }
+      | { type: 'b'; value: number }
+      | { type: 'c'; value: boolean }
+      | { type: 'd'; value: null }
+    >
+  >(shape)
 
   test('discriminator fail', () => {
     expect(rc_parse({ type: 1, value: 'hello' }, shape)).toEqual(
@@ -96,17 +89,31 @@ describe('rc_discriminated_union', () => {
       ),
     )
   })
-
-  test('passing type in shape object is allowed', () => {
-    const shape2: RcType<
-      { type: 'a'; value: string } | { type: 'b'; value: number }
-    > = rc_discriminated_union('type', {
-      a: { type: rc_string, value: rc_string },
-      b: { type: rc_string, value: rc_number },
-    })
-
-    expect(rc_parse({ type: 'a', value: 'hello' }, shape2)).toEqual(
-      successResult({ type: 'a', value: 'hello' }),
-    )
+})
+test('passing type in shape object is allowed', () => {
+  const shape2: RcType<
+    { type: 'a'; value: string } | { type: 'b'; value: number }
+  > = rc_discriminated_union('type', {
+    a: { type: rc_string, value: rc_string },
+    b: { type: rc_string, value: rc_number },
   })
+
+  expect(rc_parse({ type: 'a', value: 'hello' }, shape2)).toEqual(
+    successResult({ type: 'a', value: 'hello' }),
+  )
+})
+
+test('passing rc_object in shape object is allowed', () => {
+  const shape2 = rc_discriminated_union('type', {
+    a: rc_object({ type: rc_string, value: rc_string }),
+    b: rc_object({ value: rc_string }),
+  })
+
+  typeIsValid<
+    RcType<{ type: 'a'; value: string } | { type: 'b'; value: string }>
+  >(shape2)
+
+  expect(rc_parse({ type: 'a', value: 'hello' }, shape2)).toEqual(
+    successResult({ type: 'a', value: 'hello' }),
+  )
 })

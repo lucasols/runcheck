@@ -114,3 +114,7 @@ export function errorResult(...errorMsg: string[]) {
     errors: errorMsg,
   }
 }
+
+export function typeIsValid<T>(_value: T) {
+  return true
+}

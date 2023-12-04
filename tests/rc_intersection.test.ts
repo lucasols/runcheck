@@ -2,7 +2,6 @@ import { describe, expect, test } from 'vitest'
 import {
   RcType,
   rc_boolean,
-  rc_discriminated_union,
   rc_intersection,
   rc_number,
   rc_object,
@@ -11,6 +10,7 @@ import {
   rc_string,
   rc_union,
 } from '../src/runcheck'
+import { rc_discriminated_union } from "../src/rc_discriminated_union"
 import { errorResult, successResult } from './testUtils'
 
 describe('rc_discriminated_union and rc_object', () => {

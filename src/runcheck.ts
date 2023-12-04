@@ -1,5 +1,3 @@
-import { RcObject, TypeOfObjectType, rc_object } from './rc_object'
-
 export {
   rc_enable_obj_strict,
   rc_get_from_key_as_fallback,
@@ -13,6 +11,7 @@ export {
   rc_object,
 } from './rc_object'
 export { rc_intersection } from './rc_intersection'
+export { rc_discriminated_union } from './rc_discriminated_union'
 
 export type RcParseResult<T> =
   | {
@@ -695,73 +694,6 @@ export function rc_record<V>(
   }
 }
 
-export function rc_discriminated_union<
-  K extends string,
-  T extends Record<string, RcObject>,
->(
-  discriminatorKey: K,
-  types: T,
-): RcType<
-  Prettify<
-    { [P in keyof T]: { [Q in K]: P } & TypeOfObjectType<T[P]> }[keyof T]
-  >
-> {
-  const preComputedTypesShape = {} as Record<string, RcType<any>>
-
-  for (const [key, type] of Object.entries(types)) {
-    preComputedTypesShape[key] = rc_object(type) as any
-  }
-
-  return {
-    ...defaultProps,
-    _kind_: `discriminated_union`,
-    _is_object_: true,
-    _parse_(input, ctx) {
-      return parse<any>(this, input, ctx, () => {
-        if (!isObject(input)) {
-          ctx.objErrKeyIndex_ = -1
-          return false
-        }
-
-        const discriminator = input[discriminatorKey]
-
-        const parentPath = ctx.path_
-
-        const type = preComputedTypesShape[discriminator]
-
-        if (!type) {
-          const invalidValueType = normalizedTypeOf(discriminator, true)
-
-          return {
-            errors: [
-              getWarningOrErrorWithPath(
-                { path_: `${parentPath}.${discriminatorKey}` },
-                `Type '${invalidValueType}' is not a valid discriminator`,
-              ),
-            ],
-            data: undefined,
-          }
-        }
-
-        ctx.path_ = `${parentPath}|${discriminatorKey}: ${discriminator}|`
-
-        const parseResult = type._parse_(input, ctx)
-
-        ctx.path_ = parentPath
-
-        if (!parseResult.ok) {
-          return { errors: parseResult.errors, data: undefined }
-        }
-
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-        parseResult.data[discriminatorKey] = discriminator
-
-        return { errors: false, data: parseResult.data }
-      })
-    },
-  }
-}
-
 /** instead of returning a general error, rejects invalid keys and returns warnings for these items */
 export function rc_loose_record<V>(
   valueType: RcType<V>,
@@ -1341,7 +1273,10 @@ export function rc_unsafe_transform<Input, Transformed>(
   }
 }
 
-function normalizedTypeOf(input: unknown, showValueInError: boolean): string {
+export function normalizedTypeOf(
+  input: unknown,
+  showValueInError: boolean,
+): string {
   const typeOf = typeof input
 
   const type = ((): string => {
@@ -1431,7 +1366,7 @@ function isFn(value: any): value is () => any {
   return typeof value === 'function'
 }
 
-type Prettify<T> =
+export type Prettify<T> =
   T extends Record<string, any> ?
     {
       [K in keyof T]: Prettify<T[K]>
@@ -1439,3 +1374,7 @@ type Prettify<T> =
   : T
 
 export type RcPrettyInferType<T extends RcType<any>> = Prettify<RcInferType<T>>
+
+export function isRcType(value: any): value is RcType<any> {
+  return isObject(value) && '__rc_type' in value
+}
