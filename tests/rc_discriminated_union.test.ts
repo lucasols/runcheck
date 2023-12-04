@@ -96,4 +96,17 @@ describe('rc_discriminated_union', () => {
       ),
     )
   })
+
+  test('passing type in shape object is allowed', () => {
+    const shape2: RcType<
+      { type: 'a'; value: string } | { type: 'b'; value: number }
+    > = rc_discriminated_union('type', {
+      a: { type: rc_string, value: rc_string },
+      b: { type: rc_string, value: rc_number },
+    })
+
+    expect(rc_parse({ type: 'a', value: 'hello' }, shape2)).toEqual(
+      successResult({ type: 'a', value: 'hello' }),
+    )
+  })
 })
