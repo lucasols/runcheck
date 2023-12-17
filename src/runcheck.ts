@@ -51,7 +51,7 @@ export type RcOptionalKeyType<T> = RcBase<T, true>
 
 export type RcType<T> = RcBase<T, false>
 
-type Schema<T> = (t: T) => void
+type Schema<T> = (t: T) => T
 
 export type RcBase<T, RequiredKey extends boolean> = {
   __rc_type: Schema<T>

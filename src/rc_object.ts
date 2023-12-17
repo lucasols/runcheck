@@ -393,7 +393,7 @@ export function rc_obj_omit<O extends AnyObj, K extends keyof O>(
   return rc_object(shape) as any
 }
 
-type ExpectedSchema<T> = (t: T) => void
+type ExpectedSchema<T> = (t: T) => T
 
 type RcTypeWithSquemaEqualTo<T> = { __rc_type: ExpectedSchema<T> }
 
