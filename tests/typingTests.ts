@@ -15,11 +15,11 @@ import { Equal, test, expectType, describe } from './typingTests.utils'
 
 test('obj types optional keys', () => {
   const type2 = rc_object({
-    a: rc_string.optionalKey(),
-    c: rc_string.optional(),
+    a: rc_string.optionalKey,
+    c: rc_string.optional,
     b: {
-      c: rc_string.optional(),
-      cR: rc_string.optionalKey(),
+      c: rc_string.optional,
+      cR: rc_string.optionalKey,
     },
   })
 
@@ -56,12 +56,12 @@ describe('rc_obj_builder', () => {
     // @ts-expect-error
     rc_obj_builder<Test>()({
       a: rc_string,
-      b: rc_number.optional(),
+      b: rc_number.optional,
     })
 
     rc_obj_builder<Test>()({
       a: rc_string,
-      b: rc_number.optional(),
+      b: rc_number.optional,
       undef: rc_undefined,
     })
   })
