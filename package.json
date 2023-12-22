@@ -9,6 +9,7 @@
     "lint": "pnpm tsc && pnpm eslint",
     "tsc": "tsc -p tsconfig.prod.json",
     "benchmark": "tsm --no-warnings benchmarks/bench.ts",
+    "benchmark-to-ref": "tsm --no-warnings benchmarks/bench2ref.ts",
     "benchmark:generate-profile": "tsm benchmarks/generateProfiles.ts",
     "eslint": "CI=true eslint --color --ext .jsx,.js,.ts,.tsx src/ tests/",
     "build": "pnpm test:run && pnpm lint && pnpm build:no-test",

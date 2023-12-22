@@ -27,6 +27,12 @@
       "problemMatcher": []
     },
     {
+      "label": "run benchmarks2ref",
+      "type": "shell",
+      "command": "pnpm benchmark-to-ref",
+      "problemMatcher": []
+    },
+    {
       "type": "npm",
       "script": "deopt-exp",
       "problemMatcher": [],
