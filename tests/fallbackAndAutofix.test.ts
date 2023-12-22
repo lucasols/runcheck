@@ -28,8 +28,8 @@ describe('fallback', () => {
 
     const result2 = rc_parse('2', shape)
 
-    expect(!result1.error && result1.data).not.toBe(
-      !result2.error && result2.data,
+    expect(!result1.error && result1.value).not.toBe(
+      !result2.error && result2.value,
     )
   })
 })

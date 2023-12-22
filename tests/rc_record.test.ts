@@ -167,7 +167,7 @@ describe('rc_record', () => {
     }
 
     const testObjSchema = rc_object({
-      data: rc_array(rc_unknown).optional(),
+      data: rc_array(rc_unknown).optional,
       required: rc_boolean,
     })
 

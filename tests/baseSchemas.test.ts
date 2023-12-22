@@ -89,10 +89,12 @@ describe('rc_undefined or optional', () => {
   })
 
   test('optional', () => {
-    expect(rc_is_valid(undefined, rc_string.optional())).toBeTruthy()
-    expect(rc_is_valid('sdf', rc_string.optional())).toBeTruthy()
+    const schema = rc_string.optional
 
-    expect(rc_is_valid(2, rc_string.optional())).toBeFalsy()
+    expect(rc_is_valid(undefined, schema)).toBeTruthy()
+    expect(rc_is_valid('sdf', schema)).toBeTruthy()
+
+    expect(rc_is_valid(2, schema)).toBeFalsy()
   })
 })
 
@@ -103,7 +105,7 @@ describe('rc_null or nullish or nullable', () => {
   })
 
   test('orNullish', () => {
-    const validator = rc_validator(rc_string.orNullish())
+    const validator = rc_validator(rc_string.orNullish)
 
     expect(validator(null)).toBeTruthy()
     expect(validator(undefined)).toBeTruthy()
@@ -113,7 +115,7 @@ describe('rc_null or nullish or nullable', () => {
   })
 
   test('or Nullable', () => {
-    const validator = rc_validator(rc_string.orNull())
+    const validator = rc_validator(rc_string.orNull)
 
     expect(validator(null)).toBeTruthy()
     expect(validator(undefined)).toBeFalsy()

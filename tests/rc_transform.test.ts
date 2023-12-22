@@ -214,7 +214,7 @@ describe('rc_narrow', () => {
       throw new Error('parseResult should be ok')
     }
 
-    const parsedData = parseResult.data
+    const parsedData = parseResult.value
 
     const parsedDataResult = rc_parse(parsedData, schema)
 

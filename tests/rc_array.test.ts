@@ -198,7 +198,7 @@ describe('array unique', () => {
       rc_array(
         rc_object({
           id: rc_number,
-          meta_id: rc_number.optional(),
+          meta_id: rc_number.optional,
         }),
         { unique: (item) => item.meta_id ?? item.id },
       ),

@@ -102,7 +102,7 @@ describe('rc_object', () => {
       : T
 
     if (!result.error) {
-      type Data = Prettify<typeof result.data>
+      type Data = Prettify<typeof result.value>
 
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const _data: Data = {
@@ -131,7 +131,7 @@ describe('rc_object', () => {
     )
 
     if (!result.error) {
-      type Data = typeof result.data
+      type Data = typeof result.value
 
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const _data: Data = { hello: { world: { value: 1 } }, value: 'ok' }
@@ -149,7 +149,7 @@ describe('rc_object', () => {
 
     const result = rc_parse(
       input,
-      rc_object({ user: rc_string.optional(), id: rc_number }),
+      rc_object({ user: rc_string.optional, id: rc_number }),
     )
 
     expect(result).toEqual(successResult({ id: 4, user: 'hello' }))
@@ -161,7 +161,7 @@ describe('rc_object', () => {
     const result = rc_parse(
       input,
       rc_object({
-        user: rc_string.optional(),
+        user: rc_string.optional,
         id: rc_number,
       }),
     )
@@ -177,7 +177,7 @@ describe('rc_object', () => {
       rc_object({
         user: rc_string,
         id: rc_number,
-      }).optional(),
+      }).optional,
     )
 
     expect(result.error).toBeFalsy()
@@ -391,7 +391,7 @@ describe('rc_get_from_key_as_fallback', () => {
       }),
     )
 
-    const result2 = rc_parse(result.data, schema)
+    const result2 = rc_parse(result.value, schema)
 
     expect(result2).toEqual(
       successResult({
@@ -578,22 +578,19 @@ test('reproduce wrong message bug', () => {
     fileType: rc_string,
     file: rc_string,
     size: rc_number,
-    user_id: rc_number.orNull(),
-    videoThumb: rc_string.optional(),
-    universal_file: rc_string.optional(),
-    transcription: rc_string.optional(),
-    short_transcription: rc_string.optional(),
-    audio_conversion_status: rc_literals(
-      'pending',
-      'success',
-      'error',
-    ).optional(),
+    user_id: rc_number.orNull,
+    videoThumb: rc_string.optional,
+    universal_file: rc_string.optional,
+    transcription: rc_string.optional,
+    short_transcription: rc_string.optional,
+    audio_conversion_status: rc_literals('pending', 'success', 'error')
+      .optional,
   })
 
   const attachmentsSchema = rc_loose_array(apiFileObjSchema).withFallback([])
 
   const schema = rc_object({
-    attachments: attachmentsSchema.orNullish(),
+    attachments: attachmentsSchema.orNullish,
   })
 
   const result = rc_parse(dataToValidate, rc_array(schema))
@@ -647,18 +644,18 @@ test('rc_obj_builder', () => {
   const shape = rc_obj_builder<Test>()({
     a: rc_string,
     b: rc_number,
-    c: rc_string.optional(),
+    c: rc_string.optional,
     obj: {
       a: rc_string,
       b: rc_number,
-      array: rc_array(rc_number).optional(),
+      array: rc_array(rc_number).optional,
       looseArray: rc_loose_array(rc_string),
       veryLongPropertyNameThatShouldBeAutocompleted: rc_string,
     },
     objOrNull: rc_object({
       a: rc_string,
       literal: rc_literals('a', 'b', 'c'),
-    }).orNull(),
+    }).orNull,
     obj2,
     literal: rc_literals('a', 'b'),
     literalInObjArray: rc_object({
@@ -668,8 +665,8 @@ test('rc_obj_builder', () => {
           type: rc_literals('a', 'b', 'c'),
         }),
       ),
-    }).orNull(),
-    obj2OrNull: obj3.orNullish(),
+    }).orNull,
+    obj2OrNull: obj3.orNullish,
   })
 
   const result = rc_parse(
@@ -887,10 +884,10 @@ test('reproduce bug in rc_rename_from_key: return validation error on parsed JSO
     })
 
   const userDataSchema = rc_object({
-    plan_seat_permissions: planSeatPermissionsSchema.optional(),
+    plan_seat_permissions: planSeatPermissionsSchema.optional,
     legacy_plan_permissions: rc_get_from_key_as_fallback(
       'plan_seat_permissions',
-      newPlanSeatPermissionsSchema.optional(),
+      newPlanSeatPermissionsSchema.optional,
     ),
   })
 
@@ -931,7 +928,7 @@ test('reproduce bug in rc_rename_from_key: return validation error on parsed JSO
     }),
   )
 
-  expect(result.ok && result.data).toMatchInlineSnapshot(`
+  expect(result.ok && result.value).toMatchInlineSnapshot(`
     {
       "data": {
         "legacy_plan_permissions": {

@@ -12,7 +12,7 @@ import {
 } from '../src/runcheck'
 
 describe('default', () => {
-  const schema: RcType<number> = rc_default(rc_number.optional(), 0)
+  const schema: RcType<number> = rc_default(rc_number.optional, 0)
 
   const parse = rc_parser(schema)
 
@@ -32,7 +32,7 @@ describe('default', () => {
 
   test('default null value', () => {
     const schema2: RcType<number | null> = rc_default(
-      rc_number.orNullish(),
+      rc_number.orNullish,
       null,
     )
 
@@ -45,7 +45,7 @@ describe('default', () => {
 
 describe('default obj property', () => {
   const schema = rc_object({
-    hello: rc_default(rc_number.optional(), 0),
+    hello: rc_default(rc_number.optional, 0),
     test: rc_string,
   })
 
@@ -59,7 +59,7 @@ describe('default obj property', () => {
 })
 
 describe('nullish default', () => {
-  const schema = rc_nullish_default(rc_number.orNull(), 0)
+  const schema = rc_nullish_default(rc_number.orNull, 0)
 
   const parse = rc_parser(schema)
 

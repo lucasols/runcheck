@@ -4,8 +4,8 @@
   "version": "0.56.2",
   "license": "MIT",
   "scripts": {
-    "test": "vitest --ui --typecheck",
-    "test:run": "vitest run --typecheck",
+    "test": "vitest --ui",
+    "test:run": "vitest run",
     "lint": "pnpm tsc && pnpm eslint",
     "tsc": "tsc -p tsconfig.prod.json",
     "benchmark": "tsm --no-warnings benchmarks/bench.ts",
@@ -51,7 +51,7 @@
     "@types/node": "^18.15.11",
     "@typescript-eslint/eslint-plugin": "^5.57.1",
     "@typescript-eslint/parser": "^5.57.1",
-    "@vitest/ui": "1.0.4",
+    "@vitest/ui": "1.1.0",
     "eslint": "^8.37.0",
     "eslint-plugin-vitest": "^0.0.57",
     "mitata": "^0.1.6",
@@ -60,7 +60,7 @@
     "tsup": "^6.7.0",
     "typescript": "^5.0.3",
     "vite": "^4.3.9",
-    "vitest": "1.0.4",
+    "vitest": "1.1.0",
     "zod": "^3.22.4"
   }
 }

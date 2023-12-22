@@ -4,7 +4,8 @@ import {
   RcInferType,
   RcOptionalKeyType,
   RcType,
-  defaultProps,
+  createExtendedType,
+  createType,
   getWarningOrErrorWithPath,
   isObject,
   isRcType,
@@ -20,10 +21,9 @@ export function rc_get_from_key_as_fallback<T extends RcType<any>>(
   fallbackKey: string,
   type: T,
 ): RcType<RcInferType<T>> {
-  return {
-    ...type,
+  return Object.assign({}, type, {
     _alternative_key_: fallbackKey,
-  }
+  })
 }
 
 export type RcObject = {
@@ -74,11 +74,11 @@ function unwrapToObjSchema(input: unknown): RcType<any> {
 
     switch (type) {
       case 'optional':
-        return unwrapToObjSchema(value).optional()
+        return unwrapToObjSchema(value).optional
       case 'nullish_or':
-        return unwrapToObjSchema(value).orNullish()
+        return unwrapToObjSchema(value).orNullish
       case 'null_or':
-        return unwrapToObjSchema(value).orNull()
+        return unwrapToObjSchema(value).orNull
     }
   }
 
@@ -103,8 +103,7 @@ export function rc_object<T extends RcObject>(
     return { key, type }
   })
 
-  return {
-    ...defaultProps,
+  return createType({
     _obj_shape_: objShape,
     _kind_: 'object',
     _is_object_: true,
@@ -250,18 +249,17 @@ export function rc_object<T extends RcObject>(
         return { errors: false, data: resultObj as any }
       })
     },
-  }
+  })
 }
 
 export function rc_obj_extends<T extends RcObject>(
   shape: T,
   options?: ObjOptions,
 ): RcObjTypeReturn<T> {
-  return {
-    ...rc_object(shape, options),
+  return createExtendedType(rc_object(shape, options), {
     _kind_: `extends_object`,
     _is_extend_obj_: true,
-  }
+  })
 }
 
 export function rc_get_obj_shape<T extends RcObject>(
@@ -279,20 +277,19 @@ export function rc_obj_strict<T extends RcObject>(
   shape: T,
   options?: ObjOptions,
 ): RcObjTypeReturn<T> {
-  return {
-    ...rc_object(shape, options),
+  return createExtendedType(rc_object(shape, options), {
     _kind_: `strict_obj`,
-  }
+  })
 }
 
-export function rc_enable_obj_strict<T extends RcType<any>>(
-  type: T,
+export function rc_enable_obj_strict<T>(
+  type: RcType<T>,
   {
     nonRecursive,
   }: {
     nonRecursive?: boolean
   } = {},
-): T {
+): RcType<T> {
   if (nonRecursive) {
     if (!type._obj_shape_) {
       throw new Error(
@@ -300,14 +297,12 @@ export function rc_enable_obj_strict<T extends RcType<any>>(
       )
     }
 
-    return {
-      ...type,
+    return createExtendedType(type, {
       _kind_: `strict_obj`,
-    }
+    })
   }
 
-  return {
-    ...type,
+  return createExtendedType(type, {
     _parse_(input, ctx) {
       const parentStrictObj = ctx.strictObj_
       ctx.strictObj_ = true
@@ -315,7 +310,7 @@ export function rc_enable_obj_strict<T extends RcType<any>>(
       ctx.strictObj_ = parentStrictObj
       return result
     },
-  }
+  })
 }
 
 type AnyObj = Record<string, unknown>

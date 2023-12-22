@@ -9,6 +9,7 @@ import {
   getWarningOrErrorWithPath,
   isRcType,
   RcBase,
+  createType,
 } from './runcheck'
 
 export function rc_discriminated_union<
@@ -34,8 +35,7 @@ export function rc_discriminated_union<
     preComputedTypesShape[key] = isRcType(type) ? type : rc_object(type as any)
   }
 
-  return {
-    ...defaultProps,
+  return createType({
     _kind_: `discriminated_union`,
     _is_object_: true,
     _parse_(input, ctx) {
@@ -81,5 +81,5 @@ export function rc_discriminated_union<
         return { errors: false, data: parseResult.data }
       })
     },
-  }
+  })
 }

@@ -76,7 +76,7 @@ You can also provide a function to `unique` option to check if the array items h
 
 ```ts
 const shape = rc_array(
-  rc_object({ id: rc_string, meta_id: rc_string.optional() }),
+  rc_object({ id: rc_string, meta_id: rc_string.optional }),
   {
     unique: (item) => item.meta_id || item.id,
   },
@@ -104,11 +104,11 @@ The `rc_object` will allow extra properties but, any extra propertie will be str
 
 # Marking optional keys
 
-Optional keys can be marked with the `optionalKey()` method.
+Optional keys can be marked with the `optionalKey` method.
 
 ```ts
 const shape = rc_object({
-  name: rc_string.optionalKey(),
+  name: rc_string.optionalKey,
   age: rc_number,
   isCool: rc_boolean,
 })
@@ -354,13 +354,13 @@ You can also use the `RcPrettyInferType<typeof schema>` to get a more readable t
 
 # Type modifiers
 
-You can use also modiers like `rc_string.optional()` to extend the rc types:
+You can use also modiers like `rc_string.optional to extend the rc types:
 
-| runcheck modifier       | ts type equivalent       |
-| ----------------------- | ------------------------ |
-| `rc_[type].optional()`  | `T \| undefined`         |
-| `rc_[type].orNull()`    | `T \| null`              |
-| `rc_[type].orNullish()` | `T \| null \| undefined` |
+| runcheck modifier     | ts type equivalent       |
+| --------------------- | ------------------------ |
+| `rc\_[type].optional` | `T \| undefined`         |
+| `rc_[type].orNull`    | `T \| null`              |
+| `rc_[type].orNullish` | `T \| null \| undefined` |
 
 # Recursive types
 

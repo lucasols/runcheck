@@ -1,4 +1,4 @@
-import { RcType, defaultProps, parse } from './runcheck'
+import { RcType, createType, parse } from './runcheck'
 
 export function rc_intersection<A, B>(a: RcType<A>, b: RcType<B>): RcType<A & B>
 export function rc_intersection<A, B, C>(
@@ -28,8 +28,7 @@ export function rc_intersection(...types: RcType<any>[]): RcType<any> {
     kind += type._kind_.includes('|') ? `(${type._kind_})` : type._kind_
   }
 
-  return {
-    ...defaultProps,
+  return createType({
     _kind_: kind,
     _is_object_: allIsObject,
     _parse_(input, ctx) {
@@ -62,5 +61,5 @@ export function rc_intersection(...types: RcType<any>[]): RcType<any> {
         return true
       })
     },
-  }
+  })
 }
