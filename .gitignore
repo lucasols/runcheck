@@ -9,3 +9,4 @@ dist-test
 v8*.log
 last-build-version.txt
 .quokka.ts
+src-ref
