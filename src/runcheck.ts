@@ -1,3 +1,5 @@
+import { unknown } from 'zod'
+
 export {
   rc_enable_obj_strict,
   rc_get_from_key_as_fallback,
@@ -1377,4 +1379,11 @@ export type RcPrettyInferType<T extends RcType<any>> = Prettify<RcInferType<T>>
 
 export function isRcType(value: any): value is RcType<any> {
   return isObject(value) && '__rc_type' in value
+}
+
+/** workaround for the typescript limitation: https://github.com/microsoft/TypeScript/issues/52295 */
+export function joinAsRcTypeUnion<T>(
+  type: T,
+): RcType<T extends RcType<infer U> ? U : never> {
+  return type as any
 }

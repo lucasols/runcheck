@@ -2,6 +2,8 @@
 /* eslint-disable @typescript-eslint/ban-ts-comment */
 import {
   RcInferType,
+  RcType,
+  joinAsRcTypeUnion,
   rc_boolean,
   rc_literals,
   rc_number,
@@ -158,5 +160,29 @@ describe('rc_obj_builder', () => {
       // @ts-expect-error
       b: rc_number,
     })
+  })
+})
+
+describe('joinAsRcTypeUnion', () => {
+  test('simple types', () => {
+    const type: RcType<string> | RcType<number> = rc_string as any
+
+    const joinedType = joinAsRcTypeUnion(type)
+    //      ^?
+
+    expectType<Equal<typeof joinedType, RcType<string | number>>>()
+  })
+
+  test('object types', () => {
+    const type: RcType<{ a: string }> | RcType<{ b: number }> = rc_object({
+      a: rc_string,
+    }) as any
+
+    const joinedType = joinAsRcTypeUnion(type)
+    //      ^?
+
+    expectType<
+      Equal<typeof joinedType, RcType<{ a: string } | { b: number }>>
+    >()
   })
 })
