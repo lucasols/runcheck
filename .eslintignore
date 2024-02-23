@@ -1,4 +1,0 @@
-dist*
-benchmarks*
-*.d.ts
-vite.config.ts

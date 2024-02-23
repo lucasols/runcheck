@@ -762,7 +762,6 @@ function checkArrayItems(
       const isUniqueKey = typeof unique === 'string'
 
       if (isUniqueKey) {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         uniqueValueToCheck = parseResult.data[unique]
       } else if (typeof unique === 'function') {
         uniqueValueToCheck = unique(parseResult.data)
