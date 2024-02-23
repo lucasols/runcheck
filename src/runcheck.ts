@@ -1,5 +1,5 @@
-import { unknown } from 'zod'
-
+export { rc_discriminated_union } from './rc_discriminated_union'
+export { rc_intersection } from './rc_intersection'
 export {
   rc_enable_obj_strict,
   rc_get_from_key_as_fallback,
@@ -12,8 +12,6 @@ export {
   rc_obj_strict,
   rc_object,
 } from './rc_object'
-export { rc_intersection } from './rc_intersection'
-export { rc_discriminated_union } from './rc_discriminated_union'
 
 export type RcParseResult<T> =
   | {
