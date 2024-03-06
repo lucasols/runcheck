@@ -41,7 +41,9 @@ describe('rc_object', () => {
     )
 
     expect(result).toEqual(
-      errorResult(`Type 'number' is not assignable to 'object'`),
+      errorResult(
+        `Type 'number' is not assignable to 'object{ hello: string }'`,
+      ),
     )
   })
 
@@ -53,7 +55,7 @@ describe('rc_object', () => {
 
     expect(result).toEqual(
       successResult({ hello: 'world' }, [
-        `Fallback used, errors -> Type 'number' is not assignable to 'object'`,
+        `Fallback used, errors -> Type 'number' is not assignable to 'object{ hello: string }'`,
       ]),
     )
   })
@@ -983,7 +985,7 @@ describe('rc_obj_builder modifiers', () => {
     test('fail', () => {
       expect(rc_parse({ obj: null }, shape)).toEqual(
         errorResult(
-          `$.obj: Type 'null' is not assignable to 'object_optional'`,
+          `$.obj: Type 'null' is not assignable to 'object_optional{ a: string }'`,
         ),
       )
     })
@@ -1021,7 +1023,7 @@ describe('rc_obj_builder modifiers', () => {
     test('fail', () => {
       expect(rc_parse({ obj: 1 }, shape)).toEqual(
         errorResult(
-          `$.obj: Type 'number' is not assignable to 'object_or_nullish'`,
+          `$.obj: Type 'number' is not assignable to 'object_or_nullish{ a: string, b: number }'`,
         ),
       )
     })
@@ -1049,9 +1051,48 @@ describe('rc_obj_builder modifiers', () => {
     test('fail', () => {
       expect(rc_parse({ obj: undefined }, shape)).toEqual(
         errorResult(
-          `$.obj: Type 'undefined' is not assignable to 'object_or_null'`,
+          `$.obj: Type 'undefined' is not assignable to 'object_or_null{ a: string }'`,
         ),
       )
     })
   })
+})
+
+test('rc_object description is truncated in error message', () => {
+  const schema = rc_object({
+    a: rc_string,
+    b: rc_string,
+    c: rc_string,
+    d: rc_string,
+    e: rc_string,
+    f: rc_string,
+    g: rc_string,
+    h: rc_string,
+    i: rc_string,
+    j: rc_string,
+    k: rc_string,
+    l: rc_string,
+    m: rc_string,
+    n: rc_string,
+    o: rc_string,
+    p: rc_string,
+    q: rc_string,
+    r: rc_string,
+    s: rc_string,
+    t: rc_string,
+    u: rc_string,
+    v: rc_string,
+    w: rc_string,
+    x: rc_string,
+    y: rc_string,
+    z: rc_string,
+  })
+
+  const result = rc_parse(1, schema)
+
+  expect(result).toEqual(
+    errorResult(
+      `Type 'number' is not assignable to 'object{ a: string, b: string, c: string, d: string, e: string, f: string, g: string, h: string, i: string, ... }'`,
+    ),
+  )
 })

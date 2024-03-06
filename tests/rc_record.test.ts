@@ -44,7 +44,7 @@ describe('rc_record', () => {
 
     expect(parse2({ hello: 'world', a: { hello: 1 } })).toEqual(
       errorResult(
-        "$.hello: Type 'string' is not assignable to 'object'",
+        "$.hello: Type 'string' is not assignable to 'object{ hello: string }'",
         "$.a.hello: Type 'number' is not assignable to 'string'",
       ),
     )

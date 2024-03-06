@@ -8,6 +8,7 @@ import {
   getWarningOrErrorWithPath,
   isObject,
   isRcType,
+  normalizedTypeOf,
   parse,
   snakeCase,
 } from './runcheck'
@@ -103,6 +104,8 @@ export function rc_object<T extends RcObject>(
     return { key, type }
   })
 
+  let detailedObjShapeDescription = ''
+
   return {
     ...defaultProps,
     _obj_shape_: objShape,
@@ -112,7 +115,36 @@ export function rc_object<T extends RcObject>(
       return parse<TypeOfObjectType<T>>(this, inputObj, ctx, () => {
         if (!isObject(inputObj)) {
           ctx.objErrKeyIndex_ = -1
-          return false
+
+          if (!detailedObjShapeDescription) {
+            detailedObjShapeDescription = `${this._kind_}{ `
+            let i = 0
+            for (const { key, type } of shapeEntries) {
+              if (detailedObjShapeDescription.length > 100) {
+                detailedObjShapeDescription += `, ...`
+                break
+              }
+
+              if (i !== 0) {
+                detailedObjShapeDescription += `, `
+              }
+
+              detailedObjShapeDescription += `${key}: ${type._kind_}`
+              i++
+            }
+
+            detailedObjShapeDescription += ` }`
+          }
+
+          return {
+            data: undefined,
+            errors: [
+              getWarningOrErrorWithPath(
+                ctx,
+                `Type '${normalizedTypeOf(inputObj, false)}' is not assignable to '${detailedObjShapeDescription}'`,
+              ),
+            ],
+          }
         }
 
         const isStrict = this._kind_ === 'strict_obj' || ctx.strictObj_
