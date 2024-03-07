@@ -104,20 +104,21 @@ export function rc_object<T extends RcObject>(
     return { key, type }
   })
 
-  let detailedObjShapeDescription = ''
-
   return {
     ...defaultProps,
     _obj_shape_: objShape,
     _kind_: 'object',
+    _detailed_obj_shape_: '',
     _is_object_: true,
     _parse_(inputObj, ctx) {
       return parse<TypeOfObjectType<T>>(this, inputObj, ctx, () => {
         if (!isObject(inputObj)) {
           ctx.objErrKeyIndex_ = -1
 
-          if (!detailedObjShapeDescription) {
-            detailedObjShapeDescription = `${this._kind_}{ `
+          if (ctx.objErrShortCircuit_) return false
+
+          if (!this._detailed_obj_shape_) {
+            let detailedObjShapeDescription = `${this._kind_}{ `
             let i = 0
             for (const { key, type } of shapeEntries) {
               if (detailedObjShapeDescription.length > 100) {
@@ -134,6 +135,7 @@ export function rc_object<T extends RcObject>(
             }
 
             detailedObjShapeDescription += ` }`
+            this._detailed_obj_shape_ = detailedObjShapeDescription
           }
 
           return {
@@ -141,7 +143,7 @@ export function rc_object<T extends RcObject>(
             errors: [
               getWarningOrErrorWithPath(
                 ctx,
-                `Type '${normalizedTypeOf(inputObj, false)}' is not assignable to '${detailedObjShapeDescription}'`,
+                `Type '${normalizedTypeOf(inputObj, false)}' is not assignable to '${this._detailed_obj_shape_}'`,
               ),
             ],
           }

@@ -101,6 +101,8 @@ export type RcBase<T, RequiredKey extends boolean> = {
   /** @internal */
   readonly _alternative_key_: string | undefined
   /** @internal */
+  _detailed_obj_shape_: string | undefined
+  /** @internal */
   readonly _obj_shape_: Record<string, RcType<any>> | undefined
   /** @internal */
   readonly _autoFix_: ((input: unknown) => false | { fixed: T }) | undefined
@@ -338,6 +340,7 @@ export const defaultProps: Omit<RcType<any>, '_parse_' | '_kind_'> = {
   _alternative_key_: undefined,
   _autoFix_: undefined,
   _obj_shape_: undefined,
+  _detailed_obj_shape_: undefined,
   _is_object_: false,
   _is_extend_obj_: false,
 }
