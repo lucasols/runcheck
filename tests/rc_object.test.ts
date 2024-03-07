@@ -107,7 +107,6 @@ describe('rc_object', () => {
     if (!result.error) {
       type Data = Prettify<typeof result.data>
 
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const _data: Data = {
         hello: { world: '1' },
         value: 'ok',
@@ -136,7 +135,6 @@ describe('rc_object', () => {
     if (!result.error) {
       type Data = typeof result.data
 
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const _data: Data = { hello: { world: { value: 1 } }, value: 'ok' }
     }
 

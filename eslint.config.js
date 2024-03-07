@@ -1,10 +1,11 @@
 // @ts-check
+// @ts-ignore
+import tsParser from '@typescript-eslint/parser'
 import js from '@eslint/js'
 import ts from '@typescript-eslint/eslint-plugin'
 // @ts-ignore
 import { rules } from '@lucasols/eslint-plugin-extended-lint'
 import vitest from 'eslint-plugin-vitest'
-import tseslint from 'typescript-eslint'
 
 const isCI = process.env.CI === 'true'
 
@@ -21,15 +22,14 @@ const config = [
     ignores: ['dist/**', 'node_modules/**'],
 
     languageOptions: {
-      // @ts-ignore
-      parser: tseslint.parser,
+      parser: tsParser,
       parserOptions: { project: './tsconfig.json' },
     },
     linterOptions: {
       reportUnusedDisableDirectives: true,
     },
     plugins: {
-      '@typescript-eslint': tseslint.plugin,
+      '@typescript-eslint': ts,
       '@lucasols/extended-lint': { rules },
       vitest: vitest,
     },
