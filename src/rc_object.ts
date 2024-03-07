@@ -115,7 +115,9 @@ export function rc_object<T extends RcObject>(
         if (!isObject(inputObj)) {
           ctx.objErrKeyIndex_ = -1
 
-          if (ctx.objErrShortCircuit_) return false
+          if (ctx.objErrShortCircuit_ && !this._detailed_obj_shape_) {
+            return false
+          }
 
           if (!this._detailed_obj_shape_) {
             let detailedObjShapeDescription = `${this._kind_}{ `
@@ -397,12 +399,10 @@ export function rc_obj_pick<O extends AnyObj, K extends keyof O>(
   for (const key of keys) {
     const keyShape = obj._obj_shape_[key as string]
     if (keyShape) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       shape[key] = keyShape
     }
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-return
   return rc_object(shape) as any
 }
 
@@ -418,12 +418,10 @@ export function rc_obj_omit<O extends AnyObj, K extends keyof O>(
 
   for (const key of Object.keys(obj._obj_shape_)) {
     if (!(keys as any[]).includes(key)) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       shape[key] = obj._obj_shape_[key]
     }
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-return
   return rc_object(shape) as any
 }
 
@@ -458,7 +456,6 @@ export function rc_obj_builder<T extends Record<string, any>>() {
     },
     options?: ObjOptions,
   ): RcType<T> => {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call
     return rc_object(schema as any, options) as any
   }
 }
