@@ -1,14 +1,14 @@
 import { RcObject, TypeOfObjectType, rc_object } from './rc_object'
 import {
-  RcType,
   Prettify,
-  defaultProps,
-  parse,
-  isObject,
-  normalizedTypeOf,
-  getWarningOrErrorWithPath,
-  isRcType,
   RcBase,
+  RcType,
+  defaultProps,
+  getWarningOrErrorWithPath,
+  isObject,
+  isRcType,
+  normalizedTypeOf,
+  parse,
 } from './runcheck'
 
 export function rc_discriminated_union<
@@ -75,7 +75,6 @@ export function rc_discriminated_union<
           return { errors: parseResult.errors, data: undefined }
         }
 
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         parseResult.data[discriminatorKey] = discriminator
 
         return { errors: false, data: parseResult.data }
