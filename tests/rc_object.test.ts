@@ -21,6 +21,7 @@ import {
   rc_get_from_key_as_fallback,
   rc_string,
   rc_transform,
+  rc_union,
 } from '../src/runcheck'
 import { errorResult, successResult } from './testUtils'
 
@@ -1058,41 +1059,53 @@ describe('rc_obj_builder modifiers', () => {
   })
 })
 
-test('rc_object description is truncated in error message', () => {
-  const schema = rc_object({
-    a: rc_string,
-    b: rc_string,
-    c: rc_string,
-    d: rc_string,
-    e: rc_string,
-    f: rc_string,
-    g: rc_string,
-    h: rc_string,
-    i: rc_string,
-    j: rc_string,
-    k: rc_string,
-    l: rc_string,
-    m: rc_string,
-    n: rc_string,
-    o: rc_string,
-    p: rc_string,
-    q: rc_string,
-    r: rc_string,
-    s: rc_string,
-    t: rc_string,
-    u: rc_string,
-    v: rc_string,
-    w: rc_string,
-    x: rc_string,
-    y: rc_string,
-    z: rc_string,
+describe('detailed shape description in error message', () => {
+  test('rc_object description is truncated in error message', () => {
+    const schema = rc_object({
+      a: rc_string,
+      b: rc_string,
+      c: rc_string,
+      d: rc_string,
+      e: rc_string,
+      f: rc_string,
+      g: rc_string,
+      h: rc_string,
+      i: rc_string,
+      j: rc_string,
+      k: rc_string,
+      l: rc_string,
+      m: rc_string,
+      n: rc_string,
+      o: rc_string,
+      p: rc_string,
+      q: rc_string,
+      r: rc_string,
+      s: rc_string,
+      t: rc_string,
+      u: rc_string,
+      v: rc_string,
+      w: rc_string,
+      x: rc_string,
+      y: rc_string,
+      z: rc_string,
+    })
+
+    const result = rc_parse(1, schema)
+
+    expect(result).toEqual(
+      errorResult(
+        `Type 'number' is not assignable to 'object{ a: string, b: string, c: string, d: string, e: string, f: string, g: string, h: string, i: string, ... }'`,
+      ),
+    )
   })
 
-  const result = rc_parse(1, schema)
+  test('error in union is not detailed', () => {
+    const schema = rc_union(rc_string, rc_obj_strict({ a: rc_string }))
 
-  expect(result).toEqual(
-    errorResult(
-      `Type 'number' is not assignable to 'object{ a: string, b: string, c: string, d: string, e: string, f: string, g: string, h: string, i: string, ... }'`,
-    ),
-  )
+    const result = rc_parse(1, schema)
+
+    expect(result).toEqual(
+      errorResult(`Type 'number' is not assignable to 'string | strict_obj'`),
+    )
+  })
 })
