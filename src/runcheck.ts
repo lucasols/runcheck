@@ -108,10 +108,12 @@ export type RcBase<T, RequiredKey extends boolean> = {
   readonly _autoFix_: ((input: unknown) => false | { fixed: T }) | undefined
 }
 
+const getUndefined = () => undefined
+
 function withFallback(this: RcType<any>, fallback: any): RcType<any> {
   return {
     ...this,
-    _fallback_: fallback,
+    _fallback_: fallback === undefined ? getUndefined : fallback,
   }
 }
 

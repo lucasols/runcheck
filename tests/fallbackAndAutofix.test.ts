@@ -6,6 +6,7 @@ import {
   rc_number,
   rc_object,
   rc_parse,
+  rc_record,
   rc_string,
 } from '../src/runcheck'
 import { successResult } from './testUtils'
@@ -30,6 +31,49 @@ describe('fallback', () => {
 
     expect(!result1.error && result1.data).not.toBe(
       !result2.error && result2.data,
+    )
+  })
+
+  test('optional and fallback', () => {
+    const result = rc_parse([], rc_string.optional().withFallback('world'))
+
+    expect(result).toEqual(
+      successResult('world', [
+        "Fallback used, errors -> Type 'array' is not assignable to 'string_optional'",
+      ]),
+    )
+  })
+
+  test('nullable and fallback', () => {
+    const result = rc_parse([], rc_string.orNull().withFallback('world'))
+
+    expect(result).toEqual(
+      successResult('world', [
+        "Fallback used, errors -> Type 'array' is not assignable to 'string_or_null'",
+      ]),
+    )
+  })
+
+  test('nullish and fallback', () => {
+    const result = rc_parse([], rc_string.orNullish().withFallback('world'))
+
+    expect(result).toEqual(
+      successResult('world', [
+        "Fallback used, errors -> Type 'array' is not assignable to 'string_or_nullish'",
+      ]),
+    )
+  })
+
+  test('optional and nullable and fallback', () => {
+    const result = rc_parse(
+      [],
+      rc_string.optional().orNull().withFallback('world'),
+    )
+
+    expect(result).toEqual(
+      successResult('world', [
+        "Fallback used, errors -> Type 'array' is not assignable to 'string_optional_or_null'",
+      ]),
     )
   })
 })
@@ -154,4 +198,23 @@ describe('autofix', () => {
       ),
     )
   })
+})
+
+test('withFallback not working sometimes', () => {
+  const object = rc_object({
+    a: rc_record(rc_string).optional().withFallback(undefined),
+  })
+
+  const result = rc_parse({ a: [] }, object)
+
+  expect(result).toEqual(
+    successResult(
+      {
+        a: undefined,
+      },
+      [
+        `$.a: Fallback used, errors -> Type 'array' is not assignable to 'record<string, string>_optional'`,
+      ],
+    ),
+  )
 })
