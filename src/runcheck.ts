@@ -1056,7 +1056,7 @@ export function rc_unwrap_or_null<R>(result: RcParseResult<R>): {
   return rc_unwrap_or(result, null)
 }
 
-export function rc_unwrap_or<R, F = R>(
+export function rc_unwrap_or<R, F = NoInfer<R>>(
   result: RcParseResult<R>,
   fallback: F,
 ): {
