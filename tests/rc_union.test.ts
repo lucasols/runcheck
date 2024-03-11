@@ -183,3 +183,11 @@ describe('nested unions', () => {
     )
   })
 })
+
+test('nullable union error', () => {
+  const shape = rc_union(rc_number, rc_string).orNull()
+
+  expect(rc_parse(true, shape)).toEqual(
+    errorResult(`Type 'boolean' is not assignable to 'null | number | string'`),
+  )
+})

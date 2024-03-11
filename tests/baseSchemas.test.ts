@@ -211,3 +211,34 @@ describe('rc_literal', () => {
     )
   })
 })
+
+describe('rc_type.where', () => {
+  test('pass', () => {
+    const result = rc_parse(
+      'hello',
+      rc_string.where((input) => input.length === 5),
+    )
+
+    expect(result).toEqual(successResult('hello'))
+  })
+
+  test('fail', () => {
+    const result = rc_parse(
+      'hello',
+      rc_string.where((input) => input.length === 6),
+    )
+
+    expect(result).toEqual(errorResult(`Predicate failed for type 'string'`))
+  })
+
+  test('fail with custom msg', () => {
+    const result = rc_parse(
+      'h',
+      rc_string.where((input) =>
+        input.length < 4 ? { error: 'too short' } : true,
+      ),
+    )
+
+    expect(result).toEqual(errorResult(`Predicate failed: too short`))
+  })
+})

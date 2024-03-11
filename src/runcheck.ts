@@ -56,7 +56,9 @@ type Schema<T> = (t: T) => T
 export type RcBase<T, RequiredKey extends boolean> = {
   __rc_type: Schema<T>
   readonly withFallback: WithFallback<T>
-  readonly where: (predicate: (input: T) => boolean) => RcType<T>
+  readonly where: (
+    predicate: (input: T) => boolean | { error: string },
+  ) => RcType<T>
   /** RcType | undefined */
   readonly optional: () => RcType<T | undefined>
   /** { key?: RcType | undefined } */
@@ -81,7 +83,7 @@ export type RcBase<T, RequiredKey extends boolean> = {
   /** @internal */
   readonly _fallback_: T | (() => T) | undefined
   /** @internal */
-  readonly _predicate_: ((input: T) => boolean) | undefined
+  readonly _predicate_: ((input: T) => boolean | { error: string }) | undefined
   /** @internal */
   readonly _optional_: boolean
   /** @internal */
@@ -174,14 +176,21 @@ export function parse<T>(
       const validResult = isValid === true ? (input as T) : isValid.data
 
       if (type._predicate_) {
-        if (!type._predicate_(validResult)) {
+        const predicateResult = type._predicate_(validResult)
+
+        if (predicateResult !== true) {
           return {
             ok: false,
             data: undefined,
             errors: [
               getWarningOrErrorWithPath(
                 ctx,
-                `Predicate failed for type '${type._kind_}'`,
+
+                `Predicate failed${
+                  predicateResult === false ?
+                    ` for type '${type._kind_}'`
+                  : `: ${predicateResult.error}`
+                }`,
               ),
             ],
           }
@@ -277,7 +286,7 @@ function withAutofix(
 
 function where(
   this: RcType<any>,
-  predicate: (input: any) => boolean,
+  predicate: (input: any) => boolean | { error: string },
 ): RcType<any> {
   return {
     ...this,
@@ -289,7 +298,7 @@ function optional(this: RcType<any>): RcType<any> {
   return {
     ...this,
     _optional_: true,
-    _kind_: `${this._kind_}_optional`,
+    _kind_: `undefined | ${this._kind_}`,
   }
 }
 
@@ -304,7 +313,7 @@ function orNull(this: RcType<any>): RcType<any> {
   return {
     ...this,
     _orNull_: true,
-    _kind_: `${this._kind_}_or_null`,
+    _kind_: `null | ${this._kind_}`,
   }
 }
 
@@ -312,7 +321,7 @@ function orNullish(this: RcType<any>): RcType<any> {
   return {
     ...this,
     _orNullish_: true,
-    _kind_: `${this._kind_}_or_nullish`,
+    _kind_: `null | undefined | ${this._kind_}`,
   }
 }
 

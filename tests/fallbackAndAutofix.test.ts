@@ -39,7 +39,7 @@ describe('fallback', () => {
 
     expect(result).toEqual(
       successResult('world', [
-        "Fallback used, errors -> Type 'array' is not assignable to 'string_optional'",
+        "Fallback used, errors -> Type 'array' is not assignable to 'undefined | string'",
       ]),
     )
   })
@@ -49,7 +49,7 @@ describe('fallback', () => {
 
     expect(result).toEqual(
       successResult('world', [
-        "Fallback used, errors -> Type 'array' is not assignable to 'string_or_null'",
+        "Fallback used, errors -> Type 'array' is not assignable to 'null | string'",
       ]),
     )
   })
@@ -59,7 +59,7 @@ describe('fallback', () => {
 
     expect(result).toEqual(
       successResult('world', [
-        "Fallback used, errors -> Type 'array' is not assignable to 'string_or_nullish'",
+        "Fallback used, errors -> Type 'array' is not assignable to 'null | undefined | string'",
       ]),
     )
   })
@@ -72,7 +72,7 @@ describe('fallback', () => {
 
     expect(result).toEqual(
       successResult('world', [
-        "Fallback used, errors -> Type 'array' is not assignable to 'string_optional_or_null'",
+        "Fallback used, errors -> Type 'array' is not assignable to 'null | undefined | string'",
       ]),
     )
   })
@@ -213,7 +213,8 @@ test('withFallback not working sometimes', () => {
         a: undefined,
       },
       [
-        `$.a: Fallback used, errors -> Type 'array' is not assignable to 'record<string, string>_optional'`,
+        // eslint-disable-next-line no-useless-escape
+        `$.a: Fallback used, errors -> Type 'array' is not assignable to 'undefined | record\<string, string\>'`,
       ],
     ),
   )

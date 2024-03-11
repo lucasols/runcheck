@@ -12,7 +12,7 @@ import {
 } from '../src/runcheck'
 
 describe('default', () => {
-  const schema: RcType<number> = rc_default(rc_number.optional(), 0)
+  const schema: RcType<number> = rc_default(rc_number, 0)
 
   const parse = rc_parser(schema)
 
@@ -26,7 +26,7 @@ describe('default', () => {
 
   test('invalid inputs', () => {
     expect(parse('1')).toEqual(
-      errorResult(`Type 'string' is not assignable to 'number_optional'`),
+      errorResult(`Type 'string' is not assignable to 'number'`),
     )
   })
 
@@ -45,7 +45,7 @@ describe('default', () => {
 
 describe('default obj property', () => {
   const schema = rc_object({
-    hello: rc_default(rc_number.optional(), 0),
+    hello: rc_default(rc_number, 0),
     test: rc_string,
   })
 
@@ -54,6 +54,12 @@ describe('default obj property', () => {
   test('default value', () => {
     expect(parse({ test: 'test' })).toEqual(
       successResult({ hello: 0, test: 'test' }),
+    )
+  })
+
+  test('invalid inputs', () => {
+    expect(parse({ hello: '1', test: 'test' })).toEqual(
+      errorResult(`$.hello: Type 'string' is not assignable to 'number'`),
     )
   })
 })

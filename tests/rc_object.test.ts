@@ -984,7 +984,7 @@ describe('rc_obj_builder modifiers', () => {
     test('fail', () => {
       expect(rc_parse({ obj: null }, shape)).toEqual(
         errorResult(
-          `$.obj: Type 'null' is not assignable to 'object_optional{ a: string }'`,
+          `$.obj: Type 'null' is not assignable to 'undefined | object{ a: string }'`,
         ),
       )
     })
@@ -1022,7 +1022,7 @@ describe('rc_obj_builder modifiers', () => {
     test('fail', () => {
       expect(rc_parse({ obj: 1 }, shape)).toEqual(
         errorResult(
-          `$.obj: Type 'number' is not assignable to 'object_or_nullish{ a: string, b: number }'`,
+          `$.obj: Type 'number' is not assignable to 'null | undefined | object{ a: string, b: number }'`,
         ),
       )
     })
@@ -1050,7 +1050,7 @@ describe('rc_obj_builder modifiers', () => {
     test('fail', () => {
       expect(rc_parse({ obj: undefined }, shape)).toEqual(
         errorResult(
-          `$.obj: Type 'undefined' is not assignable to 'object_or_null{ a: string }'`,
+          `$.obj: Type 'undefined' is not assignable to 'null | object{ a: string }'`,
         ),
       )
     })
