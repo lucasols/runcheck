@@ -272,7 +272,7 @@ group('string in obj, no v8 optimization', (i) => {
   })
 })
 
-group.only('large array', { it: 500 }, () => {
+group('large array', { it: 500 }, () => {
   const largeArray = Array.from({ length: 100 }, (_, i) => ({
     string: `string${i}`,
     number: i,
