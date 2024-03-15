@@ -83,8 +83,6 @@ export type RcBase<T, RequiredKey extends boolean> = {
   /** @internal */
   readonly _fallback_: T | (() => T) | undefined
   /** @internal */
-  readonly _predicate_: ((input: T) => boolean | { error: string }) | undefined
-  /** @internal */
   readonly _optional_: boolean
   /** @internal */
   readonly _orNullish_: boolean
@@ -175,28 +173,6 @@ export function parse<T>(
     if (isValid === true || !isValid.errors) {
       const validResult = isValid === true ? (input as T) : isValid.data
 
-      if (type._predicate_) {
-        const predicateResult = type._predicate_(validResult)
-
-        if (predicateResult !== true) {
-          return {
-            ok: false,
-            data: undefined,
-            errors: [
-              getWarningOrErrorWithPath(
-                ctx,
-
-                `Predicate failed${
-                  predicateResult === false ?
-                    ` for type '${type._kind_}'`
-                  : `: ${predicateResult.error}`
-                }`,
-              ),
-            ],
-          }
-        }
-      }
-
       return { ok: true, data: validResult, errors: undefined }
     }
   }
@@ -222,21 +198,6 @@ export function parse<T>(
       const autofixed = type._autoFix_(input)
 
       if (autofixed) {
-        if (type._predicate_) {
-          if (!type._predicate_(autofixed.fixed)) {
-            return {
-              ok: false,
-              data: undefined,
-              errors: [
-                getWarningOrErrorWithPath(
-                  ctx,
-                  `Predicate failed for autofix in type '${type._kind_}'`,
-                ),
-              ],
-            }
-          }
-        }
-
         addWarning(
           ctx,
           `Autofixed from error "${getResultErrors(
@@ -290,7 +251,38 @@ function where(
 ): RcType<any> {
   return {
     ...this,
-    _predicate_: predicate,
+    _parse_: (input, ctx) => {
+      return parse(this, input, ctx, () => {
+        const result = this._parse_(input, ctx)
+
+        if (!result.ok) {
+          return {
+            errors: result.errors,
+            data: undefined,
+          }
+        }
+
+        const predicateResult = predicate(result.data)
+
+        if (predicateResult !== true) {
+          return {
+            errors: [
+              getWarningOrErrorWithPath(
+                ctx,
+                `Predicate failed${
+                  predicateResult === false ?
+                    ` for type '${this._kind_}'`
+                  : `: ${predicateResult.error}`
+                }`,
+              ),
+            ],
+            data: undefined,
+          }
+        }
+
+        return { errors: false, data: result.data }
+      })
+    },
   }
 }
 
