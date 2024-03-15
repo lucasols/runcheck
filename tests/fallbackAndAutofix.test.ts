@@ -7,6 +7,7 @@ import {
   rc_object,
   rc_parse,
   rc_record,
+  rc_safe_fallback,
   rc_string,
 } from '../src/runcheck'
 import { successResult } from './testUtils'
@@ -218,4 +219,24 @@ test('withFallback not working sometimes', () => {
       ],
     ),
   )
+})
+
+describe('rc_safe_fallback', () => {
+  const schema = rc_object({
+    a: rc_safe_fallback(rc_string, 'world'),
+  })
+
+  test('fallback not used', () => {
+    const result = rc_parse({ a: 'hello' }, schema)
+
+    expect(result).toEqual(successResult({ a: 'hello' }))
+  })
+
+  test('when fallback is used no warning should be returned', () => {
+    const result = rc_parse({}, schema)
+
+    expect(result).toEqual(successResult({ a: 'world' }))
+
+    expect(result.ok && !result.warnings).toBe(true)
+  })
 })

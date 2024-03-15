@@ -630,6 +630,27 @@ export function rc_nullish_default<T>(
   }
 }
 
+/** returns a fallback in case of wrong inputs without adding a warning */
+export function rc_safe_fallback<T>(
+  schema: RcType<T>,
+  fallback: NoInfer<T> | (() => NoInfer<T>),
+): RcType<T> {
+  return {
+    ...(schema as unknown as RcType<T>),
+    _parse_(input, ctx) {
+      return parse(this, input, ctx, () => {
+        const parseResult = schema._parse_(input, ctx)
+
+        if (parseResult.ok) {
+          return { data: parseResult.data, errors: false }
+        }
+
+        return { data: isFn(fallback) ? fallback() : fallback, errors: false }
+      })
+    },
+  }
+}
+
 export function rc_record<V>(
   valueType: RcType<V>,
   {
