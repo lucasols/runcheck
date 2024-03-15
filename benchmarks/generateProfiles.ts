@@ -1,14 +1,12 @@
+import * as test from '../dist-test/runcheck.js'
 import {
   rc_array,
   rc_boolean,
-  rc_literals,
   rc_number,
   rc_object,
   rc_parse,
   rc_string,
-  rc_union,
 } from '../src/runcheck.js'
-import * as test from '../dist-test/runcheck.js'
 import { generateProfile } from './profileUtils'
 
 const validateData = Object.freeze({
@@ -31,7 +29,6 @@ const largeArray = Array.from({ length: 100 }, (_, i) => ({
   number: i,
   array: [1, 2, 3],
   obj: JSON.parse(JSON.stringify(validateData)),
-  union: i % 2 === 0 ? 'foo' : { type: 'qux', baz: 'qux', num: i },
 }))
 
 const testObjShape = test.rc_object({
@@ -54,29 +51,6 @@ const testSchema = test.rc_array(
     number: test.rc_number,
     array: test.rc_array(test.rc_number),
     obj: testObjShape,
-    union: test.rc_union(
-      test.rc_string,
-      test.rc_object({
-        type: test.rc_literals('bar'),
-        baz: test.rc_string,
-        num: test.rc_number,
-      }),
-      test.rc_object({
-        type: test.rc_literals('baz'),
-        baz: test.rc_string,
-        num: test.rc_number,
-      }),
-      test.rc_object({
-        type: test.rc_literals('bazs'),
-        baz: test.rc_string,
-        num: test.rc_number,
-      }),
-      test.rc_object({
-        type: test.rc_literals('qux'),
-        baz: test.rc_string,
-        num: test.rc_number,
-      }),
-    ),
   }),
 )
 
@@ -100,17 +74,6 @@ const schema = rc_array(
     number: rc_number,
     array: rc_array(rc_number),
     obj: objShape,
-    union: rc_union(
-      rc_string,
-      rc_object({ type: rc_literals('bar'), baz: rc_string, num: rc_number }),
-      rc_object({ type: rc_literals('baz'), baz: rc_string, num: rc_number }),
-      rc_object({
-        type: rc_literals('bazs'),
-        baz: rc_string,
-        num: rc_number,
-      }),
-      rc_object({ type: rc_literals('qux'), baz: rc_string, num: rc_number }),
-    ),
   }),
 )
 
@@ -118,16 +81,12 @@ if (rc_parse(largeArray, schema).error) {
   throw new Error('invalid data')
 }
 
-generateProfile(
-  'runcheck',
-  () => {
-    rc_parse(largeArray, schema)
-  },
-  { heatup: 1000 },
-)
+if (test.rc_parse(largeArray, testSchema).error) {
+  throw new Error('invalid data')
+}
 
 generateProfile(
-  'runcheck test',
+  'runcheck.dist-test',
   () => {
     test.rc_parse(largeArray, testSchema)
   },
