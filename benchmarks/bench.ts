@@ -1,4 +1,5 @@
 import { z as zod } from 'zod'
+import * as v from 'valibot'
 import {
   rc_any,
   rc_array,
@@ -271,7 +272,7 @@ group('string in obj, no v8 optimization', (i) => {
   })
 })
 
-group('large array', { it: 500 }, () => {
+group.only('large array', { it: 500 }, () => {
   const largeArray = Array.from({ length: 100 }, (_, i) => ({
     string: `string${i}`,
     number: i,
@@ -290,6 +291,31 @@ group('large array', { it: 500 }, () => {
 
   bench('zod', () => {
     dataType.parse(largeArray)
+  })
+
+  const valibotSchema = v.array(
+    v.object({
+      string: v.string(),
+      number: v.number(),
+      array: v.array(v.number()),
+      obj: v.object({
+        number: v.number(),
+        negNumber: v.number(),
+        maxNumber: v.number(),
+        string: v.string(),
+        longString: v.string(),
+        boolean: v.boolean(),
+        deeplyNested: v.object({
+          foo: v.string(),
+          num: v.number(),
+          bool: v.boolean(),
+        }),
+      }),
+    }),
+  )
+
+  bench('valibot', () => {
+    v.parse(valibotSchema, largeArray)
   })
 
   const schema = rc_array(

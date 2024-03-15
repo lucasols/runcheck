@@ -44,6 +44,9 @@ devDependencies:
   typescript-eslint:
     specifier: ^7.1.1
     version: 7.1.1(eslint@8.57.0)(typescript@5.4.2)
+  valibot:
+    specifier: ^0.30.0
+    version: 0.30.0
   vite:
     specifier: ^5.1.5
     version: 5.1.5(@types/node@20.11.25)
@@ -2357,6 +2360,10 @@ packages:
     resolution: {integrity: sha512-7rKUyy33Q1yc98pQ1DAmLtwX109F7TIfWlW1Ydo8Wl1ii1SeHieeh0HHfPeL2fMXK6z0s8ecKs9frCuLJvndBg==}
     dependencies:
       punycode: 2.1.1
+    dev: true
+
+  /valibot@0.30.0:
+    resolution: {integrity: sha512-5POBdbSkM+3nvJ6ZlyQHsggisfRtyT4tVTo1EIIShs6qCdXJnyWU5TJ68vr8iTg5zpOLjXLRiBqNx+9zwZz/rA==}
     dev: true
 
   /vite-node@1.3.1(@types/node@20.11.25):
