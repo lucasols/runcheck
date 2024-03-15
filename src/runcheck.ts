@@ -727,7 +727,7 @@ function checkArrayItems(
   const useLooseMode = _loose && !ctx.noWarnings_ && !ctx.noLooseArray_
   const unique = options?.unique
 
-  const looseErrors: ErrorWithPath[][] = []
+  const looseErrors: [err: ErrorWithPath[], path: string][] = []
   const arrayResult: any[] = []
   const uniqueValues = unique ? new Set<any>() : undefined
 
@@ -758,7 +758,7 @@ function checkArrayItems(
         if (!useLooseMode) {
           return { errors: filterResult.errors, data: undefined }
         } else {
-          looseErrors.push(filterResult.errors)
+          looseErrors.push([filterResult.errors, path])
           continue
         }
       }
@@ -812,7 +812,7 @@ function checkArrayItems(
           data: undefined,
         }
       } else {
-        looseErrors.push(parseResult.errors)
+        looseErrors.push([parseResult.errors, path])
         continue
       }
     } else {
@@ -822,9 +822,35 @@ function checkArrayItems(
 
   if (looseErrors.length > 0) {
     if (arrayResult.length === 0) {
-      return { errors: looseErrors.slice(0, 5).flat(), data: undefined }
+      return {
+        errors: looseErrors
+          .slice(0, 5)
+          .map(([err]) => err)
+          .flat(),
+        data: undefined,
+      }
     } else {
-      addWarnings(ctx, looseErrors.flat())
+      const adjustedLooseErrors: ErrorWithPath[] = []
+
+      for (const [errors, path] of looseErrors) {
+        for (const err of errors) {
+          let itemError = err.slice(path.length + 1)
+
+          if (itemError.startsWith(': ')) {
+            itemError = itemError.slice(2)
+          }
+
+          if (itemError.startsWith('.') || itemError.startsWith('[')) {
+            itemError = `#${itemError}`
+          }
+
+          const newError = `$${path}: Rejected, error -> ${itemError}`
+
+          adjustedLooseErrors.push(newError as ErrorWithPath)
+        }
+      }
+
+      addWarnings(ctx, adjustedLooseErrors)
     }
   }
 

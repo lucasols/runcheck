@@ -65,7 +65,64 @@ describe('rc_loose_array', () => {
     expect(result).toEqual(
       successResult(
         ['hello', 'ok'],
-        [`$[1]: Type 'number' is not assignable to 'string'`],
+        [
+          `$[1]: Rejected, error -> Type 'number' is not assignable to 'string'`,
+        ],
+      ),
+    )
+  })
+
+  test('error msg for rejected object items', () => {
+    const schema = rc_loose_array(
+      rc_object({
+        a: {
+          b: {
+            c: rc_string,
+          },
+        },
+      }),
+    )
+
+    const result = rc_parse(
+      [
+        { a: { b: { c: 'ok' } } },
+        { a: { b: { c: 1 } } },
+        { a: { b: { c: 'ok' } } },
+      ],
+      schema,
+    )
+
+    expect(result).toEqual(
+      successResult(
+        [{ a: { b: { c: 'ok' } } }, { a: { b: { c: 'ok' } } }],
+        [
+          `$[1]: Rejected, error -> #.a.b.c: Type 'number' is not assignable to 'string'`,
+        ],
+      ),
+    )
+  })
+
+  test('error msg for rejected array items', () => {
+    const schema = rc_loose_array(rc_array(rc_string))
+
+    const result = rc_parse(
+      [
+        ['ok', 'world'],
+        ['ok', 1],
+        ['ok', 'world'],
+      ],
+      schema,
+    )
+
+    expect(result).toEqual(
+      successResult(
+        [
+          ['ok', 'world'],
+          ['ok', 'world'],
+        ],
+        [
+          `$[1]: Rejected, error -> #[1]: Type 'number' is not assignable to 'string'`,
+        ],
       ),
     )
   })
@@ -100,7 +157,10 @@ describe('array unique', () => {
     ])
 
     expect(wrongResult).toEqual(
-      successResult(['1', '2', '3'], [`$[1]: string value is not unique`]),
+      successResult(
+        ['1', '2', '3'],
+        [`$[1]: Rejected, error -> string value is not unique`],
+      ),
     )
 
     expect(helloParser(['1', '2', '3'])).toMatchInlineSnapshot(
@@ -159,7 +219,9 @@ describe('array unique', () => {
     expect(looseResult).toEqual(
       successResult(
         [{ id: 1 }, { id: 2 }, { id: 3 }],
-        [`$[1].id: Type 'number' with value "1" is not unique`],
+        [
+          `$[1]: Rejected, error -> #.id: Type 'number' with value "1" is not unique`,
+        ],
       ),
     )
 
@@ -424,7 +486,9 @@ describe('rc_array_filter_from_schema', () => {
       expect(result).toEqual(
         successResult(
           [{ value: 'hello' }, { value: 'test' }],
-          [`$[1].deleted: Type 'string' is not assignable to 'boolean'`],
+          [
+            `$[1]: Rejected, error -> #.deleted: Type 'string' is not assignable to 'boolean'`,
+          ],
         ),
       )
     })
@@ -441,7 +505,9 @@ describe('rc_array_filter_from_schema', () => {
       expect(result).toEqual(
         successResult(
           [{ value: 'hello' }],
-          [`$[2].value: Type 'number' is not assignable to 'string'`],
+          [
+            `$[2]: Rejected, error -> #.value: Type 'number' is not assignable to 'string'`,
+          ],
         ),
       )
     })
