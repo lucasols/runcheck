@@ -6,6 +6,7 @@ import {
   rc_nullish_default,
   rc_number,
   rc_object,
+  rc_parse,
   rc_parser,
   rc_string,
   rc_transform,
@@ -112,4 +113,17 @@ test('use default on transformed values', () => {
   const parse = rc_parser(schema)
 
   expect(parse(1)).toEqual(successResult(0))
+})
+
+test('rc_default with fallback', () => {
+  const result = rc_parse(
+    [],
+    rc_default(rc_string, 'world').withFallback('world'),
+  )
+
+  expect(result).toEqual(
+    successResult('world', [
+      "Fallback used, errors -> Type 'array' is not assignable to 'string'",
+    ]),
+  )
 })
