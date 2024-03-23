@@ -672,7 +672,8 @@ export function rc_record<V>(
         const parentPath = ctx.path_
 
         for (const [key, inputValue] of Object.entries(inputObj)) {
-          const subPath = `.${key}`
+          const subPath =
+            key === '' || key.includes(' ') ? `['${key}']` : `.${key}`
 
           const path = `${parentPath}${subPath}`
           ctx.path_ = path

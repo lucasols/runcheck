@@ -22,6 +22,7 @@ import {
   rc_string,
   rc_transform,
   rc_union,
+  rc_record,
 } from '../src/runcheck'
 import { errorResult, successResult } from './testUtils'
 
@@ -1106,4 +1107,20 @@ describe('detailed shape description in error message', () => {
       errorResult(`Type 'number' is not assignable to 'string | strict_obj'`),
     )
   })
+})
+
+test('error in empty string key', () => {
+  const schema = rc_object({
+    '': rc_string,
+    record: rc_record(rc_string),
+  })
+
+  const result = rc_parse({ '': 1, record: { '': 1 } }, schema)
+
+  expect(result).toEqual(
+    errorResult(
+      `$['']: Type 'number' is not assignable to 'string'`,
+      `$.record['']: Type 'number' is not assignable to 'string'`,
+    ),
+  )
 })

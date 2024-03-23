@@ -210,7 +210,8 @@ export function rc_object<T extends RcObject>(
           const typekey = key as keyof T
           i += 1
 
-          const subPath = `.${key}`
+          const subPath =
+            key === '' || key.includes(' ') ? `['${key}']` : `.${key}`
 
           const path = `${parentPath}${subPath}`
 
