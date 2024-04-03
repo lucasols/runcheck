@@ -10,7 +10,7 @@ export {
   rc_obj_omit,
   rc_obj_pick,
   rc_obj_strict,
-  rc_object,
+  rc_object
 } from './rc_object'
 
 export type RcParseResult<T> =
@@ -1010,7 +1010,7 @@ type MapTupleToTypes<T extends readonly [...any[]]> = {
  *
  * TS equivalent example: [string, number, boolean]
  */
-export function rc_tuple<T extends readonly RcType<any>[]>(
+export function rc_tuple<const T extends readonly RcType<any>[]>(
   types: T,
 ): RcType<MapTupleToTypes<T>> {
   return {

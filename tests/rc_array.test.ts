@@ -168,7 +168,7 @@ describe('array unique', () => {
     )
   })
 
-  test('trhow error if invalid type is used with unique key', () => {
+  test('throw error if invalid type is used with unique key', () => {
     // @ts-expect-error invalid type
     expect(rc_parser(rc_array(rc_number, { unique: 'id' }))).not.throw()
   })
@@ -230,7 +230,7 @@ describe('array unique', () => {
     )
   })
 
-  test('trhow error if all elements are invalid', () => {
+  test('throw error if all elements are invalid', () => {
     const helloParser = rc_parser(
       rc_loose_array(
         rc_object({
@@ -294,7 +294,7 @@ describe('array unique', () => {
 
 describe('rc_tuple', () => {
   test('basic check', () => {
-    const helloParser = rc_parser(rc_tuple([rc_string] as const))
+    const helloParser = rc_parser(rc_tuple([rc_string]))
 
     const result: RcParseResult<[string]> = helloParser(['hello'])
 
@@ -308,7 +308,7 @@ describe('rc_tuple', () => {
   test('input is wrong', () => {
     const result: RcParseResult<[string]> = rc_parse(
       1,
-      rc_tuple([rc_string] as const),
+      rc_tuple([rc_string]),
     )
 
     expect(result).toMatchInlineSnapshot(
@@ -320,7 +320,7 @@ describe('rc_tuple', () => {
     expect(
       expectParse({
         input: ['ok', 0],
-        type: rc_tuple([rc_string, rc_string] as const),
+        type: rc_tuple([rc_string, rc_string]),
       }),
     ).toEqual(errorResult(`$[1]: Type 'number' is not assignable to 'string'`))
   })
