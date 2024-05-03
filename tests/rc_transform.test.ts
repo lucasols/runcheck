@@ -1,16 +1,19 @@
 import { describe, expect, test } from 'vitest'
 import {
+  RcParser,
   RcType,
   rc_array,
   rc_narrow,
   rc_number,
+  rc_object,
   rc_parse,
   rc_parse_json,
+  rc_parser,
+  rc_string,
   rc_transform,
   rc_union,
   rc_unsafe_transform,
 } from '../src/runcheck'
-import { RcParser, rc_parser, rc_string, rc_object } from '../src/runcheck'
 import { errorResult, successResult } from './testUtils'
 
 describe('valid and invalid inputs', () => {
@@ -132,6 +135,19 @@ describe('transform output validation', () => {
         `$|output|: Expected strict object with 1 keys but got 2`,
         `Type 'object' is not assignable to 'string'`,
       ),
+    )
+  })
+
+  test('warning are shown in result', () => {
+    const transformSchema = rc_transform(
+      rc_string.withFallback('world'),
+      (s) => s.length,
+    )
+
+    expect(rc_parse(1, transformSchema)).toEqual(
+      successResult(5, [
+        `Fallback used, errors -> Type 'number' is not assignable to 'string'`,
+      ]),
     )
   })
 })
