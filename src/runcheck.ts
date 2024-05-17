@@ -10,7 +10,7 @@ export {
   rc_obj_omit,
   rc_obj_pick,
   rc_obj_strict,
-  rc_object
+  rc_object,
 } from './rc_object'
 
 export type RcParseResult<T> =
@@ -1159,18 +1159,50 @@ export function rc_validator<S>(type: RcType<S>) {
   return (input: any): input is S => rc_is_valid(input, type)
 }
 
-export function rc_recursive<T>(type: () => RcType<T>): RcType<T> {
+export function rc_recursive<T extends RcBase<any, any>>(type: () => T): T {
+  let recursiveType: { -readonly [K in keyof T]: T[K] } | undefined = undefined
+
   return {
     ...defaultProps,
     _kind_: 'recursive',
     _parse_(input, ctx) {
-      return type()._parse_(input, ctx)
+      if (!recursiveType) {
+        recursiveType = {
+          ...type(),
+        }
+
+        if (this._optional_) {
+          recursiveType._optional_ = this._optional_
+        }
+
+        if (this._orNullish_) {
+          recursiveType._orNullish_ = this._orNullish_
+        }
+
+        if (this._orNull_) {
+          recursiveType._orNull_ = this._orNull_
+        }
+
+        if (this._autoFix_) {
+          recursiveType._autoFix_ = this._autoFix_
+        }
+
+        if (this._fallback_) {
+          recursiveType._fallback_ = this._fallback_
+        }
+
+        if (this._alternative_key_) {
+          recursiveType._alternative_key_ = this._alternative_key_
+        }
+      }
+
+      return recursiveType._parse_(input, ctx)
     },
-  }
+  } as T
 }
 
 type TransformOptions<T> = {
-  /** if the input type is invalid, the transform will be ignored and this schema will be used to validate the input */
+  /** if the input type is invalid, the transform will be ignore schema will be used to validate the input */
   outputSchema?: RcType<T>
   disableStrictOutputSchema?: boolean
 }
