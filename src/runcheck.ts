@@ -473,8 +473,25 @@ export function rc_union<T extends RcType<any>[]>(
     throw new Error('Unions should have at least one type')
   }
 
+  let kind = ''
+  let allIsObject = false
+
+  for (const type of types) {
+    if (kind) {
+      kind += ' | '
+    }
+
+    kind += type._kind_
+
+    if (!allIsObject && type._is_object_) {
+      allIsObject = true
+    }
+  }
+
   return {
     ...defaultProps,
+    _kind_: kind,
+    _is_object_: allIsObject,
     _parse_(input, ctx) {
       return parse(this, input, ctx, () => {
         const basePath = ctx.path_
@@ -543,7 +560,6 @@ export function rc_union<T extends RcType<any>[]>(
         return false
       })
     },
-    _kind_: types.map((type) => type._kind_).join(' | '),
   }
 }
 
