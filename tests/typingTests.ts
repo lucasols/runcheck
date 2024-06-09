@@ -180,6 +180,27 @@ describe('rc_obj_builder', () => {
       },
     })
   })
+
+  test('object unions should use rc_union', () => {
+    type Test = {
+      a: string
+      union:
+        | {
+            type: 'a'
+          }
+        | {
+            type: 'b'
+          }
+    }
+
+    rc_obj_builder<Test>()({
+      a: rc_string,
+      union: {
+        // @ts-expect-error
+        type: rc_literals('a', 'b'),
+      },
+    })
+  })
 })
 
 describe('joinAsRcTypeUnion', () => {

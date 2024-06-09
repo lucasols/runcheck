@@ -434,10 +434,19 @@ type StrictObjTypeToRcType<T> = {
   [K in keyof T]-?: StrictTypeToRcType<T[K]>
 }
 
+type IsUnion<T, U extends T = T> =
+  T extends unknown ?
+    [U] extends [T] ?
+      false
+    : true
+  : false
+
 type StrictTypeToRcType<T> =
   [T] extends [any[]] ? RcTypeWithSchemaEqualTo<T>
   : [T] extends [Record<string, any>] ?
-    StrictObjTypeToRcType<T> | RcTypeWithSchemaEqualTo<T>
+    IsUnion<T> extends true ?
+      RcTypeWithSchemaEqualTo<T>
+    : StrictObjTypeToRcType<T> | RcTypeWithSchemaEqualTo<T>
   : [T] extends [Record<string, any> | null] ?
     ['null_or', StrictObjTypeToRcType<T>] | RcTypeWithSchemaEqualTo<T>
   : [T] extends [Record<string, any> | undefined] ?
