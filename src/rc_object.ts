@@ -428,30 +428,31 @@ export function rc_obj_omit<O extends AnyObj, K extends keyof O>(
 
 type ExpectedSchema<T> = (t: T) => T
 
-type RcTypeWithSquemaEqualTo<T> = { __rc_type: ExpectedSchema<T> }
+type RcTypeWithSchemaEqualTo<T> = { __rc_type: ExpectedSchema<T> }
 
 type StrictObjTypeToRcType<T> = {
-  [K in keyof T]-?: StricTypeToRcType<T[K]>
+  [K in keyof T]-?: StrictTypeToRcType<T[K]>
 }
 
-type StricTypeToRcType<T> =
-  [T] extends [any[]] ? RcTypeWithSquemaEqualTo<T>
+type StrictTypeToRcType<T> =
+  [T] extends [any[]] ? RcTypeWithSchemaEqualTo<T>
   : [T] extends [Record<string, any>] ?
-    StrictObjTypeToRcType<T> | RcTypeWithSquemaEqualTo<T>
+    StrictObjTypeToRcType<T> | RcTypeWithSchemaEqualTo<T>
   : [T] extends [Record<string, any> | null] ?
-    ['null_or', StrictObjTypeToRcType<T>] | RcTypeWithSquemaEqualTo<T>
+    ['null_or', StrictObjTypeToRcType<T>] | RcTypeWithSchemaEqualTo<T>
   : [T] extends [Record<string, any> | undefined] ?
-    ['optional', StrictObjTypeToRcType<T>] | RcTypeWithSquemaEqualTo<T>
+    ['optional', StrictObjTypeToRcType<T>] | RcTypeWithSchemaEqualTo<T>
   : [T] extends [Record<string, any> | null | undefined] ?
-    ['nullish_or', StrictObjTypeToRcType<T>] | RcTypeWithSquemaEqualTo<T>
-  : RcTypeWithSquemaEqualTo<T>
+    ['nullish_or', StrictObjTypeToRcType<T>] | RcTypeWithSchemaEqualTo<T>
+  : RcTypeWithSchemaEqualTo<T>
 
-type StricTypeToRcTypeBase<T extends Record<string, any>> = {
-  [K in keyof T]-?: StricTypeToRcType<T[K]>
+/** @internal */
+export type StrictTypeToRcTypeBase<T extends Record<string, any>> = {
+  [K in keyof T]-?: StrictTypeToRcType<T[K]>
 }
 
 export function rc_obj_builder<T extends Record<string, any>>() {
-  return <S extends StricTypeToRcTypeBase<T>>(
+  return <S extends StrictTypeToRcTypeBase<T>>(
     schema: {
       [K in keyof S]: K extends keyof T ? S[K] : never
     },

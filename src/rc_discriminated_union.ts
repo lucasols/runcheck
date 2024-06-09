@@ -1,4 +1,9 @@
-import { RcObject, TypeOfObjectType, rc_object } from './rc_object'
+import {
+  RcObject,
+  StrictTypeToRcTypeBase,
+  TypeOfObjectType,
+  rc_object,
+} from './rc_object'
 import {
   Prettify,
   RcBase,
@@ -80,5 +85,24 @@ export function rc_discriminated_union<
         return { errors: false, data: parseResult.data }
       })
     },
+  }
+}
+
+type OmitDiscriminator<K, D extends Record<string, unknown>> =
+  D extends any ? Omit<D, K & string> : never
+
+export function rc_discriminated_union_builder<
+  D extends Record<string, unknown>,
+  K extends keyof D,
+>(discriminatorKey: K) {
+  return (schema: {
+    [P in D[K] & string]: StrictTypeToRcTypeBase<
+      OmitDiscriminator<K, D & { [Q in K]: P }>
+    >
+  }): RcType<D> => {
+    return rc_discriminated_union(
+      discriminatorKey as any,
+      schema as any,
+    ) as unknown as RcType<D>
   }
 }

@@ -1,4 +1,7 @@
-export { rc_discriminated_union } from './rc_discriminated_union'
+export {
+  rc_discriminated_union,
+  rc_discriminated_union_builder,
+} from './rc_discriminated_union'
 export { rc_intersection } from './rc_intersection'
 export {
   rc_enable_obj_strict,
