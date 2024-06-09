@@ -43,6 +43,14 @@ test('obj types optional keys', () => {
   >()
 })
 
+function union(a: string | number) {
+  return a
+}
+
+const testA: string = 'a'
+
+union(testA)
+
 describe('rc_obj_builder', () => {
   test('should return error if has a missing key', () => {
     type Test = {
@@ -199,6 +207,35 @@ describe('rc_obj_builder', () => {
         // @ts-expect-error
         type: rc_literals('a', 'b'),
       },
+    })
+  })
+
+  test('object unions with missing members should return error', () => {
+    type Test = {
+      a: string
+      union:
+        | {
+            type: 'a'
+          }
+        | {
+            type: 'b'
+          }
+        | {
+            type: 'c'
+          }
+    }
+
+    rc_obj_builder<Test>()({
+      a: rc_string,
+      // @ts-expect-error
+      union: rc_union(
+        rc_object({
+          type: rc_literals('a'),
+        }),
+        rc_object({
+          type: rc_literals('c'),
+        }),
+      ),
     })
   })
 })
