@@ -446,7 +446,6 @@ type StrictTypeToRcType<T> =
     ['nullish_or', StrictObjTypeToRcType<T>] | RcTypeWithSchemaEqualTo<T>
   : RcTypeWithSchemaEqualTo<T>
 
-/** @internal */
 export type StrictTypeToRcTypeBase<T extends Record<string, any>> = {
   [K in keyof T]-?: StrictTypeToRcType<T[K]>
 }
