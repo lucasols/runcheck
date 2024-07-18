@@ -23,17 +23,14 @@
   "repository": "github:lucasols/runcheck",
   "author": "Lucas Santos",
   "type": "module",
-  "main": "./dist/runcheck.cjs",
   "module": "./dist/runcheck.js",
   "types": "./dist/runcheck.d.ts",
   "exports": {
     ".": {
-      "import": "./dist/runcheck.js",
-      "require": "./dist/runcheck.cjs"
+      "import": "./dist/runcheck.js"
     },
     "./autofixable": {
-      "import": "./dist/autofixable.js",
-      "require": "./dist/autofixable.cjs"
+      "import": "./dist/autofixable.js"
     }
   },
   "typesVersions": {
