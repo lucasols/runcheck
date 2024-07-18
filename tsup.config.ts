@@ -7,7 +7,7 @@ writeFileSync(`./last-build-version.txt`, `v${pkg.version}\n`, 'utf-8')
 export default defineConfig({
   entry: ['src/runcheck.ts', 'src/autofixable.ts'],
   clean: true,
-  format: ['esm'],
+  format: ['esm', 'cjs'],
   sourcemap: true,
   esbuildOptions(options) {
     options.mangleProps = /[^_]_$/
