@@ -1,11 +1,11 @@
 import { describe, expect, test } from 'vitest'
-import { rc_enable_obj_strict } from '../src/rc_object'
+import { rc_enable_obj_strict, rc_get_obj_shape } from '../src/rc_object'
 import {
   RcParseResult,
   rc_array,
   rc_assert_is_valid,
   rc_boolean,
-  rc_get_obj_schema,
+  rc_get_from_key_as_fallback,
   rc_literals,
   rc_loose_array,
   rc_number,
@@ -18,11 +18,10 @@ import {
   rc_object,
   rc_parse,
   rc_parser,
-  rc_get_from_key_as_fallback,
+  rc_record,
   rc_string,
   rc_transform,
   rc_union,
-  rc_record,
 } from '../src/runcheck'
 import { errorResult, successResult } from './testUtils'
 
@@ -440,7 +439,7 @@ test('rc_get_obj_schema', () => {
     name: rc_string,
   })
 
-  const subSchema = rc_get_obj_schema(baseSchema).name
+  const subSchema = rc_get_obj_shape(baseSchema).name
 
   expect(rc_parse('hello', subSchema)).toEqual(successResult('hello'))
 })
