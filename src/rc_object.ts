@@ -301,9 +301,11 @@ export function rc_obj_extends<T extends RcObject>(
   }
 }
 
-export function rc_get_obj_shape<T extends RcObject>(
-  type: RcObjTypeReturn<T>,
-): T {
+export function rc_get_obj_shape<T extends Record<string, any>>(
+  type: RcType<T>,
+): {
+  [K in keyof T]: RcType<T[K]>
+} {
   if (!type._obj_shape_) {
     throw new Error(`type does not have an object shape`)
   }
@@ -410,7 +412,7 @@ export function rc_obj_pick<O extends AnyObj, K extends keyof O>(
 export function rc_obj_omit<O extends AnyObj, K extends keyof O>(
   obj: RcType<O>,
   keys: K[],
-): RcType<Pick<O, K>> {
+): RcType<Omit<O, K>> {
   const shape = {} as any
 
   if (!obj._obj_shape_) {

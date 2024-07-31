@@ -5,10 +5,13 @@ import {
   RcType,
   joinAsRcTypeUnion,
   rc_boolean,
+  rc_get_obj_shape,
   rc_literals,
   rc_null,
   rc_number,
   rc_obj_builder,
+  rc_obj_omit,
+  rc_obj_pick,
   rc_object,
   rc_string,
   rc_undefined,
@@ -385,5 +388,67 @@ describe('rc_discriminated_union_builder', () => {
         value: rc_number,
       },
     })
+  })
+})
+
+describe('obj shape manipulation', () => {
+  test('rc_get_obj_shape', () => {
+    const shape = rc_get_obj_shape(
+      rc_object({
+        a: rc_string,
+        b: rc_number,
+      }),
+    )
+
+    expectType<
+      Equal<
+        typeof shape,
+        {
+          a: RcType<string>
+          b: RcType<number>
+        }
+      >
+    >()
+  })
+
+  test('rc_obj_omit', () => {
+    const objSchema = rc_obj_omit(
+      rc_object({
+        a: rc_string,
+        b: rc_number,
+        c: rc_boolean,
+      }),
+      ['a'],
+    )
+
+    expectType<
+      Equal<
+        typeof objSchema,
+        RcType<{
+          b: number
+          c: boolean
+        }>
+      >
+    >()
+  })
+
+  test('rc_obj_pick', () => {
+    const objSchema = rc_obj_pick(
+      rc_object({
+        a: rc_string,
+        b: rc_number,
+        c: rc_boolean,
+      }),
+      ['a'],
+    )
+
+    expectType<
+      Equal<
+        typeof objSchema,
+        RcType<{
+          a: string
+        }>
+      >
+    >()
   })
 })

@@ -6,7 +6,7 @@ export { rc_intersection } from './rc_intersection'
 export {
   rc_enable_obj_strict,
   rc_get_from_key_as_fallback,
-  rc_get_obj_shape as rc_get_obj_schema,
+  rc_get_obj_shape,
   rc_obj_builder,
   rc_obj_extends,
   rc_obj_merge,
