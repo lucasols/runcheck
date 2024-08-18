@@ -18,7 +18,9 @@ export {
 
 export type RcParseResult<T> =
   | {
+      /** @deprecated use errors instead */
       error: false
+      errors: false
       ok: true
       /** @deprecated use value instead */
       data: T
@@ -27,6 +29,7 @@ export type RcParseResult<T> =
     }
   | {
       ok: false
+      /** @deprecated use errors instead */
       error: true
       errors: string[]
     }
@@ -1076,6 +1079,7 @@ export function rc_parse<S>(
   if (parseResult.ok) {
     return {
       error: false,
+      errors: false,
       ok: true,
       data: parseResult.data,
       value: parseResult.data,
@@ -1415,6 +1419,7 @@ export function rc_assert_is_valid<S>(
 ): asserts result is {
   ok: true
   error: false
+  errors: false
   data: S
   value: S
   warnings: string[] | false
