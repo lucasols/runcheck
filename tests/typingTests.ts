@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/ban-ts-comment */
 import { rc_discriminated_union_builder } from '../src/rc_discriminated_union'
 import {

@@ -1,11 +1,10 @@
+/* eslint-disable @typescript-eslint/ban-ts-comment */
 // @ts-check
-// @ts-ignore
-import tsParser from '@typescript-eslint/parser'
-import js from '@eslint/js'
-import ts from '@typescript-eslint/eslint-plugin'
-// @ts-ignore
-import { rules } from '@lucasols/eslint-plugin-extended-lint'
+import eslint from '@eslint/js'
+import { extendedLintPlugin } from '@ls-stack/extended-lint'
+import eslintUnicornPlugin from 'eslint-plugin-unicorn'
 import vitest from 'eslint-plugin-vitest'
+import tseslint from 'typescript-eslint'
 
 const isCI = process.env.CI === 'true'
 
@@ -13,31 +12,31 @@ const OFF = 0
 const WARN = 1
 const ERROR = 2
 const ERROR_IN_CI = isCI ? ERROR : WARN
-const ERROR_IN_CI_ONLY = isCI ? ERROR : OFF
+const ERROR_IN_CI_ONLY = isCI ? ERROR : 0
 
-/** @type {import('eslint').Linter.FlatConfig[]} */
-const config = [
+export default tseslint.config(
+  eslint.configs.recommended,
+  ...tseslint.configs.recommendedTypeChecked,
   {
-    files: ['**/*.ts', '**/*.tsx'],
-    ignores: ['dist/**', 'node_modules/**'],
-
-    languageOptions: {
-      parser: tsParser,
-      parserOptions: { project: './tsconfig.json' },
-    },
     linterOptions: {
       reportUnusedDisableDirectives: true,
     },
-    plugins: {
-      '@typescript-eslint': ts,
-      '@lucasols/extended-lint': { rules },
-      vitest: vitest,
+    languageOptions: {
+      parserOptions: {
+        project: './tsconfig.json',
+        tsconfigRootDir: import.meta.dirname,
+      },
+      globals: { process: true },
     },
-    rules: {
-      ...js.configs.recommended.rules,
-      ...ts.configs.recommended.rules,
-      ...ts.configs['recommended-requiring-type-checking'].rules,
+  },
+  {
+    plugins: {
+      '@lucasols/extended-lint': extendedLintPlugin,
+      unicorn: eslintUnicornPlugin,
+      vitest,
+    },
 
+    rules: {
       'no-warning-comments': [ERROR_IN_CI, { terms: ['FIX:'] }],
       'no-constant-binary-expression': ERROR_IN_CI,
       'object-shorthand': ERROR_IN_CI,
@@ -45,7 +44,6 @@ const config = [
       'no-param-reassign': ERROR_IN_CI,
       'prefer-template': ERROR_IN_CI,
       'prefer-const': [ERROR_IN_CI, { destructuring: 'all' }],
-      'no-redeclare': OFF,
 
       'no-prototype-builtins': OFF,
       'no-inner-declarations': OFF,
@@ -87,6 +85,7 @@ const config = [
           format: ['PascalCase'],
         },
       ],
+      '@typescript-eslint/only-throw-error': ERROR_IN_CI,
       '@typescript-eslint/no-unused-expressions': ERROR_IN_CI,
       '@typescript-eslint/no-unused-vars': [
         ERROR_IN_CI,
@@ -100,8 +99,6 @@ const config = [
         ERROR_IN_CI,
         { ignoreOnInitialization: true, allow: ['expect'] },
       ],
-      '@typescript-eslint/no-unsafe-call': ERROR_IN_CI,
-      '@typescript-eslint/method-signature-style': ERROR_IN_CI,
 
       '@typescript-eslint/no-non-null-assertion': OFF,
       '@typescript-eslint/no-empty-function': OFF,
@@ -111,17 +108,15 @@ const config = [
       '@typescript-eslint/no-misused-promises': OFF,
       '@typescript-eslint/restrict-template-expressions': OFF,
       '@typescript-eslint/unbound-method': OFF,
+      '@typescript-eslint/no-unsafe-call': ERROR_IN_CI,
       '@typescript-eslint/no-unsafe-return': OFF,
-      '@typescript-eslint/no-unsafe-member-access': OFF,
 
       /* vitest */
-      'vitest/no-identical-title': ERROR_IN_CI,
       'vitest/expect-expect': ERROR_IN_CI,
+      'vitest/no-identical-title': ERROR_IN_CI,
 
       /* extended-lint */
       '@lucasols/extended-lint/no-unused-type-props-in-args': ERROR_IN_CI,
     },
   },
-]
-
-export default config
+)

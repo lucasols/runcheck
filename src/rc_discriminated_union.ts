@@ -80,6 +80,7 @@ export function rc_discriminated_union<
           return { errors: parseResult.errors, data: undefined }
         }
 
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         parseResult.data[discriminatorKey] = discriminator
 
         return { errors: false, data: parseResult.data }

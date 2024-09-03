@@ -402,6 +402,7 @@ export function rc_obj_pick<O extends AnyObj, K extends keyof O>(
   for (const key of keys) {
     const keyShape = obj._obj_shape_[key as string]
     if (keyShape) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       shape[key] = keyShape
     }
   }
@@ -421,6 +422,7 @@ export function rc_obj_omit<O extends AnyObj, K extends keyof O>(
 
   for (const key of Object.keys(obj._obj_shape_)) {
     if (!(keys as any[]).includes(key)) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       shape[key] = obj._obj_shape_[key]
     }
   }

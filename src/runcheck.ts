@@ -330,9 +330,6 @@ export const defaultProps: Omit<RcType<any>, '_parse_' | '_kind_'> = {
   // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- perf improvement to avoid polymorphic deoptimizations
   // @ts-ignore
   _parse_: undefined as any,
-  // eslint-disable-next-line @typescript-eslint/ban-ts-comment  -- perf improvement to avoid polymorphic deoptimizations
-  // @ts-ignore
-  // @ts-ignore
   _kind_: undefined as any,
   optional,
   optionalKey: optional as any,
@@ -430,7 +427,7 @@ export const rc_date: RcType<Date> = {
   _kind_: 'date',
 }
 
-// eslint-disable-next-line @typescript-eslint/ban-types
+// eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
 export function rc_instanceof<T extends Function>(classToCheck: T): RcType<T> {
   return {
     ...defaultProps,
@@ -813,6 +810,7 @@ function checkArrayItems(
       const isUniqueKey = typeof unique === 'string'
 
       if (isUniqueKey) {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         uniqueValueToCheck = parseResult.data[unique]
       } else if (typeof unique === 'function') {
         uniqueValueToCheck = unique(parseResult.data)
@@ -1294,7 +1292,7 @@ export function rc_transform<Input, Transformed>(
           }
         }
 
-        // FIX: optimize this
+        // TODO: optimize this
         const newType = {
           ...type,
           _kind_: this._kind_,
@@ -1365,7 +1363,7 @@ export function rc_unsafe_transform<Input, Transformed>(
           }
         }
 
-        // FIX: optimize this
+        // TODO: optimize this
         const newType = {
           ...type,
           _kind_: this._kind_,
