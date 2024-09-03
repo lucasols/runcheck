@@ -248,3 +248,125 @@ describe('rc_narrow', () => {
     expect(true).toEqual(true)
   })
 })
+
+describe('bug: rc_unsafe_transform | null | undefined not working', () => {
+  describe('orNull', () => {
+    const schema = rc_unsafe_transform(rc_string, (s) =>
+      s.length > 10 ?
+        { errors: 'too long', ok: false }
+      : { data: s.length, ok: true },
+    ).orNull()
+
+    test('valid input', () => {
+      const parse = rc_parser(schema)
+
+      expect(parse('hello')).toEqual(successResult(5))
+    })
+
+    test('invalid string input', () => {
+      const parse = rc_parser(schema)
+
+      expect(parse('loren ipsum dot amet')).toEqual(errorResult(`too long`))
+    })
+
+    test('null input', () => {
+      const parse = rc_parser(schema)
+
+      expect(parse(null)).toEqual(successResult(null))
+    })
+
+    test('invalid input', () => {
+      const parse = rc_parser(schema)
+
+      expect(parse(1)).toEqual(
+        errorResult(`Type 'number' is not assignable to 'null | string'`),
+      )
+    })
+  })
+
+  describe('optional', () => {
+    const schema = rc_unsafe_transform(rc_string, (s) =>
+      s.length > 10 ?
+        { errors: 'too long', ok: false }
+      : { data: s.length, ok: true },
+    ).optional()
+
+    test('undefined input', () => {
+      const parse = rc_parser(schema)
+
+      expect(parse(undefined)).toEqual(successResult(undefined))
+    })
+
+    test('invalid input', () => {
+      const parse = rc_parser(schema)
+
+      expect(parse(1)).toEqual(
+        errorResult(`Type 'number' is not assignable to 'undefined | string'`),
+      )
+    })
+  })
+})
+
+describe('bug: rc_transform | null | undefined not working', () => {
+  describe('orNull', () => {
+    const schema = rc_transform(rc_string, (s) => s.length).orNull()
+
+    test('valid input', () => {
+      const parse = rc_parser(schema)
+
+      expect(parse('hello')).toEqual(successResult(5))
+    })
+
+    test('invalid input', () => {
+      const parse = rc_parser(schema)
+
+      expect(parse(1)).toEqual(
+        errorResult(`Type 'number' is not assignable to 'null | string'`),
+      )
+    })
+
+    test('null input', () => {
+      const parse = rc_parser(schema)
+
+      expect(parse(null)).toEqual(successResult(null))
+    })
+  })
+
+  describe('optional', () => {
+    const schema = rc_transform(rc_string, (s) => s.length).optional()
+
+    test('valid input', () => {
+      const parse = rc_parser(schema)
+
+      expect(parse('hello')).toEqual(successResult(5))
+    })
+
+    test('undefined input', () => {
+      const parse = rc_parser(schema)
+
+      expect(parse(undefined)).toEqual(successResult(undefined))
+    })
+  })
+
+  describe('orNullish', () => {
+    const schema = rc_transform(rc_string, (s) => s.length).orNullish()
+
+    test('valid input', () => {
+      const parse = rc_parser(schema)
+
+      expect(parse('hello')).toEqual(successResult(5))
+    })
+
+    test('null input', () => {
+      const parse = rc_parser(schema)
+
+      expect(parse(null)).toEqual(successResult(null))
+    })
+
+    test('undefined input', () => {
+      const parse = rc_parser(schema)
+
+      expect(parse(undefined)).toEqual(successResult(undefined))
+    })
+  })
+})

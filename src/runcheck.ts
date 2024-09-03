@@ -125,11 +125,11 @@ function withFallback(this: RcType<any>, fallback: any): RcType<any> {
 
 /** @internal */
 export type ErrorWithPath = string & { __withPath: true }
-type ErrorWithouPath = string & { __withPath?: never }
+type ErrorWithoutPath = string & { __withPath?: never }
 
 export function getWarningOrErrorWithPath(
   ctx: { path_: string },
-  message: ErrorWithouPath,
+  message: ErrorWithoutPath,
 ): ErrorWithPath {
   return `${ctx.path_ ? `$${ctx.path_}: ` : ''}${message}` as ErrorWithPath
 }
@@ -327,10 +327,11 @@ export const defaultProps: Omit<RcType<any>, '_parse_' | '_kind_'> = {
   __rc_type: undefined as any,
   withFallback,
   where,
-  // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- perf improvement to avoid polymorphic deoptimaztions
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment -- perf improvement to avoid polymorphic deoptimizations
   // @ts-ignore
   _parse_: undefined as any,
-  // eslint-disable-next-line @typescript-eslint/ban-ts-comment  -- perf improvement to avoid polymorphic deoptimaztions
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment  -- perf improvement to avoid polymorphic deoptimizations
+  // @ts-ignore
   // @ts-ignore
   _kind_: undefined as any,
   optional,
@@ -1270,40 +1271,49 @@ export function rc_transform<Input, Transformed>(
 ): RcType<Transformed> {
   return {
     ...defaultProps,
-    _kind_: `transform_from_${type._kind_}`,
+    _kind_: type._kind_,
     _parse_(input, ctx) {
-      let outputResultErrors: ErrorWithPath[] | null = null
+      return parse(this, input, ctx, () => {
+        let outputResultErrors: ErrorWithPath[] | null = null
 
-      if (outputSchema) {
-        const parseResult = validateTransformOutput(
-          ctx,
-          outputSchema,
-          input,
-          disableStrictOutputSchema,
-        )
+        if (outputSchema) {
+          const parseResult = validateTransformOutput(
+            ctx,
+            outputSchema,
+            input,
+            disableStrictOutputSchema,
+          )
+
+          if (parseResult.ok) {
+            return {
+              data: parseResult.data,
+              errors: false,
+            }
+          } else {
+            outputResultErrors = parseResult.errors
+          }
+        }
+
+        // FIX: optimize this
+        const newType = {
+          ...type,
+          _kind_: this._kind_,
+        }
+
+        const parseResult = newType._parse_(input, ctx)
 
         if (parseResult.ok) {
-          return parseResult
+          return {
+            errors: false,
+            data: transform(parseResult.data, type),
+          }
         } else {
-          outputResultErrors = parseResult.errors
+          return {
+            errors: [...(outputResultErrors || []), ...parseResult.errors],
+            data: undefined,
+          }
         }
-      }
-
-      const parseResult = type._parse_(input, ctx)
-
-      if (parseResult.ok) {
-        return {
-          ok: true,
-          data: transform(parseResult.data, type),
-          errors: undefined,
-        }
-      } else {
-        return {
-          ok: false,
-          errors: [...(outputResultErrors || []), ...parseResult.errors],
-          data: undefined,
-        }
-      }
+      })
     },
   }
 }
@@ -1332,51 +1342,60 @@ export function rc_unsafe_transform<Input, Transformed>(
 ): RcType<Transformed> {
   return {
     ...defaultProps,
-    _kind_: `transform_from_${type._kind_}`,
+    _kind_: type._kind_,
     _parse_(input, ctx) {
-      let outputResultErrors: ErrorWithPath[] | null = null
+      return parse(this, input, ctx, (): IsValid<Transformed> => {
+        let outputResultErrors: ErrorWithPath[] | null = null
 
-      if (outputSchema) {
-        const parseResult = validateTransformOutput(
-          ctx,
-          outputSchema,
-          input,
-          disableStrictOutputSchema,
-        )
+        if (outputSchema) {
+          const parseResult = validateTransformOutput(
+            ctx,
+            outputSchema,
+            input,
+            disableStrictOutputSchema,
+          )
 
-        if (parseResult.ok) {
-          return parseResult
-        } else {
-          outputResultErrors = parseResult.errors
-        }
-      }
-
-      const parseResult = type._parse_(input, ctx)
-
-      if (parseResult.ok) {
-        const transformResult = transform(parseResult.data, type)
-
-        if (transformResult.ok) {
-          return { ok: true, data: transformResult.data, errors: undefined }
-        } else {
-          return {
-            ok: false,
-            errors:
-              typeof transformResult.errors === 'string' ?
-                [getWarningOrErrorWithPath(ctx, transformResult.errors)]
-              : transformResult.errors.map((error) =>
-                  getWarningOrErrorWithPath(ctx, error),
-                ),
-            data: undefined,
+          if (parseResult.ok) {
+            return {
+              errors: false,
+              data: parseResult.data,
+            }
+          } else {
+            outputResultErrors = parseResult.errors
           }
         }
-      }
 
-      return {
-        ok: false,
-        errors: [...(outputResultErrors || []), ...parseResult.errors],
-        data: undefined,
-      }
+        // FIX: optimize this
+        const newType = {
+          ...type,
+          _kind_: this._kind_,
+        }
+
+        const parseResult = newType._parse_(input, ctx)
+
+        if (parseResult.ok) {
+          const transformResult = transform(parseResult.data, type)
+
+          if (transformResult.ok) {
+            return { errors: false, data: transformResult.data }
+          } else {
+            return {
+              errors:
+                typeof transformResult.errors === 'string' ?
+                  [getWarningOrErrorWithPath(ctx, transformResult.errors)]
+                : transformResult.errors.map((error) =>
+                    getWarningOrErrorWithPath(ctx, error),
+                  ),
+              data: undefined,
+            }
+          }
+        }
+
+        return {
+          errors: [...(outputResultErrors || []), ...parseResult.errors],
+          data: undefined,
+        }
+      })
     },
   }
 }

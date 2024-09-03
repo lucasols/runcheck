@@ -833,6 +833,19 @@ describe('rc_strict_obj', () => {
       ),
     )
   })
+
+  test('input with missing optional key should not return error', () => {
+    const input = { user: 1 }
+
+    const result = rc_parse(
+      input,
+      rc_obj_strict({ user: rc_number, optional_extra: rc_number.optional() }),
+    )
+
+    expect(result).toEqual(
+      successResult({ user: 1, optional_extra: undefined }),
+    )
+  })
 })
 
 test('rc_obj_builder should return error for wrong schema', () => {
