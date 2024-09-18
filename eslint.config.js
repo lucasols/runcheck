@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/ban-ts-comment */
 // @ts-check
 import eslint from '@eslint/js'
 import { extendedLintPlugin } from '@ls-stack/extended-lint'
