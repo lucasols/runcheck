@@ -856,33 +856,23 @@ function checkArrayItems(
   }
 
   if (looseErrors.length > 0) {
-    if (arrayResult.length === 0) {
-      return {
-        errors: looseErrors
-          .slice(0, 5)
-          .map(([err]) => err)
-          .flat(),
-        data: undefined,
-      }
-    } else {
-      const adjustedLooseErrors: ErrorWithPath[] = []
+    const adjustedLooseErrors: ErrorWithPath[] = []
 
-      for (const [errors, path] of looseErrors) {
-        for (const err of errors) {
-          let itemError = err.slice(path.length + 1)
+    for (const [errors, path] of looseErrors) {
+      for (const err of errors) {
+        let itemError = err.slice(path.length + 1)
 
-          if (itemError.startsWith(': ')) {
-            itemError = itemError.slice(2)
-          }
-
-          if (itemError.startsWith('.') || itemError.startsWith('[')) {
-            itemError = `#${itemError}`
-          }
-
-          const newError = `$${path}: Rejected, error -> ${itemError}`
-
-          adjustedLooseErrors.push(newError as ErrorWithPath)
+        if (itemError.startsWith(': ')) {
+          itemError = itemError.slice(2)
         }
+
+        if (itemError.startsWith('.') || itemError.startsWith('[')) {
+          itemError = `#${itemError}`
+        }
+
+        const newError = `$${path}: Rejected, error -> ${itemError}`
+
+        adjustedLooseErrors.push(newError as ErrorWithPath)
       }
 
       addWarnings(ctx, adjustedLooseErrors)

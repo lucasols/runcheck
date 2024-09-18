@@ -6,8 +6,11 @@ import {
   rc_array_filter_from_schema,
   rc_boolean,
   rc_disable_loose_array,
+  rc_discriminated_union,
+  rc_literals,
   rc_loose_array,
   rc_number,
+  rc_obj_builder,
   rc_object,
   rc_parse,
   rc_parser,
@@ -230,31 +233,6 @@ describe('array unique', () => {
     )
   })
 
-  test('throw error if all elements are invalid', () => {
-    const helloParser = rc_parser(
-      rc_loose_array(
-        rc_object({
-          id: rc_string,
-        }),
-        { unique: 'id' },
-      ),
-    )
-
-    const looseResult: RcParseResult<{ id: string }[]> = helloParser([
-      { id: 1 },
-      { id: 2 },
-      { id: 3 },
-    ])
-
-    expect(looseResult).toEqual(
-      errorResult(
-        `$[0].id: Type 'number' is not assignable to 'string'`,
-        `$[1].id: Type 'number' is not assignable to 'string'`,
-        `$[2].id: Type 'number' is not assignable to 'string'`,
-      ),
-    )
-  })
-
   test('strict mode for an array of objects, with getId fn', () => {
     const helloParser = rc_parser(
       rc_array(
@@ -306,10 +284,7 @@ describe('rc_tuple', () => {
   })
 
   test('input is wrong', () => {
-    const result: RcParseResult<[string]> = rc_parse(
-      1,
-      rc_tuple([rc_string]),
-    )
+    const result: RcParseResult<[string]> = rc_parse(1, rc_tuple([rc_string]))
 
     expect(result).toMatchInlineSnapshot(
       errorResult(`Type 'number' is not assignable to '[string]'`),
@@ -512,4 +487,43 @@ describe('rc_array_filter_from_schema', () => {
       )
     })
   })
+})
+
+test('reproduce bug in rc_loose_array', () => {
+  const fieldSchema = rc_discriminated_union('type', {
+    text: {
+      format: rc_literals('markdown', 'html'),
+    },
+    select: {
+      options: rc_loose_array(
+        rc_obj_builder<{
+          value: string
+          label: string
+        }>()({
+          value: rc_string,
+          label: rc_string,
+        }),
+      ),
+    },
+  })
+
+  const result = rc_parse(
+    [
+      { type: 'text', format: 'markdown' },
+      { type: 'select', options: [{ label: 'world' }] },
+    ],
+    rc_array(fieldSchema),
+  )
+
+  expect(result).toEqual(
+    successResult(
+      [
+        { type: 'text', format: 'markdown' },
+        { type: 'select', options: [] },
+      ],
+      [
+        `$[1]|type: select|.options[0]: Rejected, error -> #.value: Type 'undefined' is not assignable to 'string'`,
+      ],
+    ),
+  )
 })

@@ -601,7 +601,7 @@ test('reproduce wrong message bug', () => {
 
   expect(result).toMatchObject({
     warnings: [
-      "$[0].attachments[0]: Fallback used, errors -> $.file: Type 'object' is not assignable to 'string'",
+      "$[0].attachments[0]: Rejected, error -> #.file: Type 'object' is not assignable to 'string'",
     ],
   })
 })

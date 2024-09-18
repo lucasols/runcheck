@@ -56,6 +56,10 @@ export default tseslint.config(
               group: ['*.test'],
               message: 'Do not import test files',
             },
+            {
+              group: ['dist-old', 'dist'],
+              message: 'Only import from src',
+            },
           ],
         },
       ],
