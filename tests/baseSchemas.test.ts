@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'vitest'
 import {
   RcParseResult,
+  getSchemaKind,
   rc_any,
   rc_boolean,
   rc_date,
@@ -63,11 +64,17 @@ describe('rc_number', () => {
       errorResult(`Type 'string' is not assignable to 'number'`),
     )
 
-    expect(rc_parse(NaN, rc_number).error).toBeTruthy()
+    expect(rc_parse(NaN, rc_number)).toEqual(
+      errorResult(`Type 'NaN' is not assignable to 'number'`),
+    )
+
+    expect(rc_parse(Number('not a number'), rc_number)).toEqual(
+      errorResult(`Type 'NaN' is not assignable to 'number'`),
+    )
 
     expect(rc_parse(NaN, rc_number.withFallback(5))).toEqual(
       successResult(5, [
-        "Fallback used, errors -> Type 'number' is not assignable to 'number'",
+        "Fallback used, errors -> Type 'NaN' is not assignable to 'number'",
       ]),
     )
   })
@@ -241,4 +248,9 @@ describe('rc_type.where', () => {
 
     expect(result).toEqual(errorResult(`Predicate failed: too short`))
   })
+})
+
+test('getSchemaKind', () => {
+  expect(getSchemaKind(rc_string)).toBe('string')
+  expect(getSchemaKind(rc_number)).toBe('number')
 })

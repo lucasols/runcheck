@@ -1405,6 +1405,10 @@ export function normalizedTypeOf(
       }
     }
 
+    if (typeof input === 'number' && Number.isNaN(input)) {
+      return 'NaN'
+    }
+
     return typeOf
   })()
 
@@ -1500,4 +1504,8 @@ export function joinAsRcTypeUnion<T>(
   type: T,
 ): RcType<T extends RcType<infer U> ? U : never> {
   return type as any
+}
+
+export function getSchemaKind(schema: RcType<any>): string {
+  return schema._kind_
 }
