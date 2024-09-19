@@ -253,4 +253,7 @@ describe('rc_type.where', () => {
 test('getSchemaKind', () => {
   expect(getSchemaKind(rc_string)).toBe('string')
   expect(getSchemaKind(rc_number)).toBe('number')
+  expect(getSchemaKind(rc_number.optional())).toBe('undefined | number')
+  expect(getSchemaKind(rc_number.orNull())).toBe('null | number')
+  expect(getSchemaKind(rc_number.orNullish())).toBe('null | undefined | number')
 })
