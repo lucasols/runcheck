@@ -442,7 +442,7 @@ export function rc_instanceof<T extends Function>(classToCheck: T): RcType<T> {
 
 export function rc_literals<T extends (string | number | boolean)[]>(
   ...literals: T
-): RcType<T[number]> & { items: T } {
+): RcType<T[number]> {
   if (literals.length === 0) {
     throw new Error('rc_literal requires at least one literal')
   }
@@ -465,7 +465,6 @@ export function rc_literals<T extends (string | number | boolean)[]>(
       literals.length == 1 ?
         normalizedTypeOf(literals[0], true)
       : literals.map((literal) => normalizedTypeOf(literal, true)).join(' | '),
-    items: literals,
   }
 }
 
