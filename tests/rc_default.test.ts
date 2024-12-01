@@ -1,5 +1,4 @@
 import { describe, expect, test } from 'vitest'
-import { errorResult, successResult } from './testUtils'
 import {
   RcType,
   rc_default,
@@ -11,6 +10,7 @@ import {
   rc_string,
   rc_transform,
 } from '../src/runcheck'
+import { errorResult, successResult } from './testUtils'
 
 describe('default', () => {
   const schema: RcType<number> = rc_default(rc_number, 0)
@@ -84,7 +84,7 @@ test('make schema optional', () => {
   expect(parse(undefined)).toEqual(successResult(0))
 })
 
-test('make nullish default nulish', () => {
+test('make nullish default nullish', () => {
   const schema: RcType<number> = rc_nullish_default(rc_number, 0)
 
   const parse = rc_parser(schema)
