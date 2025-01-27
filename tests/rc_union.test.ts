@@ -191,3 +191,16 @@ test('nullable union error', () => {
     errorResult(`Type 'boolean' is not assignable to 'null | number | string'`),
   )
 })
+
+test('object union', () => {
+  const shape = rc_union(
+    rc_object({ a: rc_string }),
+    rc_object({ b: rc_number }),
+  )
+
+  expect(rc_parse({ a: 'hello', b: 1, c: null }, shape)).toEqual(
+    successResult({ a: 'hello' }),
+  )
+
+  expect(rc_parse({ b: 1, c: null }, shape)).toEqual(successResult({ b: 1 }))
+})
