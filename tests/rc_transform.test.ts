@@ -31,7 +31,7 @@ describe('valid and invalid inputs', () => {
     const input = 1
 
     expect(parse(input)).toEqual(
-      errorResult(`Type 'number' is not assignable to 'string'`),
+      errorResult(`Type 'number' is not assignable to 'string_transform'`),
     )
   })
 })
@@ -91,7 +91,7 @@ describe('transform output validation', () => {
     expect(parse(input)).toEqual(
       errorResult(
         `$.str_to_arr|output|: Type 'number' is not assignable to 'string[]'`,
-        `$.str_to_arr: Type 'number' is not assignable to 'string'`,
+        `$.str_to_arr: Type 'number' is not assignable to 'string_transform'`,
       ),
     )
   })
@@ -104,7 +104,7 @@ describe('transform output validation', () => {
     expect(rc_parse({}, schema2)).toEqual(
       errorResult(
         `$|output|: Type 'object' is not assignable to 'number'`,
-        `Type 'object' is not assignable to 'string'`,
+        `Type 'object' is not assignable to 'string_transform'`,
       ),
     )
   })
@@ -133,7 +133,7 @@ describe('transform output validation', () => {
     ).toEqual(
       errorResult(
         `$|output|: Expected strict object with 1 keys but got 2`,
-        `Type 'object' is not assignable to 'string'`,
+        `Type 'object' is not assignable to 'string_transform'`,
       ),
     )
   })
@@ -146,7 +146,7 @@ describe('transform output validation', () => {
 
     expect(rc_parse(1, transformSchema)).toEqual(
       successResult(5, [
-        `Fallback used, errors -> Type 'number' is not assignable to 'string'`,
+        `Fallback used, errors -> Type 'number' is not assignable to 'string_transform'`,
       ]),
     )
   })
@@ -177,7 +177,7 @@ describe('unsafe transform', () => {
     const input = 1
 
     expect(parse(input)).toEqual(
-      errorResult(`Type 'number' is not assignable to 'string'`),
+      errorResult(`Type 'number' is not assignable to 'string_transform'`),
     )
   })
 
@@ -273,7 +273,9 @@ describe('rc_unsafe_transform with modifiers', () => {
 
     test('invalid input', () => {
       expect(rc_parse(1, schema)).toEqual(
-        errorResult(`Type 'number' is not assignable to 'null | string'`),
+        errorResult(
+          `Type 'number' is not assignable to 'null | string_transform'`,
+        ),
       )
     })
   })
@@ -291,7 +293,9 @@ describe('rc_unsafe_transform with modifiers', () => {
 
     test('invalid input', () => {
       expect(rc_parse(1, schema)).toEqual(
-        errorResult(`Type 'number' is not assignable to 'undefined | string'`),
+        errorResult(
+          `Type 'number' is not assignable to 'undefined | string_transform'`,
+        ),
       )
     })
   })
@@ -309,7 +313,9 @@ describe('rc_transform with modifiers', () => {
 
     test('invalid input', () => {
       expect(rc_parse(1, schema)).toEqual(
-        errorResult(`Type 'number' is not assignable to 'null | string'`),
+        errorResult(
+          `Type 'number' is not assignable to 'null | string_transform'`,
+        ),
       )
     })
 
@@ -352,9 +358,50 @@ describe('rc_transform with modifiers', () => {
     test('invalid input', () => {
       expect(rc_parse(1, schema)).toEqual(
         successResult(0, [
-          `Fallback used, errors -> Type 'number' is not assignable to 'string'`,
+          `Fallback used, errors -> Type 'number' is not assignable to 'string_transform'`,
         ]),
       )
     })
   })
+})
+
+const numberFromNumericString = rc_unsafe_transform(rc_string, (s) => {
+  const parsed = Number(s)
+
+  if (Number.isNaN(parsed)) {
+    return { errors: `${s} is not a number`, ok: false }
+  }
+
+  return { data: parsed, ok: true }
+})
+
+test('rc_unsafe_transform in union', () => {
+  const schema = rc_union(rc_number, numberFromNumericString)
+
+  expect(rc_parse(123, schema)).toEqual(successResult(123))
+  expect(rc_parse('123', schema)).toEqual(successResult(123))
+  expect(rc_parse('hello', schema)).toEqual(
+    errorResult(
+      `Type 'string' is not assignable to 'number | string_transform'`,
+    ),
+  )
+})
+
+test('rc_transform in union inside object', () => {
+  const schema = rc_object({
+    hello: rc_union(rc_number, numberFromNumericString),
+  })
+
+  expect(rc_parse({ hello: 123 }, schema)).toEqual(
+    successResult({ hello: 123 }),
+  )
+  expect(rc_parse({ hello: '123' }, schema)).toEqual(
+    successResult({ hello: 123 }),
+  )
+
+  expect(rc_parse({ hello: 'hello' }, schema)).toEqual(
+    errorResult(
+      `$.hello: Type 'string' is not assignable to 'number | string_transform'`,
+    ),
+  )
 })

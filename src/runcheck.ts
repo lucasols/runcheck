@@ -524,7 +524,7 @@ export function rc_union<T extends RcType<any>[]>(
           ctx.objErrKeyIndex_ = 0
 
           if (parseResult.ok) {
-            return true
+            return { data: parseResult.data, errors: false }
           } else if (type._is_object_ && objErrIndex !== -1) {
             if (objErrIndex > 0) {
               nonShallowObjErrors.push(...parseResult.errors)
@@ -1259,7 +1259,7 @@ export function rc_transform<Input, Transformed>(
 ): RcType<Transformed> {
   return {
     ...defaultProps,
-    _kind_: type._kind_,
+    _kind_: `${type._kind_}_transform`,
     _parse_(input, ctx) {
       return parse(this, input, ctx, () => {
         let outputResultErrors: ErrorWithPath[] | null = null
@@ -1330,7 +1330,7 @@ export function rc_unsafe_transform<Input, Transformed>(
 ): RcType<Transformed> {
   return {
     ...defaultProps,
-    _kind_: type._kind_,
+    _kind_: `${type._kind_}_transform`,
     _parse_(input, ctx) {
       return parse(this, input, ctx, (): IsValid<Transformed> => {
         let outputResultErrors: ErrorWithPath[] | null = null
