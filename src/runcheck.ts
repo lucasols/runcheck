@@ -1214,8 +1214,14 @@ export function rc_recursive<T extends RcBase<any, any>>(type: () => T): T {
 }
 
 type TransformOptions<T> = {
-  /** if the input type is invalid, the transform will be ignore schema will be used to validate the input */
+  /**
+   * @deprecated will be removed in the next major version
+   *
+   * if the input type is invalid, the transform will be ignore
+   * schema will be used to validate the input
+   */
   outputSchema?: RcType<T>
+  /** @deprecated will be removed in the next major version */
   disableStrictOutputSchema?: boolean
 }
 
