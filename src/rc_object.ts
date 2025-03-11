@@ -10,6 +10,8 @@ import {
   isRcType,
   normalizedTypeOf,
   parse,
+  rc_array,
+  rc_loose_array,
   snakeCase,
 } from './runcheck'
 
@@ -80,6 +82,24 @@ function unwrapToObjSchema(input: unknown): RcType<any> {
         return unwrapToObjSchema(value).orNullish()
       case 'null_or':
         return unwrapToObjSchema(value).orNull()
+      case 'array_of':
+        return rc_array(unwrapToObjSchema(value))
+      case 'loose_array_of':
+        return rc_loose_array(unwrapToObjSchema(value))
+      case 'optional_array_of':
+        return rc_array(unwrapToObjSchema(value)).optional()
+      case 'optional_loose_array_of':
+        return rc_loose_array(unwrapToObjSchema(value)).optional()
+      case 'null_or_array_of':
+        return rc_array(unwrapToObjSchema(value)).orNull()
+      case 'null_or_loose_array_of':
+        return rc_loose_array(unwrapToObjSchema(value)).orNull()
+      case 'nullish_or_array_of':
+        return rc_array(unwrapToObjSchema(value)).orNullish()
+      case 'nullish_or_loose_array_of':
+        return rc_loose_array(unwrapToObjSchema(value)).orNullish()
+      default:
+        return type
     }
   }
 
@@ -446,7 +466,21 @@ type IsUnion<T, U extends T = T> =
   : false
 
 type StrictTypeToRcType<T> =
-  [T] extends [any[]] ? RcTypeWithSchemaEqualTo<T>
+  [T] extends [(infer U)[]] ?
+    | ['array_of' | 'loose_array_of', StrictTypeToRcType<U>]
+    | RcTypeWithSchemaEqualTo<T>
+  : [T] extends [(infer U)[] | undefined] ?
+    | ['optional_array_of' | 'optional_loose_array_of', StrictTypeToRcType<U>]
+    | RcTypeWithSchemaEqualTo<T>
+  : [T] extends [(infer U)[] | null] ?
+    | ['null_or_array_of' | 'null_or_loose_array_of', StrictTypeToRcType<U>]
+    | RcTypeWithSchemaEqualTo<T>
+  : [T] extends [(infer U)[] | undefined | null] ?
+    | [
+        'nullish_or_array_of' | 'nullish_or_loose_array_of',
+        StrictTypeToRcType<U>,
+      ]
+    | RcTypeWithSchemaEqualTo<T>
   : [T] extends [Record<string, any>] ?
     IsUnion<T> extends true ?
       RcTypeWithSchemaEqualTo<T>

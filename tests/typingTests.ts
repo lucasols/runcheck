@@ -242,6 +242,106 @@ describe('rc_obj_builder', () => {
       ),
     })
   })
+
+  test('array prop with wrong type should return error', () => {
+    type Test = {
+      objArray: string[]
+    }
+
+    rc_obj_builder<Test>()({
+      objArray: [
+        'array_of',
+        // @ts-expect-error
+        rc_number,
+      ],
+    })
+  })
+
+  test('obj array prop with wrong type should return error', () => {
+    type Test = {
+      objArray: { a: string }[]
+    }
+
+    rc_obj_builder<Test>()({
+      objArray: [
+        'array_of',
+        {
+          // @ts-expect-error
+          a: rc_number,
+        },
+      ],
+    })
+  })
+
+  test('obj array with extra properties should return error', () => {
+    type Test = {
+      objArray: { a: string }[]
+    }
+
+    rc_obj_builder<Test>()({
+      objArray: [
+        'array_of',
+        {
+          a: rc_string,
+          // @ts-expect-error
+          b: rc_number,
+        },
+      ],
+    })
+  })
+
+  test('obj array with missing properties should return error', () => {
+    type Test = {
+      objArray: { a: string; b: number }[]
+    }
+
+    rc_obj_builder<Test>()({
+      objArray: [
+        'array_of',
+        // @ts-expect-error
+        { a: rc_string },
+      ],
+    })
+  })
+
+  test('array union should not autocomplete', () => {
+    type Test = {
+      objArray: (string | number)[]
+    }
+
+    rc_obj_builder<Test>()({
+      objArray: [
+        'array_of',
+        // @ts-expect-error
+        rc_string,
+      ],
+    })
+
+    rc_obj_builder<Test>()({
+      objArray: ['array_of', rc_union(rc_string, rc_number)],
+    })
+  })
+
+  test('array object union should not autocomplete', () => {
+    type Test = {
+      objArray: ({ a: string } | { a: number })[]
+    }
+
+    rc_obj_builder<Test>()({
+      objArray: [
+        'array_of',
+        // @ts-expect-error
+        { a: rc_string },
+      ],
+    })
+
+    rc_obj_builder<Test>()({
+      objArray: [
+        'array_of',
+        rc_union(rc_object({ a: rc_string }), rc_object({ a: rc_number })),
+      ],
+    })
+  })
 })
 
 describe('joinAsRcTypeUnion', () => {

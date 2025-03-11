@@ -606,7 +606,31 @@ test('reproduce wrong message bug', () => {
   })
 })
 
-test('rc_obj_builder', () => {
+describe('rc_obj_builder', () => {
+  type ArrayProps = {
+    primitiveArray: string[]
+    optionalPrimitiveArray?: number[]
+    primitiveArrayOrNull: string[] | null
+    primitiveArrayOrNullish?: string[] | null
+
+    objArray: {
+      a: string
+    }[]
+    optionalObjArray?: {
+      a: string
+    }[]
+    objArrayOrNull:
+      | {
+          a: string
+        }[]
+      | null
+    objArrayOrNullish?:
+      | {
+          a: string
+        }[]
+      | null
+  }
+
   type Test = {
     a: string
     b: number
@@ -635,7 +659,7 @@ test('rc_obj_builder', () => {
     obj2OrNull?: {
       a: string
     } | null
-  }
+  } & ArrayProps
 
   const obj2 = rc_object({
     a: rc_string,
@@ -671,28 +695,174 @@ test('rc_obj_builder', () => {
       ),
     }).orNull(),
     obj2OrNull: obj3.orNullish(),
+    primitiveArray: ['array_of', rc_string],
+    optionalPrimitiveArray: ['optional_array_of', rc_number],
+    primitiveArrayOrNull: ['null_or_array_of', rc_string],
+    primitiveArrayOrNullish: ['nullish_or_array_of', rc_string],
+    objArray: ['array_of', { a: rc_string }],
+    optionalObjArray: ['optional_array_of', { a: rc_string }],
+    objArrayOrNull: ['null_or_array_of', { a: rc_string }],
+    objArrayOrNullish: ['nullish_or_array_of', { a: rc_string }],
   })
 
-  const result = rc_parse(
-    {
+  const baseValues = {
+    a: 'a',
+    b: 1,
+    c: 'c',
+    literal: 'a',
+    obj: {
       a: 'a',
       b: 1,
-      c: 'c',
-      literal: 'a',
-      obj: {
-        a: 'a',
-        b: 1,
-        looseArray: ['a', 'b'],
-        veryLongPropertyNameThatShouldBeAutocompleted: 'a',
-      },
-      objOrNull: null,
-      obj2: { a: 'a' },
-      literalInObjArray: null,
+      looseArray: ['a', 'b'],
+      veryLongPropertyNameThatShouldBeAutocompleted: 'a',
     },
-    shape,
-  )
+    objOrNull: null,
+    obj2: { a: 'a' },
+    literalInObjArray: null,
+    primitiveArray: ['a'],
+    optionalPrimitiveArray: [1, 2],
+    primitiveArrayOrNull: ['a'],
+    primitiveArrayOrNullish: ['a'],
+    objArray: [{ a: 'a' }],
+    optionalObjArray: [{ a: 'a' }],
+    objArrayOrNull: [{ a: 'a' }],
+    objArrayOrNullish: [{ a: 'a' }],
+  }
 
-  expect(result).toEqual(successResult(expect.anything()))
+  test('with base values', () => {
+    const result = rc_parse(baseValues, shape)
+
+    expect(result).toEqual(successResult(expect.anything()))
+  })
+
+  test('with undefined/null values', () => {
+    const result = rc_parse(
+      {
+        ...baseValues,
+        optionalPrimitiveArray: undefined,
+        primitiveArrayOrNull: null,
+        primitiveArrayOrNullish: null,
+        optionalObjArray: undefined,
+        objArrayOrNull: null,
+        objArrayOrNullish: null,
+      },
+      shape,
+    )
+
+    expect(result).toEqual(successResult(expect.anything()))
+  })
+
+  test('with undefined on nullish schemas', () => {
+    const result = rc_parse(
+      {
+        ...baseValues,
+        primitiveArrayOrNullish: undefined,
+        objArrayOrNullish: undefined,
+      },
+      shape,
+    )
+
+    expect(result).toEqual(successResult(expect.anything()))
+  })
+
+  describe('array props with loose array', () => {
+    const schema = rc_obj_builder<ArrayProps>()({
+      primitiveArray: ['loose_array_of', rc_string],
+      optionalPrimitiveArray: ['optional_loose_array_of', rc_number],
+      primitiveArrayOrNull: ['null_or_loose_array_of', rc_string],
+      primitiveArrayOrNullish: ['nullish_or_loose_array_of', rc_string],
+      objArray: ['loose_array_of', { a: rc_string }],
+      optionalObjArray: ['optional_loose_array_of', { a: rc_string }],
+      objArrayOrNull: ['null_or_loose_array_of', { a: rc_string }],
+      objArrayOrNullish: ['nullish_or_loose_array_of', { a: rc_string }],
+    })
+
+    const baseArrayValues: ArrayProps = {
+      primitiveArray: ['a'],
+      optionalPrimitiveArray: [1, 2],
+      primitiveArrayOrNull: ['a'],
+      primitiveArrayOrNullish: ['a'],
+      objArray: [{ a: 'a' }],
+      objArrayOrNull: [{ a: 'a' }],
+      objArrayOrNullish: [{ a: 'a' }],
+    }
+
+    test('with values', () => {
+      const result = rc_parse(baseArrayValues, schema)
+
+      expect(result).toEqual(successResult(expect.anything()))
+    })
+
+    test('with undefined/null values', () => {
+      const result = rc_parse(
+        {
+          ...baseArrayValues,
+          optionalPrimitiveArray: undefined,
+          primitiveArrayOrNull: null,
+          primitiveArrayOrNullish: null,
+          objArrayOrNull: null,
+          objArrayOrNullish: null,
+        },
+        schema,
+      )
+
+      expect(result).toEqual(successResult(expect.anything()))
+    })
+
+    test('with undefined on nullish schemas', () => {
+      const result = rc_parse(
+        {
+          ...baseArrayValues,
+          primitiveArrayOrNullish: undefined,
+          objArrayOrNullish: undefined,
+        },
+        schema,
+      )
+
+      expect(result).toEqual(successResult(expect.anything()))
+    })
+
+    test('with warnings', () => {
+      const result = rc_parse(
+        {
+          primitiveArray: [1, 'ok'],
+          optionalPrimitiveArray: [1, 'err'],
+          primitiveArrayOrNull: ['ok', 0],
+          primitiveArrayOrNullish: ['ok', 0],
+          optionalObjArray: [{ a: 'a' }, { a: 0 }],
+          objArray: [{ a: 'a' }, { a: 0 }],
+          objArrayOrNull: [{ a: 'a' }, { a: 0 }],
+          objArrayOrNullish: [{ a: 'a' }, { a: 0 }],
+        },
+        schema,
+      )
+
+      expect(result).toEqual(
+        successResult(
+          {
+            primitiveArray: ['ok'],
+            optionalPrimitiveArray: [1],
+            primitiveArrayOrNull: ['ok'],
+            primitiveArrayOrNullish: ['ok'],
+            optionalObjArray: [{ a: 'a' }],
+            objArray: [{ a: 'a' }],
+            objArrayOrNull: [{ a: 'a' }],
+            objArrayOrNullish: [{ a: 'a' }],
+          },
+          [
+            "$.primitiveArray[0]: Rejected, error -> Type 'number' is not assignable to 'string'",
+            "$.optionalPrimitiveArray[1]: Rejected, error -> Type 'string' is not assignable to 'number'",
+            "$.primitiveArrayOrNull[1]: Rejected, error -> Type 'number' is not assignable to 'string'",
+            "$.primitiveArrayOrNullish[1]: Rejected, error -> Type 'number' is not assignable to 'string'",
+            "$.objArray[1]: Rejected, error -> #.a: Type 'number' is not assignable to 'string'",
+            "$.optionalObjArray[1]: Rejected, error -> #.a: Type 'number' is not assignable to 'string'",
+            "$.objArrayOrNull[1]: Rejected, error -> #.a: Type 'number' is not assignable to 'string'",
+            "$.objArrayOrNullish[1]: Rejected, error -> #.a: Type 'number' is not assignable to 'string'",
+          ],
+        ),
+      )
+    })
+  })
 })
 
 describe('rc_strict_obj', () => {
