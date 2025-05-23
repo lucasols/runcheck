@@ -49,6 +49,7 @@
   },
   "devDependencies": {
     "@ls-stack/extended-lint": "^0.2.0",
+    "@standard-schema/spec": "^1.0.0",
     "@types/eslint": "^9.6.1",
     "@types/eslint__js": "^8.42.3",
     "@types/node": "^22.5.2",

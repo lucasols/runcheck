@@ -15,6 +15,7 @@ export {
   rc_obj_strict,
   rc_object,
 } from './rc_object'
+import { StandardSchemaV1 } from '@standard-schema/spec'
 
 export type RcParseResult<T> =
   | {
@@ -1514,4 +1515,51 @@ export function joinAsRcTypeUnion<T>(
 
 export function getSchemaKind(schema: RcType<any>): string {
   return schema._kind_
+}
+
+export function rc_to_standard<T>(
+  schemaOrResult: RcType<T> | RcParseResult<T>,
+  {
+    errorOnWarnings = false,
+  }: {
+    errorOnWarnings?: boolean
+  } = {},
+): StandardSchemaV1<T> {
+  return {
+    '~standard': {
+      validate(value) {
+        const result =
+          'ok' in schemaOrResult ? schemaOrResult : (
+            rc_parse(value, schemaOrResult)
+          )
+
+        return parseResultToStandard(result, errorOnWarnings)
+      },
+      vendor: 'runcheck',
+      version: 1,
+    },
+  }
+}
+
+function parseResultToStandard<T>(
+  result: RcParseResult<T>,
+  errorOnWarnings: boolean,
+): StandardSchemaV1.Result<T> {
+  if (errorOnWarnings && result.ok && result.warnings) {
+    return {
+      issues: result.warnings.map((warning) => ({
+        message: warning,
+      })),
+    }
+  }
+
+  if (result.ok) {
+    return { value: result.value }
+  }
+
+  return {
+    issues: result.errors.map((error) => ({
+      message: error,
+    })),
+  }
 }

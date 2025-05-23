@@ -11,6 +11,9 @@ importers:
       '@ls-stack/extended-lint':
         specifier: ^0.2.0
         version: 0.2.0(eslint@9.9.1)(typescript@5.5.4)
+      '@standard-schema/spec':
+        specifier: ^1.0.0
+        version: 1.0.0
       '@types/eslint':
         specifier: ^9.6.1
         version: 9.6.1
@@ -561,6 +564,9 @@ packages:
     resolution: {integrity: sha512-6UUxd0+SKomjdzuAcp+HAmxw1FlGBnl1v2yEPSabtx4lBfdXHDVsW7+lQkgz9cNFJGY3AWR7+V8P5BqkD9L9nA==}
     cpu: [x64]
     os: [win32]
+
+  '@standard-schema/spec@1.0.0':
+    resolution: {integrity: sha512-m2bOd0f2RT9k8QJx1JN85cZYyH1RqFBdlwtkSlf4tBDYLCiiZnv1fIIwacK6cqwXavOydf0NPToMQgpKq+dVlA==}
 
   '@tootallnate/once@2.0.0':
     resolution: {integrity: sha512-XCuKFP5PS55gnMVu3dty8KPatLqUoy/ZYzDzAGCQ8JNFCkLXzmI7vNHCR+XpbZaMWQK/vQubr7PkYq8g470J/A==}
@@ -2606,6 +2612,8 @@ snapshots:
 
   '@rollup/rollup-win32-x64-msvc@4.21.2':
     optional: true
+
+  '@standard-schema/spec@1.0.0': {}
 
   '@tootallnate/once@2.0.0': {}
 
