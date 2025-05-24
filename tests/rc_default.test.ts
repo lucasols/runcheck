@@ -210,8 +210,8 @@ describe('schema.default() method', () => {
   test('array default', () => {
     const schema: RcType<number[]> = rc_array(rc_number).default([])
     const parse = rc_parser(schema)
-    expect(parse(undefined)).toEqual(successResult(0))
-    expect(parse(1)).toEqual(successResult(1))
+    expect(parse(undefined)).toEqual(successResult([]))
+    expect(parse([1])).toEqual(successResult([1]))
   })
 
   test('array union default', () => {
@@ -219,8 +219,8 @@ describe('schema.default() method', () => {
       .orNull()
       .default([])
     const parse = rc_parser(schema)
-    expect(parse(undefined)).toEqual(successResult(0))
-    expect(parse(1)).toEqual(successResult(1))
+    expect(parse(undefined)).toEqual(successResult([]))
+    expect(parse([1])).toEqual(successResult([1]))
   })
 })
 
@@ -318,5 +318,12 @@ describe('schema.nullishDefault() method', () => {
     expect(parse(1)).toEqual(successResult(1))
     expect(parse(null)).toEqual(successResult(42))
     expect(parse(undefined)).toEqual(successResult(42))
+  })
+
+  test('nullishDefault with array schema', () => {
+    const schema: RcType<number[]> = rc_array(rc_number).nullishDefault([])
+    const parse = rc_parser(schema)
+    expect(parse(undefined)).toEqual(successResult([]))
+    expect(parse([1])).toEqual(successResult([1]))
   })
 })
