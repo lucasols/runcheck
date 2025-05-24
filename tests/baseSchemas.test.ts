@@ -257,3 +257,18 @@ test('getSchemaKind', () => {
   expect(getSchemaKind(rc_number.orNull())).toBe('null | number')
   expect(getSchemaKind(rc_number.orNullish())).toBe('null | undefined | number')
 })
+
+test('schema.parse', () => {
+  expect(rc_string.parse('hello')).toEqual(successResult('hello'))
+  expect(rc_string.parse(1)).toEqual(
+    errorResult(`Type 'number' is not assignable to 'string'`),
+  )
+
+  expect(rc_string.parse(5)).toEqual(
+    errorResult(`Type 'number' is not assignable to 'string'`),
+  )
+
+  expect(
+    rc_string.withFallback('world').parse(5, { noWarnings: true }),
+  ).toEqual(errorResult(`Type 'number' is not assignable to 'string'`))
+})

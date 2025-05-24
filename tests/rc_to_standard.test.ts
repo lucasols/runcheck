@@ -295,7 +295,7 @@ describe('rc_to_standard', () => {
         }
       `)
 
-      const invalidParseResult = rc_parse({ id: 'invalid', name: 123 }, schema)
+      const invalidParseResult = schema.parse({ id: 'invalid', name: 123 })
       const standardSchemaError = rc_to_standard(invalidParseResult)
       const errorResult = standardSchemaError['~standard'].validate('ignored')
 

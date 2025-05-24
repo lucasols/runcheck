@@ -77,6 +77,15 @@ export type RcBase<T, RequiredKey extends boolean> = {
   readonly withAutofix: (
     customAutofix: (input: unknown) => false | { fixed: T },
   ) => RcType<T>
+  readonly default: (
+    defaultValue: NotUndefined<T> | (() => NotUndefined<T>),
+  ) => RcType<NotUndefined<T>>
+  readonly nullishDefault: (
+    defaultValue: NotNullish<T> | (() => NotNullish<T>),
+  ) => RcType<NotNullish<T>>
+
+  readonly or: <O>(schema: RcType<O>) => RcType<T | O>
+  readonly parse: (input: unknown, options?: ParseOptions) => RcParseResult<T>
 
   // This should not be stripped out because it is used in type inference
   readonly _optional_key_?: RequiredKey
@@ -122,6 +131,32 @@ function withFallback(this: RcType<any>, fallback: any): RcType<any> {
     ...this,
     _fallback_: fallback === undefined ? getUndefined : fallback,
   }
+}
+
+function defaultMethod<T>(
+  this: RcType<T>,
+  defaultValue: NotUndefined<T> | (() => NotUndefined<T>),
+): RcType<NotUndefined<T>> {
+  return rc_default(this, defaultValue)
+}
+
+function nullishDefaultMethod<T>(
+  this: RcType<T>,
+  defaultValue: NotNullish<T> | (() => NotNullish<T>),
+): RcType<NotNullish<T>> {
+  return rc_nullish_default(this, defaultValue)
+}
+
+function orMethod<T, O>(this: RcType<T>, schema: RcType<O>): RcType<T | O> {
+  return rc_union(this, schema)
+}
+
+function parseMethod<T>(
+  this: RcType<T>,
+  input: unknown,
+  options: ParseOptions,
+): RcParseResult<T> {
+  return rc_parse(input, this, options)
 }
 
 /** @internal */
@@ -337,6 +372,10 @@ export const defaultProps: Omit<RcType<any>, '_parse_' | '_kind_'> = {
   orNullish,
   withAutofix,
   orNull,
+  default: defaultMethod as any,
+  nullishDefault: nullishDefaultMethod as any,
+  or: orMethod as any,
+  parse: parseMethod as any,
   _array_item_type_: undefined,
   _fallback_: undefined,
   _predicate_: undefined,
@@ -354,7 +393,7 @@ export const defaultProps: Omit<RcType<any>, '_parse_' | '_kind_'> = {
 }
 
 export const rc_undefined: RcType<undefined> = {
-  ...defaultProps,
+  ...(defaultProps as Omit<RcType<undefined>, '_parse_' | '_kind_'>),
   _parse_(input, ctx) {
     return parse(this, input, ctx, () => input === undefined)
   },
@@ -362,7 +401,7 @@ export const rc_undefined: RcType<undefined> = {
 }
 
 export const rc_null: RcType<null> = {
-  ...defaultProps,
+  ...(defaultProps as Omit<RcType<null>, '_parse_' | '_kind_'>),
   _parse_(input, ctx) {
     return parse(this, input, ctx, () => input === null)
   },
@@ -568,7 +607,7 @@ export function rc_union<T extends RcType<any>[]>(
   }
 }
 
-type NotUndefined<T> = T extends undefined ? never : T
+type NotUndefined<T> = Exclude<T, undefined>
 
 /** Generate a schema with valid fallback value for undefined inputs */
 export function rc_default<T>(
@@ -610,7 +649,7 @@ export function rc_default<T>(
   }
 }
 
-type NotNullish<T> = T extends null | undefined ? never : T
+type NotNullish<T> = Exclude<T, null | undefined>
 
 export function rc_nullish_default<T>(
   schema: RcType<T>,

@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'vitest'
 import {
   RcType,
+  rc_array,
   rc_literals,
   rc_number,
   rc_object,
@@ -203,4 +204,166 @@ test('object union', () => {
   )
 
   expect(rc_parse({ b: 1, c: null }, shape)).toEqual(successResult({ b: 1 }))
+})
+
+describe('or', () => {
+  test('basic or with string and number', () => {
+    const shape = rc_string.or(rc_number)
+
+    expect(rc_parse('hello', shape)).toEqual(successResult('hello'))
+    expect(rc_parse(42, shape)).toEqual(successResult(42))
+
+    expect(rc_parse(true, shape)).toEqual(
+      errorResult(`Type 'boolean' is not assignable to 'string | number'`),
+    )
+  })
+
+  test('or with object types', () => {
+    const shape = rc_object({ a: rc_string }).or(rc_object({ b: rc_number }))
+
+    expect(rc_parse({ a: 'hello' }, shape)).toEqual(
+      successResult({ a: 'hello' }),
+    )
+
+    expect(rc_parse({ b: 42 }, shape)).toEqual(successResult({ b: 42 }))
+
+    expect(rc_parse({ c: 'invalid' }, shape)).toEqual(
+      errorResult(
+        "$|union 1|.a: Type 'undefined' is not assignable to 'string'",
+        'not matches any other union member',
+      ),
+    )
+  })
+
+  test('chained or operations', () => {
+    const shape = rc_string.or(rc_number).or(rc_object({ id: rc_string }))
+
+    expect(rc_parse('hello', shape)).toEqual(successResult('hello'))
+    expect(rc_parse(42, shape)).toEqual(successResult(42))
+    expect(rc_parse({ id: 'test' }, shape)).toEqual(
+      successResult({ id: 'test' }),
+    )
+
+    expect(rc_parse(true, shape)).toEqual(
+      errorResult(
+        `Type 'boolean' is not assignable to 'string | number | object'`,
+      ),
+    )
+  })
+
+  test('or with literals', () => {
+    const shape = rc_literals('red', 'blue').or(rc_literals('large', 'small'))
+
+    expect(rc_parse('red', shape)).toEqual(successResult('red'))
+    expect(rc_parse('large', shape)).toEqual(successResult('large'))
+
+    expect(rc_parse('green', shape)).toEqual(
+      errorResult(
+        `Type 'string' is not assignable to 'string(red) | string(blue) | string(large) | string(small)'`,
+      ),
+    )
+  })
+
+  test('or with nullable types', () => {
+    const shape = rc_string.orNull().or(rc_number.orNull())
+
+    expect(rc_parse('hello', shape)).toEqual(successResult('hello'))
+    expect(rc_parse(42, shape)).toEqual(successResult(42))
+    expect(rc_parse(null, shape)).toEqual(successResult(null))
+
+    expect(rc_parse(true, shape)).toEqual(
+      errorResult(
+        `Type 'boolean' is not assignable to 'null | string | null | number'`,
+      ),
+    )
+  })
+
+  test('or with optional types', () => {
+    const shape = rc_string.optional().or(rc_number.optional())
+
+    expect(rc_parse('hello', shape)).toEqual(successResult('hello'))
+    expect(rc_parse(42, shape)).toEqual(successResult(42))
+    expect(rc_parse(undefined, shape)).toEqual(successResult(undefined))
+
+    expect(rc_parse(true, shape)).toEqual(
+      errorResult(
+        `Type 'boolean' is not assignable to 'undefined | string | undefined | number'`,
+      ),
+    )
+  })
+
+  test('or with arrays', () => {
+    const shape = rc_array(rc_string).or(rc_array(rc_number))
+
+    expect(rc_parse(['hello', 'world'], shape)).toEqual(
+      successResult(['hello', 'world']),
+    )
+
+    expect(rc_parse([1, 2, 3], shape)).toEqual(successResult([1, 2, 3]))
+
+    expect(rc_parse(['hello', 1], shape)).toEqual(
+      errorResult(`Type 'array' is not assignable to 'string[] | number[]'`),
+    )
+  })
+
+  test('or with record types', () => {
+    const shape = rc_record(rc_string).or(rc_record(rc_number))
+
+    expect(rc_parse({ a: 'hello', b: 'world' }, shape)).toEqual(
+      successResult({ a: 'hello', b: 'world' }),
+    )
+
+    expect(rc_parse({ a: 1, b: 2 }, shape)).toEqual(
+      successResult({ a: 1, b: 2 }),
+    )
+
+    expect(rc_parse({ a: 'hello', b: 1 }, shape)).toEqual(
+      errorResult(
+        "$|union 1|.b: Type 'number' is not assignable to 'string'",
+        'not matches any other union member',
+      ),
+    )
+  })
+
+  test('or with fallback', () => {
+    const shape = rc_string.or(rc_number).withFallback('default')
+
+    expect(rc_parse('hello', shape)).toEqual(successResult('hello'))
+    expect(rc_parse(42, shape)).toEqual(successResult(42))
+
+    expect(rc_parse(true, shape)).toEqual(
+      successResult('default', [
+        "Fallback used, errors -> Type 'boolean' is not assignable to 'string | number'",
+      ]),
+    )
+  })
+
+  test('nested or with complex objects', () => {
+    const userShape = rc_object({
+      type: rc_literals('user'),
+      name: rc_string,
+    })
+
+    const adminShape = rc_object({
+      type: rc_literals('admin'),
+      permissions: rc_array(rc_string),
+    })
+
+    const shape = userShape.or(adminShape)
+
+    expect(rc_parse({ type: 'user', name: 'John' }, shape)).toEqual(
+      successResult({ type: 'user', name: 'John' }),
+    )
+
+    expect(
+      rc_parse({ type: 'admin', permissions: ['read', 'write'] }, shape),
+    ).toEqual(successResult({ type: 'admin', permissions: ['read', 'write'] }))
+
+    expect(rc_parse({ type: 'guest', name: 'John' }, shape)).toEqual(
+      errorResult(
+        "$|union 1|.type: Type 'string(guest)' is not assignable to 'string(user)'",
+        'not matches any other union member',
+      ),
+    )
+  })
 })

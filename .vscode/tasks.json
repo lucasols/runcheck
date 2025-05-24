@@ -6,7 +6,7 @@
     {
       "label": "run tests",
       "type": "npm",
-      "script": "test"
+      "script": "test:watch"
     },
     {
       "label": "bump version and deploy",

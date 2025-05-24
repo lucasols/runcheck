@@ -127,3 +127,162 @@ test('rc_default with fallback', () => {
     ]),
   )
 })
+
+describe('schema.default() method', () => {
+  test('valid input', () => {
+    const schema = rc_number.default(0)
+    const parse = rc_parser(schema)
+    expect(parse(1)).toEqual(successResult(1))
+  })
+
+  test('default value', () => {
+    const schema = rc_number.default(0)
+    const parse = rc_parser(schema)
+    expect(parse(undefined)).toEqual(successResult(0))
+  })
+
+  test('invalid inputs', () => {
+    const schema = rc_number.default(0)
+    const parse = rc_parser(schema)
+    expect(parse('1')).toEqual(
+      errorResult(`Type 'string' is not assignable to 'number'`),
+    )
+  })
+
+  test('default null value', () => {
+    const schema = rc_number.orNullish().default(null)
+    const parse = rc_parser(schema)
+
+    expect(parse(undefined)).toEqual(successResult(null))
+    expect(parse(null)).toEqual(successResult(null))
+  })
+
+  test('default with object property', () => {
+    const schema = rc_object({
+      hello: rc_number.default(0),
+      test: rc_string,
+    })
+    const parse = rc_parser(schema)
+
+    expect(parse({ test: 'test' })).toEqual(
+      successResult({ hello: 0, test: 'test' }),
+    )
+  })
+
+  test('keep transformed value', () => {
+    const schema = rc_transform(rc_number, (n) => n + 1).default(0)
+    const parse = rc_parser(schema)
+    expect(parse(1)).toEqual(successResult(2))
+  })
+
+  test('use default on transformed values', () => {
+    const schema = rc_transform(rc_number, (n) =>
+      n === 1 ? undefined : n,
+    ).default(0)
+    const parse = rc_parser(schema)
+    expect(parse(1)).toEqual(successResult(0))
+  })
+
+  test('withFallback after default', () => {
+    const schema = rc_string.default('hello').withFallback('world')
+    const result = rc_parse([], schema)
+
+    expect(result).toEqual(
+      successResult('world', [
+        "Fallback used, errors -> Type 'array' is not assignable to 'string'",
+      ]),
+    )
+  })
+})
+
+describe('schema.nullishDefault() method', () => {
+  test('valid input', () => {
+    const schema = rc_number.nullishDefault(0)
+    const parse = rc_parser(schema)
+    expect(parse(1)).toEqual(successResult(1))
+  })
+
+  test('nullish default for undefined', () => {
+    const schema = rc_number.nullishDefault(0)
+    const parse = rc_parser(schema)
+    expect(parse(undefined)).toEqual(successResult(0))
+  })
+
+  test('nullish default for null', () => {
+    const schema = rc_number.nullishDefault(0)
+    const parse = rc_parser(schema)
+    expect(parse(null)).toEqual(successResult(0))
+  })
+
+  test('invalid inputs', () => {
+    const schema = rc_number.nullishDefault(0)
+    const parse = rc_parser(schema)
+    expect(parse('1')).toEqual(
+      errorResult(`Type 'string' is not assignable to 'number'`),
+    )
+  })
+
+  test('nullish default with function', () => {
+    const schema = rc_number.nullishDefault(() => 42)
+    const parse = rc_parser(schema)
+    expect(parse(null)).toEqual(successResult(42))
+    expect(parse(undefined)).toEqual(successResult(42))
+  })
+
+  test('nullish default with object property', () => {
+    const schema = rc_object({
+      hello: rc_number.nullishDefault(0),
+      test: rc_string,
+    })
+    const parse = rc_parser(schema)
+
+    expect(parse({ test: 'test' })).toEqual(
+      successResult({ hello: 0, test: 'test' }),
+    )
+    expect(parse({ hello: null, test: 'test' })).toEqual(
+      successResult({ hello: 0, test: 'test' }),
+    )
+  })
+
+  test('keep transformed value', () => {
+    const schema = rc_transform(rc_number, (n) => n + 1).nullishDefault(0)
+    const parse = rc_parser(schema)
+    expect(parse(1)).toEqual(successResult(2))
+  })
+
+  test('use nullish default on transformed values that return null', () => {
+    const schema = rc_transform(rc_number, (n) =>
+      n === 1 ? null : n,
+    ).nullishDefault(0)
+    const parse = rc_parser(schema)
+    expect(parse(1)).toEqual(successResult(0))
+  })
+
+  test('use nullish default on transformed values that return undefined', () => {
+    const schema = rc_transform(rc_number, (n) =>
+      n === 1 ? undefined : n,
+    ).nullishDefault(0)
+    const parse = rc_parser(schema)
+    expect(parse(1)).toEqual(successResult(0))
+  })
+
+  test('withFallback after nullishDefault', () => {
+    const schema = rc_string.nullishDefault('hello').withFallback('world')
+    const result = rc_parse([], schema)
+
+    expect(result).toEqual(
+      successResult('world', [
+        "Fallback used, errors -> Type 'array' is not assignable to 'string'",
+      ]),
+    )
+  })
+
+  test('nullishDefault with orNullish schema', () => {
+    const schema = rc_number.orNullish().nullishDefault(42)
+    const parse = rc_parser(schema)
+
+    expect(parse(1)).toEqual(successResult(1))
+    expect(parse(null)).toEqual(successResult(42))
+    expect(parse(undefined)).toEqual(successResult(42))
+  })
+})
