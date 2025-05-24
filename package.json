@@ -12,7 +12,7 @@
     "benchmark-to-ref": "tsm --no-warnings benchmarks/bench2ref.ts",
     "benchmark:generate-profile": "tsm benchmarks/generateProfiles.ts",
     "eslint": "CI=true eslint --color src/ tests/",
-    "build": "pnpm test:run && pnpm lint && pnpm build:no-test",
+    "build": "pnpm test && pnpm lint && pnpm build:no-test",
     "build:no-test": "tsup --minify --dts",
     "build-test": "tsup --config tsup.test.config.ts",
     "pre-publish": "./scripts/check-if-is-sync.sh && pnpm build"
