@@ -54,6 +54,8 @@ type InternalParseResult<T> =
 
 type WithFallback<T> = (fallback: T | (() => T)) => RcType<T>
 
+type RemoveArrayNever<T> = T extends never[] ? never : T
+
 export type RcOptionalKeyType<T> = RcBase<T, true>
 
 export type RcType<T> = RcBase<T, false>
@@ -79,10 +81,10 @@ export type RcBase<T, RequiredKey extends boolean> = {
   ) => RcType<T>
   readonly default: <D extends NotUndefined<T>>(
     defaultValue: D | (() => D),
-  ) => RcType<NotUndefined<T> | D>
+  ) => RcType<NotUndefined<T> | RemoveArrayNever<D>>
   readonly nullishDefault: <D extends NotNullish<T>>(
     defaultValue: D | (() => D),
-  ) => RcType<NotNullish<T> | D>
+  ) => RcType<NotNullish<T> | RemoveArrayNever<D>>
 
   readonly or: <O>(schema: RcType<O>) => RcType<T | O>
   readonly parse: (input: unknown, options?: ParseOptions) => RcParseResult<T>

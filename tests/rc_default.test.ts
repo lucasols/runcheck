@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'vitest'
 import {
   RcType,
+  rc_array,
   rc_default,
   rc_nullish_default,
   rc_number,
@@ -201,6 +202,22 @@ describe('schema.default() method', () => {
 
   test('optional and default', () => {
     const schema: RcType<number> = rc_number.optional().default(0)
+    const parse = rc_parser(schema)
+    expect(parse(undefined)).toEqual(successResult(0))
+    expect(parse(1)).toEqual(successResult(1))
+  })
+
+  test('array default', () => {
+    const schema: RcType<number[]> = rc_array(rc_number).default([])
+    const parse = rc_parser(schema)
+    expect(parse(undefined)).toEqual(successResult(0))
+    expect(parse(1)).toEqual(successResult(1))
+  })
+
+  test('array union default', () => {
+    const schema: RcType<number[] | null> = rc_array(rc_number)
+      .orNull()
+      .default([])
     const parse = rc_parser(schema)
     expect(parse(undefined)).toEqual(successResult(0))
     expect(parse(1)).toEqual(successResult(1))
