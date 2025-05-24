@@ -77,12 +77,12 @@ export type RcBase<T, RequiredKey extends boolean> = {
   readonly withAutofix: (
     customAutofix: (input: unknown) => false | { fixed: T },
   ) => RcType<T>
-  readonly default: (
-    defaultValue: NotUndefined<T> | (() => NotUndefined<T>),
-  ) => RcType<NotUndefined<T>>
-  readonly nullishDefault: (
-    defaultValue: NotNullish<T> | (() => NotNullish<T>),
-  ) => RcType<NotNullish<T>>
+  readonly default: <D extends NotUndefined<T>>(
+    defaultValue: D | (() => D),
+  ) => RcType<NotUndefined<T> | D>
+  readonly nullishDefault: <D extends NotNullish<T>>(
+    defaultValue: D | (() => D),
+  ) => RcType<NotNullish<T> | D>
 
   readonly or: <O>(schema: RcType<O>) => RcType<T | O>
   readonly parse: (input: unknown, options?: ParseOptions) => RcParseResult<T>
