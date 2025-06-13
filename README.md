@@ -251,31 +251,34 @@ rc_assert_is_valid(result)
 
 # Loose parsing
 
-Use `rc_unwrap_or` and `rc_unwrap_or_null` to do a loose parsing.
+You can now use the result methods `unwrapOr` and `unwrapOrNull` for more convenient loose parsing:
 
 ```ts
-import { rc_unwrap_or, rc_unwrap_or_null } from 'runcheck'
+import { rc_parse } from 'runcheck'
 
 const input = JSON.parse(jsonInput)
 
-const result = rc_unwrap_or(input, rc_array(rc_string), [])
+// Using unwrapOr method
+const result = rc_parse(input, rc_array(rc_string)).unwrapOr([])
 // will fallback to [] if the input is invalid
 
-const result2 = rc_unwrap_or_null(input, rc_array(rc_string))
+// Using unwrapOrNull method
+const result2 = rc_parse(input, rc_array(rc_string)).unwrapOrNull()
 // will fallback to null if the input is invalid
 ```
 
 # Strict parsing
 
-Use `rc_unwrap` to throw an `RcValidationError` error if the input is invalid.
+You can use the `unwrap()` method directly on the parse result:
 
 ```ts
-import { rc_unwrap, RcValidationError } from 'runcheck'
+import { rc_parse, RcValidationError } from 'runcheck'
 
 const input = JSON.parse(jsonInput)
 
 try {
-  const result = rc_unwrap(input, rc_array(rc_string))
+  const result = rc_parse(input, rc_array(rc_string)).unwrap()
+  // result will be the parsed data or throw RcValidationError
 } catch (error) {
   if (error instanceof RcValidationError) {
     // handle error
