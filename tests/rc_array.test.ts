@@ -244,12 +244,9 @@ describe('array unique', () => {
       ),
     )
 
-    const success: RcParseResult<{ id: number }[]> = helloParser([
-      { id: 1 },
-      { id: 1, meta_id: 4 },
-      { id: 2 },
-      { id: 3 },
-    ])
+    const success: RcParseResult<
+      { id: number; meta_id: number | undefined }[]
+    > = helloParser([{ id: 1 }, { id: 1, meta_id: 4 }, { id: 2 }, { id: 3 }])
 
     expect(success).toEqual(
       successResult([{ id: 1 }, { id: 1, meta_id: 4 }, { id: 2 }, { id: 3 }]),
