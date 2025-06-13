@@ -199,3 +199,161 @@ describe('schema.parse(...).unwrap()', () => {
     )
   })
 })
+
+describe('parse options with new methods', () => {
+  const schema = rc_object({
+    withAutofix: rc_number.withAutofix(() => ({ fixed: 1 })),
+    withFallback: rc_number.withFallback(2),
+  })
+
+  describe('unwrap with parse options', () => {
+    test('should work with noWarnings: false (default)', () => {
+      const result = rc_parse({ withAutofix: '1', withFallback: '2' }, schema, {
+        noWarnings: false,
+      })
+
+      const unwrapped = result.unwrap()
+      expect(unwrapped).toEqual({ withAutofix: 1, withFallback: 2 })
+    })
+
+    test('should throw when noWarnings: true and there are warnings', () => {
+      const result = rc_parse({ withAutofix: '1', withFallback: '2' }, schema, {
+        noWarnings: true,
+      })
+
+      expect(() => result.unwrap()).toThrow(RcValidationError)
+      expect(() => result.unwrap()).toThrow(
+        /Type 'string' is not assignable to 'number'/,
+      )
+    })
+
+    test('should work normally when noWarnings: true and no warnings', () => {
+      const result = rc_parse({ withAutofix: 1, withFallback: 2 }, schema, {
+        noWarnings: true,
+      })
+
+      const unwrapped = result.unwrap()
+      expect(unwrapped).toEqual({ withAutofix: 1, withFallback: 2 })
+    })
+  })
+
+  describe('unwrapOr with parse options', () => {
+    test('should return data when noWarnings: false and there are warnings', () => {
+      const result = rc_parse({ withAutofix: '1', withFallback: '2' }, schema, {
+        noWarnings: false,
+      })
+
+      const unwrapped = result.unwrapOr({ withAutofix: 0, withFallback: 0 })
+      expect(unwrapped).toEqual({ withAutofix: 1, withFallback: 2 })
+    })
+
+    test('should return default when noWarnings: true and there are warnings', () => {
+      const result = rc_parse({ withAutofix: '1', withFallback: '2' }, schema, {
+        noWarnings: true,
+      })
+
+      const defaultValue = { withAutofix: 0, withFallback: 0 }
+      const unwrapped = result.unwrapOr(defaultValue)
+      expect(unwrapped).toEqual(defaultValue)
+    })
+
+    test('should return data when noWarnings: true and no warnings', () => {
+      const result = rc_parse({ withAutofix: 1, withFallback: 2 }, schema, {
+        noWarnings: true,
+      })
+
+      const unwrapped = result.unwrapOr({ withAutofix: 0, withFallback: 0 })
+      expect(unwrapped).toEqual({ withAutofix: 1, withFallback: 2 })
+    })
+  })
+
+  describe('unwrapOrNull with parse options', () => {
+    test('should return data when noWarnings: false and there are warnings', () => {
+      const result = rc_parse({ withAutofix: '1', withFallback: '2' }, schema, {
+        noWarnings: false,
+      })
+
+      const unwrapped = result.unwrapOrNull()
+      expect(unwrapped).toEqual({ withAutofix: 1, withFallback: 2 })
+    })
+
+    test('should return null when noWarnings: true and there are warnings', () => {
+      const result = rc_parse({ withAutofix: '1', withFallback: '2' }, schema, {
+        noWarnings: true,
+      })
+
+      const unwrapped = result.unwrapOrNull()
+      expect(unwrapped).toBeNull()
+    })
+
+    test('should return data when noWarnings: true and no warnings', () => {
+      const result = rc_parse({ withAutofix: 1, withFallback: 2 }, schema, {
+        noWarnings: true,
+      })
+
+      const unwrapped = result.unwrapOrNull()
+      expect(unwrapped).toEqual({ withAutofix: 1, withFallback: 2 })
+    })
+  })
+})
+
+describe('schema.parse methods with options', () => {
+  describe('schema.parse(...).unwrap() with options', () => {
+    test('should work with autofix when no parse options', () => {
+      const result = rc_number
+        .withAutofix(() => ({ fixed: 42 }))
+        .parse('42')
+        .unwrap()
+      expect(result).toBe(42)
+    })
+
+    test('should throw when using noWarnings: true with autofix', () => {
+      const schema = rc_number.withAutofix(() => ({ fixed: 42 }))
+      const result = schema.parse('42', { noWarnings: true })
+
+      expect(() => result.unwrap()).toThrow(RcValidationError)
+    })
+
+    test('should work with fallback when no parse options', () => {
+      const result = rc_number.withFallback(99).parse('invalid').unwrap()
+      expect(result).toBe(99)
+    })
+
+    test('should throw when using noWarnings: true with fallback', () => {
+      const schema = rc_number.withFallback(99)
+      const result = schema.parse('invalid', { noWarnings: true })
+
+      expect(() => result.unwrap()).toThrow(RcValidationError)
+    })
+  })
+
+  describe('schema.parse(...).unwrapOr() with options', () => {
+    test('should return data when autofix succeeds without options', () => {
+      const schema = rc_number.withAutofix(() => ({ fixed: 42 }))
+      const result = schema.parse('42').unwrapOr(0)
+      expect(result).toBe(42)
+    })
+
+    test('should return default when using noWarnings: true with autofix', () => {
+      const schema = rc_number.withAutofix(() => ({ fixed: 42 }))
+      const result = schema.parse('42', { noWarnings: true }).unwrapOr(0)
+      expect(result).toBe(0)
+    })
+  })
+
+  describe('schema.parse(...).unwrapOrNull() with options', () => {
+    test('should return data when fallback succeeds without options', () => {
+      const schema = rc_number.withFallback(99)
+      const result = schema.parse('invalid').unwrapOrNull()
+      expect(result).toBe(99)
+    })
+
+    test('should return null when using noWarnings: true with fallback', () => {
+      const schema = rc_number.withFallback(99)
+      const result = schema
+        .parse('invalid', { noWarnings: true })
+        .unwrapOrNull()
+      expect(result).toBeNull()
+    })
+  })
+})

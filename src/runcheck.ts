@@ -17,7 +17,7 @@ export {
 } from './rc_object'
 import { StandardSchemaV1 } from '@standard-schema/spec'
 
-type RcOkResult<T> = {
+export type RcOkResult<T> = {
   /** @deprecated use errors instead */
   error: false
   errors: false
@@ -31,7 +31,7 @@ type RcOkResult<T> = {
   unwrapOrNull: () => T | null
 }
 
-type RcErrorResult<T> = {
+export type RcErrorResult<T> = {
   ok: false
   /** @deprecated use errors instead */
   error: true

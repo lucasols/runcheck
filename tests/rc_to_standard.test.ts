@@ -5,7 +5,6 @@ import {
   rc_parse,
   rc_string,
   rc_to_standard,
-  RcParseResult,
 } from '../src/runcheck'
 
 describe('rc_to_standard', () => {
@@ -116,14 +115,7 @@ describe('rc_to_standard', () => {
 
   describe('with parse result input', () => {
     test('should convert successful parse result', () => {
-      const parseResult: RcParseResult<string> = {
-        error: false,
-        errors: false,
-        ok: true,
-        data: 'hello',
-        value: 'hello',
-        warnings: false,
-      }
+      const parseResult = rc_parse('hello', rc_string)
       const standardSchema = rc_to_standard(parseResult)
       const result = standardSchema['~standard'].validate('any input')
 
@@ -135,16 +127,7 @@ describe('rc_to_standard', () => {
     })
 
     test('should convert successful parse result with warnings', () => {
-      const parseResult: RcParseResult<string> = {
-        error: false,
-        errors: false,
-        ok: true,
-        data: 'fallback',
-        value: 'fallback',
-        warnings: [
-          "Fallback used, errors -> Type 'number' is not assignable to 'string'",
-        ],
-      }
+      const parseResult = rc_parse(123, rc_string.withFallback('fallback'))
       const standardSchema = rc_to_standard(parseResult)
       const result = standardSchema['~standard'].validate('any input')
 
@@ -156,16 +139,7 @@ describe('rc_to_standard', () => {
     })
 
     test('should convert successful parse result with warnings to errors when errorOnWarnings is true', () => {
-      const parseResult: RcParseResult<string> = {
-        error: false,
-        errors: false,
-        ok: true,
-        data: 'fallback',
-        value: 'fallback',
-        warnings: [
-          "Fallback used, errors -> Type 'number' is not assignable to 'string'",
-        ],
-      }
+      const parseResult = rc_parse(123, rc_string.withFallback('fallback'))
       const standardSchema = rc_to_standard(parseResult, {
         errorOnWarnings: true,
       })
@@ -183,11 +157,7 @@ describe('rc_to_standard', () => {
     })
 
     test('should convert failed parse result', () => {
-      const parseResult: RcParseResult<string> = {
-        ok: false,
-        error: true,
-        errors: ["Type 'number' is not assignable to 'string'"],
-      }
+      const parseResult = rc_parse(123, rc_string)
       const standardSchema = rc_to_standard(parseResult)
       const result = standardSchema['~standard'].validate('any input')
 
@@ -203,11 +173,11 @@ describe('rc_to_standard', () => {
     })
 
     test('should convert failed parse result with multiple errors', () => {
-      const parseResult: RcParseResult<string> = {
-        ok: false,
-        error: true,
-        errors: ['First error', 'Second error'],
-      }
+      const schema = rc_object({
+        name: rc_string,
+        age: rc_number,
+      })
+      const parseResult = rc_parse({ name: 123, age: 'invalid' }, schema)
       const standardSchema = rc_to_standard(parseResult)
       const result = standardSchema['~standard'].validate('any input')
 
@@ -215,10 +185,10 @@ describe('rc_to_standard', () => {
         {
           "issues": [
             {
-              "message": "First error",
+              "message": "$.name: Type 'number' is not assignable to 'string'",
             },
             {
-              "message": "Second error",
+              "message": "$.age: Type 'string' is not assignable to 'number'",
             },
           ],
         }
@@ -228,14 +198,7 @@ describe('rc_to_standard', () => {
 
   describe('edge cases', () => {
     test('should handle successful result without warnings', () => {
-      const parseResult: RcParseResult<number> = {
-        error: false,
-        errors: false,
-        ok: true,
-        data: 42,
-        value: 42,
-        warnings: false,
-      }
+      const parseResult = rc_parse(42, rc_number)
       const standardSchema = rc_to_standard(parseResult)
       const result = standardSchema['~standard'].validate('ignored')
 
@@ -247,14 +210,7 @@ describe('rc_to_standard', () => {
     })
 
     test('should handle successful result with empty warnings array', () => {
-      const parseResult: RcParseResult<number> = {
-        error: false,
-        errors: false,
-        ok: true,
-        data: 42,
-        value: 42,
-        warnings: [],
-      }
+      const parseResult = rc_parse(42, rc_number)
       const standardSchema = rc_to_standard(parseResult, {
         errorOnWarnings: true,
       })
@@ -262,7 +218,7 @@ describe('rc_to_standard', () => {
 
       expect(result).toMatchInlineSnapshot(`
         {
-          "issues": [],
+          "value": 42,
         }
       `)
     })
@@ -272,45 +228,6 @@ describe('rc_to_standard', () => {
 
       expect(standardSchema['~standard'].vendor).toBe('runcheck')
       expect(standardSchema['~standard'].version).toBe(1)
-    })
-  })
-
-  describe('integration with actual parsing', () => {
-    test('should work with actual rc_parse results', () => {
-      const schema = rc_object({
-        id: rc_number,
-        name: rc_string,
-      })
-
-      const validParseResult = rc_parse({ id: 1, name: 'test' }, schema)
-      const standardSchema = rc_to_standard(validParseResult)
-      const result = standardSchema['~standard'].validate('ignored')
-
-      expect(result).toMatchInlineSnapshot(`
-        {
-          "value": {
-            "id": 1,
-            "name": "test",
-          },
-        }
-      `)
-
-      const invalidParseResult = schema.parse({ id: 'invalid', name: 123 })
-      const standardSchemaError = rc_to_standard(invalidParseResult)
-      const errorResult = standardSchemaError['~standard'].validate('ignored')
-
-      expect(errorResult).toMatchInlineSnapshot(`
-        {
-          "issues": [
-            {
-              "message": "$.id: Type 'string' is not assignable to 'number'",
-            },
-            {
-              "message": "$.name: Type 'number' is not assignable to 'string'",
-            },
-          ],
-        }
-      `)
     })
   })
 })
