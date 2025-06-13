@@ -17,29 +17,31 @@ export {
 } from './rc_object'
 import { StandardSchemaV1 } from '@standard-schema/spec'
 
-export type RcParseResult<T> =
-  | {
-      /** @deprecated use errors instead */
-      error: false
-      errors: false
-      ok: true
-      /** @deprecated use value instead */
-      data: T
-      value: T
-      warnings: string[] | false
-      unwrap: () => T
-      unwrapOr: (defaultValue: T) => T
-      unwrapOrNull: () => T | null
-    }
-  | {
-      ok: false
-      /** @deprecated use errors instead */
-      error: true
-      errors: string[]
-      unwrap: () => T
-      unwrapOr: (defaultValue: T) => T
-      unwrapOrNull: () => T | null
-    }
+type RcOkResult<T> = {
+  /** @deprecated use errors instead */
+  error: false
+  errors: false
+  ok: true
+  /** @deprecated use value instead */
+  data: T
+  value: T
+  warnings: string[] | false
+  unwrap: () => T
+  unwrapOr: (defaultValue: T) => T
+  unwrapOrNull: () => T | null
+}
+
+type RcErrorResult<T> = {
+  ok: false
+  /** @deprecated use errors instead */
+  error: true
+  errors: string[]
+  unwrap: () => T
+  unwrapOr: (defaultValue: T) => T
+  unwrapOrNull: () => T | null
+}
+
+export type RcParseResult<T> = RcOkResult<T> | RcErrorResult<T>
 
 export type RcInferType<T extends RcType<any>> =
   T extends RcType<infer U> ? U : never
@@ -1092,12 +1094,20 @@ type ParseOptions = {
   noWarnings?: boolean
 }
 
+function showWarnings(result: RcOkResult<any>) {
+  if (result.warnings && result.warnings.length > 0) {
+    console.warn(`Unwrap warnings: ${result.warnings.join('\n')}`)
+  }
+}
+
 function unwrap(this: RcParseResult<any>) {
   if (this.errors) {
     throw new RcValidationError(this.errors)
   }
 
-  return this.data
+  showWarnings(this)
+
+  return this.value
 }
 
 function unwrapOr(this: RcParseResult<any>, defaultValue: any) {
@@ -1105,7 +1115,9 @@ function unwrapOr(this: RcParseResult<any>, defaultValue: any) {
     return defaultValue
   }
 
-  return this.data
+  showWarnings(this)
+
+  return this.value
 }
 
 function unwrapOrNull(this: RcParseResult<any>) {
@@ -1113,7 +1125,9 @@ function unwrapOrNull(this: RcParseResult<any>) {
     return null
   }
 
-  return this.data
+  showWarnings(this)
+
+  return this.value
 }
 
 /**
@@ -1217,6 +1231,8 @@ export function rc_unwrap_or<R, F = NoInfer<R>>(
 }
 
 export class RcValidationError extends Error {
+  name = 'RcValidationError'
+
   constructor(public readonly errors: string[]) {
     super(errors.join('\n'))
   }

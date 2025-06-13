@@ -1,3 +1,4 @@
+import { expect } from 'vitest'
 import { RcType, rc_parse } from '../src/runcheck'
 
 export function pipe<T1, R>(input: T1, fn1: (a: T1) => R): R
@@ -104,7 +105,17 @@ export function expectParse<T extends RcType<any>>({
 }
 
 export function successResult(data: any, warnings: string[] | false = false) {
-  return { error: false, errors: false, value: data, data, warnings, ok: true }
+  return {
+    error: false,
+    errors: false,
+    value: data,
+    data,
+    warnings,
+    ok: true,
+    unwrap: expect.any(Function),
+    unwrapOr: expect.any(Function),
+    unwrapOrNull: expect.any(Function),
+  }
 }
 
 export function errorResult(...errorMsg: string[]) {
@@ -112,6 +123,9 @@ export function errorResult(...errorMsg: string[]) {
     error: true,
     ok: false,
     errors: errorMsg,
+    unwrap: expect.any(Function),
+    unwrapOr: expect.any(Function),
+    unwrapOrNull: expect.any(Function),
   }
 }
 
