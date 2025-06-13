@@ -27,12 +27,18 @@ export type RcParseResult<T> =
       data: T
       value: T
       warnings: string[] | false
+      unwrap: () => T
+      unwrapOr: (defaultValue: T) => T
+      unwrapOrNull: () => T | null
     }
   | {
       ok: false
       /** @deprecated use errors instead */
       error: true
       errors: string[]
+      unwrap: () => T
+      unwrapOr: (defaultValue: T) => T
+      unwrapOrNull: () => T | null
     }
 
 export type RcInferType<T extends RcType<any>> =
@@ -1086,6 +1092,30 @@ type ParseOptions = {
   noWarnings?: boolean
 }
 
+function unwrap(this: RcParseResult<any>) {
+  if (this.errors) {
+    throw new RcValidationError(this.errors)
+  }
+
+  return this.data
+}
+
+function unwrapOr(this: RcParseResult<any>, defaultValue: any) {
+  if (this.errors) {
+    return defaultValue
+  }
+
+  return this.data
+}
+
+function unwrapOrNull(this: RcParseResult<any>) {
+  if (this.errors) {
+    return null
+  }
+
+  return this.data
+}
+
 /**
  * Parse a runcheck type. If valid return the valid input, with warning for autofix
  * and fallback, or the errors if invalid
@@ -1115,6 +1145,9 @@ export function rc_parse<S>(
       data: parseResult.data,
       value: parseResult.data,
       warnings: ctx.warnings_.length > 0 ? ctx.warnings_ : false,
+      unwrap,
+      unwrapOr,
+      unwrapOrNull,
     }
   }
 
@@ -1122,6 +1155,9 @@ export function rc_parse<S>(
     ok: false,
     error: true,
     errors: parseResult.errors,
+    unwrap,
+    unwrapOr,
+    unwrapOrNull,
   }
 }
 
@@ -1140,7 +1176,7 @@ export function rc_loose_parse<S>(
 ): { data: S | null; errors: string[] | false; warnings: string[] | false } {
   const result = rc_parse(input, type, options)
 
-  if (result.error) {
+  if (result.errors) {
     return {
       data: null,
       errors: result.errors,
@@ -1151,6 +1187,7 @@ export function rc_loose_parse<S>(
   return { data: result.value, errors: false, warnings: result.warnings }
 }
 
+/** @deprecated use rc_parse(...).unwrapOrNull() instead */
 export function rc_unwrap_or_null<R>(result: RcParseResult<R>): {
   value: R | null
   errors: string[] | false
@@ -1159,6 +1196,7 @@ export function rc_unwrap_or_null<R>(result: RcParseResult<R>): {
   return rc_unwrap_or(result, null)
 }
 
+/** @deprecated use rc_parse(...).unwrapOr(defaultValue) instead */
 export function rc_unwrap_or<R, F = NoInfer<R>>(
   result: RcParseResult<R>,
   fallback: F,
@@ -1184,11 +1222,12 @@ export class RcValidationError extends Error {
   }
 }
 
+/** @deprecated use rc_parse(...).unwrap() instead */
 export function rc_unwrap<R>(result: RcParseResult<R>): {
   value: R
   warnings: string[] | false
 } {
-  if (result.error) {
+  if (result.errors) {
     throw new RcValidationError(result.errors)
   }
 
@@ -1482,8 +1521,11 @@ export function rc_assert_is_valid<S>(
   data: S
   value: S
   warnings: string[] | false
+  unwrap: () => S
+  unwrapOr: (defaultValue: S) => S
+  unwrapOrNull: () => S | null
 } {
-  if (result.error) {
+  if (result.errors) {
     throw new Error(`invalid input: ${result.errors.join(', ')}`)
   }
 }
@@ -1515,6 +1557,9 @@ export function rc_parse_json<T>(
         errors: [
           `expected a json string, got ${normalizedTypeOf(jsonString, true)}`,
         ],
+        unwrap,
+        unwrapOr,
+        unwrapOrNull,
       }
     }
 
@@ -1526,6 +1571,9 @@ export function rc_parse_json<T>(
       ok: false,
       error: true,
       errors: [`json parsing error: ${isObject(err) ? err.message : ''}`],
+      unwrap,
+      unwrapOr,
+      unwrapOrNull,
     }
   }
 }
