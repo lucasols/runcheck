@@ -229,5 +229,102 @@ describe('rc_to_standard', () => {
       expect(standardSchema['~standard'].vendor).toBe('runcheck')
       expect(standardSchema['~standard'].version).toBe(1)
     })
+
+    test('should call onWarnings callback when warnings are present', () => {
+      const capturedWarnings: string[][] = []
+      const standardSchema = rc_to_standard(rc_string.withFallback('default'), {
+        onWarnings: (warnings) => {
+          capturedWarnings.push(warnings)
+        },
+      })
+
+      const result1 = standardSchema['~standard'].validate(123)
+      const result2 = standardSchema['~standard'].validate('valid')
+      const result3 = standardSchema['~standard'].validate([])
+
+      expect(result1).toEqual({ value: 'default' })
+      expect(result2).toEqual({ value: 'valid' })
+      expect(result3).toEqual({ value: 'default' })
+
+      expect(capturedWarnings).toEqual([
+        ["Fallback used, errors -> Type 'number' is not assignable to 'string'"],
+        ["Fallback used, errors -> Type 'array' is not assignable to 'string'"],
+      ])
+    })
+
+    test('should not call onWarnings callback when no warnings', () => {
+      const capturedWarnings: string[][] = []
+      const standardSchema = rc_to_standard(rc_string, {
+        onWarnings: (warnings) => {
+          capturedWarnings.push(warnings)
+        },
+      })
+
+      const result1 = standardSchema['~standard'].validate('valid')
+      const result2 = standardSchema['~standard'].validate('another')
+
+      expect(result1).toEqual({ value: 'valid' })
+      expect(result2).toEqual({ value: 'another' })
+      expect(capturedWarnings).toEqual([])
+    })
+
+    test('should not call onWarnings callback when errorOnWarnings is true', () => {
+      const capturedWarnings: string[][] = []
+      const standardSchema = rc_to_standard(rc_string.withFallback('default'), {
+        errorOnWarnings: true,
+        onWarnings: (warnings) => {
+          capturedWarnings.push(warnings)
+        },
+      })
+
+      const result = standardSchema['~standard'].validate(123)
+
+      expect(result).toEqual({
+        issues: [
+          {
+            message: "Fallback used, errors -> Type 'number' is not assignable to 'string'",
+          },
+        ],
+      })
+      expect(capturedWarnings).toEqual([])
+    })
+
+    test('should call onWarnings with parse result input', () => {
+      const capturedWarnings: string[][] = []
+      const parseResult = rc_parse(123, rc_string.withFallback('fallback'))
+      const standardSchema = rc_to_standard(parseResult, {
+        onWarnings: (warnings) => {
+          capturedWarnings.push(warnings)
+        },
+      })
+
+      const result = standardSchema['~standard'].validate('ignored')
+
+      expect(result).toEqual({ value: 'fallback' })
+      expect(capturedWarnings).toEqual([
+        ["Fallback used, errors -> Type 'number' is not assignable to 'string'"],
+      ])
+    })
+
+    test('should not call onWarnings with failed parse result', () => {
+      const capturedWarnings: string[][] = []
+      const parseResult = rc_parse(123, rc_string)
+      const standardSchema = rc_to_standard(parseResult, {
+        onWarnings: (warnings) => {
+          capturedWarnings.push(warnings)
+        },
+      })
+
+      const result = standardSchema['~standard'].validate('ignored')
+
+      expect(result).toEqual({
+        issues: [
+          {
+            message: "Type 'number' is not assignable to 'string'",
+          },
+        ],
+      })
+      expect(capturedWarnings).toEqual([])
+    })
   })
 })

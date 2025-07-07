@@ -60,7 +60,9 @@ type InternalParseResult<T> =
   | { ok: true; data: T; errors: undefined }
   | { ok: false; errors: ErrorWithPath[]; data: undefined }
 
-type WithFallback<T> = (fallback: T | (() => T)) => RcType<T>
+type WithFallback<T> = (
+  fallback: T | ((invalidInput: unknown) => T),
+) => RcType<T>
 
 type RemoveArrayNever<T> = T extends never[] ? never : T
 
@@ -107,7 +109,7 @@ export type RcBase<T, RequiredKey extends boolean> = {
   /** @internal */
   readonly _kind_: string
   /** @internal */
-  readonly _fallback_: T | (() => T) | undefined
+  readonly _fallback_: T | ((invalidInput: unknown) => T) | undefined
   /** @internal */
   readonly _optional_: boolean
   /** @internal */
@@ -243,7 +245,7 @@ export function parse<T>(
         )}`,
       )
 
-      return { ok: true, data: isFn(fb) ? fb() : fb, errors: undefined }
+      return { ok: true, data: isFn(fb) ? fb(input) : fb, errors: undefined }
     }
 
     if (type._useAutFix_ && type._autoFix_) {
@@ -1594,7 +1596,7 @@ export function rc_parse_json<T>(
   }
 }
 
-function isFn(value: any): value is () => any {
+function isFn(value: any): value is (...args: any[]) => any {
   return typeof value === 'function'
 }
 
@@ -1626,8 +1628,10 @@ export function rc_to_standard<T>(
   schemaOrResult: RcType<T> | RcParseResult<T>,
   {
     errorOnWarnings = false,
+    onWarnings,
   }: {
     errorOnWarnings?: boolean
+    onWarnings?: (warnings: string[]) => void
   } = {},
 ): StandardSchemaV1<T> {
   return {
@@ -1638,7 +1642,7 @@ export function rc_to_standard<T>(
             rc_parse(value, schemaOrResult)
           )
 
-        return parseResultToStandard(result, errorOnWarnings)
+        return parseResultToStandard(result, errorOnWarnings, onWarnings)
       },
       vendor: 'runcheck',
       version: 1,
@@ -1649,6 +1653,7 @@ export function rc_to_standard<T>(
 function parseResultToStandard<T>(
   result: RcParseResult<T>,
   errorOnWarnings: boolean,
+  onWarnings: ((warnings: string[]) => void) | undefined,
 ): StandardSchemaV1.Result<T> {
   if (errorOnWarnings && result.ok && result.warnings) {
     return {
@@ -1659,6 +1664,10 @@ function parseResultToStandard<T>(
   }
 
   if (result.ok) {
+    if (onWarnings && result.warnings) {
+      onWarnings(result.warnings)
+    }
+
     return { value: result.value }
   }
 

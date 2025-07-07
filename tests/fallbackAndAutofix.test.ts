@@ -35,6 +35,66 @@ describe('fallback', () => {
     )
   })
 
+  test('fallback function receives invalidInput argument', () => {
+    const capturedInputs: unknown[] = []
+    const shape = rc_number.withFallback((invalidInput) => {
+      capturedInputs.push(invalidInput)
+      return 42
+    })
+
+    const result1 = rc_parse('invalid', shape)
+    const result2 = rc_parse([], shape)
+    const result3 = rc_parse({ foo: 'bar' }, shape)
+
+    expect(result1).toEqual(
+      successResult(42, [
+        "Fallback used, errors -> Type 'string' is not assignable to 'number'",
+      ]),
+    )
+    expect(result2).toEqual(
+      successResult(42, [
+        "Fallback used, errors -> Type 'array' is not assignable to 'number'",
+      ]),
+    )
+    expect(result3).toEqual(
+      successResult(42, [
+        "Fallback used, errors -> Type 'object' is not assignable to 'number'",
+      ]),
+    )
+
+    expect(capturedInputs).toEqual(['invalid', [], { foo: 'bar' }])
+  })
+
+  test('fallback function can use invalidInput for transformation', () => {
+    const shape = rc_number.withFallback((invalidInput: unknown) => {
+      if (typeof invalidInput === 'string') {
+        const parsed = Number(invalidInput)
+        return isNaN(parsed) ? 0 : parsed
+      }
+      return 0
+    })
+
+    const result1 = rc_parse('123', shape)
+    const result2 = rc_parse('not-a-number', shape)
+    const result3 = rc_parse({}, shape)
+
+    expect(result1).toEqual(
+      successResult(123, [
+        "Fallback used, errors -> Type 'string' is not assignable to 'number'",
+      ]),
+    )
+    expect(result2).toEqual(
+      successResult(0, [
+        "Fallback used, errors -> Type 'string' is not assignable to 'number'",
+      ]),
+    )
+    expect(result3).toEqual(
+      successResult(0, [
+        "Fallback used, errors -> Type 'object' is not assignable to 'number'",
+      ]),
+    )
+  })
+
   test('optional and fallback', () => {
     const result = rc_parse([], rc_string.optional().withFallback('world'))
 
