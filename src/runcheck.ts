@@ -1701,3 +1701,35 @@ function parseResultToStandard<T>(
     })),
   }
 }
+
+export function rc_from_standard<T>(
+  standardSchema: StandardSchemaV1<any, T>,
+  /** use this kind instead of the default one in error messages (standard_schema_${standard.vendor}@${standard.version}) */
+  kind?: string,
+): RcType<T> {
+  const standard = standardSchema['~standard']
+  return {
+    ...defaultProps,
+    _kind_: kind || `standard_schema_${standard.vendor}@${standard.version}`,
+    _parse_(input, ctx) {
+      return parse(this, input, ctx, () => {
+        const result = standard.validate(input)
+
+        if ('value' in result) {
+          return { data: result.value, errors: false }
+        }
+
+        if ('issues' in result) {
+          return {
+            data: undefined,
+            errors: result.issues.map((issue: { message: string }) =>
+              getWarningOrErrorWithPath(ctx, issue.message),
+            ),
+          }
+        }
+
+        return false
+      })
+    },
+  }
+}
