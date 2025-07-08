@@ -9,6 +9,7 @@ import {
   rc_record,
   rc_safe_fallback,
   rc_string,
+  rc_union,
 } from '../src/runcheck'
 import { successResult } from './testUtils'
 
@@ -145,7 +146,7 @@ describe('autofix', () => {
 
     expect(result).toEqual(
       successResult('1', [
-        `Autofixed from error "Type 'number' is not assignable to 'string'"`,
+        `Autofixed from error -> Type 'number' is not assignable to 'string'`,
       ]),
     )
   })
@@ -160,7 +161,7 @@ describe('autofix', () => {
 
     expect(result).toEqual(
       successResult(true, [
-        `Autofixed from error "Type 'number' is not assignable to 'boolean'"`,
+        `Autofixed from error -> Type 'number' is not assignable to 'boolean'`,
       ]),
     )
   })
@@ -170,7 +171,7 @@ describe('autofix', () => {
 
     expect(result).toEqual(
       successResult(1, [
-        `Autofixed from error "Type 'string' is not assignable to 'number'"`,
+        `Autofixed from error -> Type 'string' is not assignable to 'number'`,
       ]),
     )
   })
@@ -189,7 +190,7 @@ describe('autofix', () => {
           number: 1,
         },
         [
-          `$.number: Autofixed from error "Type 'string' is not assignable to 'number'"`,
+          `$.number: Autofixed from error -> Type 'string' is not assignable to 'number'`,
         ],
       ),
     )
@@ -226,7 +227,7 @@ describe('autofix', () => {
           },
         },
         [
-          `$.a.b.number: Autofixed from error "Type 'string' is not assignable to 'number'"`,
+          `$.a.b.number: Autofixed from error -> Type 'string' is not assignable to 'number'`,
         ],
       ),
     )
@@ -254,9 +255,486 @@ describe('autofix', () => {
           },
         ],
         [
-          `$[0].number[1]: Autofixed from error "Type 'string' is not assignable to 'number'"`,
+          `$[0].number[1]: Autofixed from error -> Type 'string' is not assignable to 'number'`,
         ],
       ),
+    )
+  })
+
+  test('return error if autofix is not possible', () => {
+    const result = rc_parse(
+      { number: 'not-a-number' },
+      rc_object({ number: rc_number_autofix }),
+    )
+
+    expect(result.ok).toBe(false)
+    expect(result.errors).toEqual([
+      `$.number: Type 'string' is not assignable to 'number'`,
+    ])
+  })
+
+  test('autofix with custom error message', () => {
+    const schema = rc_string.withAutofix((input) => {
+      if (typeof input === 'number') {
+        return { fixed: input.toString() }
+      }
+      return { errors: ['Custom error: cannot convert to string'] }
+    })
+
+    const result = rc_parse([], schema)
+
+    expect(result.ok).toBe(false)
+    expect(result.errors).toEqual(['Custom error: cannot convert to string'])
+  })
+
+  test('custom autofix function returns fixed value', () => {
+    const schema = rc_string.withAutofix((input) => {
+      if (typeof input === 'number') {
+        return { fixed: `number_${input}` }
+      }
+      return false
+    })
+
+    const result = rc_parse(42, schema)
+
+    expect(result).toEqual(
+      successResult('number_42', [
+        `Autofixed from error -> Type 'number' is not assignable to 'string'`,
+      ]),
+    )
+  })
+
+  test('custom autofix function returns false when cannot fix', () => {
+    const schema = rc_string.withAutofix((input) => {
+      if (typeof input === 'number') {
+        return { fixed: input.toString() }
+      }
+      return false
+    })
+
+    const result = rc_parse([], schema)
+
+    expect(result.ok).toBe(false)
+    expect(result.errors).toEqual([
+      `Type 'array' is not assignable to 'string'`,
+    ])
+  })
+
+  test('autofix function receives correct input', () => {
+    let capturedInput: unknown
+    const schema = rc_string.withAutofix((input) => {
+      capturedInput = input
+      return { fixed: 'fixed' }
+    })
+
+    rc_parse(42, schema)
+
+    expect(capturedInput).toBe(42)
+  })
+
+  test('autofix in nested object structures', () => {
+    const schema = rc_object({
+      data: rc_object({
+        value: rc_string.withAutofix((input) => {
+          if (typeof input === 'number') {
+            return { fixed: `converted_${input}` }
+          }
+          return false
+        }),
+      }),
+    })
+
+    const result = rc_parse({ data: { value: 123 } }, schema)
+
+    expect(result).toEqual(
+      successResult({ data: { value: 'converted_123' } }, [
+        `$.data.value: Autofixed from error -> Type 'number' is not assignable to 'string'`,
+      ]),
+    )
+  })
+
+  test('autofix in nested array structures', () => {
+    const schema = rc_array(
+      rc_object({
+        numbers: rc_array(
+          rc_string.withAutofix((input) => {
+            if (typeof input === 'number') {
+              return { fixed: `num_${input}` }
+            }
+            return false
+          }),
+        ),
+      }),
+    )
+
+    const result = rc_parse(
+      [{ numbers: [1, 'text', 3] }, { numbers: ['text', 5] }],
+      schema,
+    )
+
+    expect(result).toEqual(
+      successResult(
+        [
+          { numbers: ['num_1', 'text', 'num_3'] },
+          { numbers: ['text', 'num_5'] },
+        ],
+        [
+          `$[0].numbers[0]: Autofixed from error -> Type 'number' is not assignable to 'string'`,
+          `$[0].numbers[2]: Autofixed from error -> Type 'number' is not assignable to 'string'`,
+          `$[1].numbers[1]: Autofixed from error -> Type 'number' is not assignable to 'string'`,
+        ],
+      ),
+    )
+  })
+
+  test('autofix mixed with optional fields', () => {
+    const schema = rc_object({
+      required: rc_string.withAutofix((input) => {
+        if (typeof input === 'number') {
+          return { fixed: input.toString() }
+        }
+        return false
+      }),
+      optional: rc_string
+        .withAutofix((input) => {
+          if (typeof input === 'number') {
+            return { fixed: input.toString() }
+          }
+          return false
+        })
+        .optional(),
+    })
+
+    const result = rc_parse({ required: 42, optional: 3.14 }, schema)
+
+    expect(result).toEqual(
+      successResult({ required: '42', optional: '3.14' }, [
+        `$.required: Autofixed from error -> Type 'number' is not assignable to 'string'`,
+        `$.optional: Autofixed from error -> Type 'number' is not assignable to 'undefined | string'`,
+      ]),
+    )
+  })
+
+  test('autofix with union types', () => {
+    const stringAutofix = rc_string.withAutofix((input) => {
+      if (typeof input === 'number') {
+        return { fixed: input.toString() }
+      }
+      return false
+    })
+
+    const result = rc_parse(42, rc_union(stringAutofix, rc_number))
+
+    expect(result).toEqual(
+      successResult('42', [
+        `Autofixed from error -> Type 'number' is not assignable to 'string'`,
+      ]),
+    )
+  })
+
+  test('autofix chaining with fallback', () => {
+    const schema = rc_string
+      .withAutofix((input) => {
+        if (typeof input === 'number') {
+          return { fixed: input.toString() }
+        }
+        return false
+      })
+      .withFallback('fallback_value')
+
+    const result = rc_parse([], schema)
+
+    expect(result).toEqual(
+      successResult('fallback_value', [
+        `Fallback used, errors -> Type 'array' is not assignable to 'string'`,
+      ]),
+    )
+  })
+
+  test('autofix with where predicate', () => {
+    const schema = rc_string
+      .withAutofix((input) => {
+        if (typeof input === 'number' && input >= 100) {
+          return { fixed: `valid_${input}` }
+        }
+        if (typeof input === 'number') {
+          return { fixed: `invalid_${input}` }
+        }
+        return false
+      })
+      .where((value) => value.startsWith('valid_'))
+
+    const result1 = rc_parse(123, schema)
+    const result2 = rc_parse(42, schema)
+
+    expect(result1).toEqual(
+      successResult('valid_123', [
+        `Autofixed from error -> Type 'number' is not assignable to 'string'`,
+      ]),
+    )
+
+    expect(result2).toEqual(
+      successResult('invalid_42', [
+        `Autofixed from error -> Type 'number' is not assignable to 'string'`,
+        `Autofixed from error -> Predicate failed for type 'string'`,
+      ]),
+    )
+  })
+
+  test('autofix disabled with noWarnings option', () => {
+    const schema = rc_string.withAutofix((input) => {
+      if (typeof input === 'number') {
+        return { fixed: input.toString() }
+      }
+      return false
+    })
+
+    const result = rc_parse(42, schema, { noWarnings: true })
+
+    expect(result.ok).toBe(false)
+    expect(result.errors).toEqual([
+      `Type 'number' is not assignable to 'string'`,
+    ])
+  })
+
+  test('autofix multiple transformations in sequence', () => {
+    let transformCount = 0
+    const schema = rc_array(
+      rc_string.withAutofix((input) => {
+        transformCount++
+        if (typeof input === 'number') {
+          return { fixed: `item_${input}` }
+        }
+        return false
+      }),
+    )
+
+    const result = rc_parse([1, 2, 'text', 4], schema)
+
+    expect(transformCount).toBe(3) // Only numbers should be transformed
+    expect(result).toEqual(
+      successResult(
+        ['item_1', 'item_2', 'text', 'item_4'],
+        [
+          `$[0]: Autofixed from error -> Type 'number' is not assignable to 'string'`,
+          `$[1]: Autofixed from error -> Type 'number' is not assignable to 'string'`,
+          `$[3]: Autofixed from error -> Type 'number' is not assignable to 'string'`,
+        ],
+      ),
+    )
+  })
+
+  test('autofix with complex custom logic', () => {
+    const schema = rc_object({
+      status: rc_string.withAutofix((input) => {
+        if (typeof input === 'boolean') {
+          return { fixed: input ? 'active' : 'inactive' }
+        }
+        if (typeof input === 'number') {
+          return { fixed: input > 0 ? 'positive' : 'zero_or_negative' }
+        }
+        return false
+      }),
+    })
+
+    const result1 = rc_parse({ status: true }, schema)
+    const result2 = rc_parse({ status: false }, schema)
+    const result3 = rc_parse({ status: 5 }, schema)
+    const result4 = rc_parse({ status: -1 }, schema)
+
+    expect(result1).toEqual(
+      successResult({ status: 'active' }, [
+        `$.status: Autofixed from error -> Type 'boolean' is not assignable to 'string'`,
+      ]),
+    )
+    expect(result2).toEqual(
+      successResult({ status: 'inactive' }, [
+        `$.status: Autofixed from error -> Type 'boolean' is not assignable to 'string'`,
+      ]),
+    )
+    expect(result3).toEqual(
+      successResult({ status: 'positive' }, [
+        `$.status: Autofixed from error -> Type 'number' is not assignable to 'string'`,
+      ]),
+    )
+    expect(result4).toEqual(
+      successResult({ status: 'zero_or_negative' }, [
+        `$.status: Autofixed from error -> Type 'number' is not assignable to 'string'`,
+      ]),
+    )
+  })
+
+  test('safeFix true - no warning reported', () => {
+    const schema = rc_string.withAutofix((input) => {
+      if (typeof input === 'number') {
+        return { fixed: input.toString(), safeFix: true }
+      }
+      return false
+    })
+
+    const result = rc_parse(42, schema)
+
+    expect(result).toEqual(successResult('42', false))
+    expect(result.ok && result.warnings).toBe(false)
+  })
+
+  test('safeFix false - warning reported', () => {
+    const schema = rc_string.withAutofix((input) => {
+      if (typeof input === 'number') {
+        return { fixed: input.toString(), safeFix: false }
+      }
+      return false
+    })
+
+    const result = rc_parse(42, schema)
+
+    expect(result).toEqual(
+      successResult('42', [
+        `Autofixed from error -> Type 'number' is not assignable to 'string'`,
+      ]),
+    )
+  })
+
+  test('safeFix undefined - warning reported (default behavior)', () => {
+    const schema = rc_string.withAutofix((input) => {
+      if (typeof input === 'number') {
+        return { fixed: input.toString() }
+      }
+      return false
+    })
+
+    const result = rc_parse(42, schema)
+
+    expect(result).toEqual(
+      successResult('42', [
+        `Autofixed from error -> Type 'number' is not assignable to 'string'`,
+      ]),
+    )
+  })
+
+  test('safeFix in nested structures', () => {
+    const schema = rc_object({
+      safe: rc_string.withAutofix((input) => {
+        if (typeof input === 'number') {
+          return { fixed: `safe_${input}`, safeFix: true }
+        }
+        return false
+      }),
+      warned: rc_string.withAutofix((input) => {
+        if (typeof input === 'number') {
+          return { fixed: `warned_${input}`, safeFix: false }
+        }
+        return false
+      }),
+    })
+
+    const result = rc_parse({ safe: 123, warned: 456 }, schema)
+
+    expect(result).toEqual(
+      successResult({ safe: 'safe_123', warned: 'warned_456' }, [
+        `$.warned: Autofixed from error -> Type 'number' is not assignable to 'string'`,
+      ]),
+    )
+  })
+
+  test('safeFix in arrays', () => {
+    const schema = rc_array(
+      rc_string.withAutofix((input) => {
+        if (typeof input === 'number') {
+          return { fixed: `item_${input}`, safeFix: input % 2 === 0 }
+        }
+        return false
+      }),
+    )
+
+    const result = rc_parse([1, 2, 3, 4], schema)
+
+    expect(result).toEqual(
+      successResult(
+        ['item_1', 'item_2', 'item_3', 'item_4'],
+        [
+          `$[0]: Autofixed from error -> Type 'number' is not assignable to 'string'`,
+          `$[2]: Autofixed from error -> Type 'number' is not assignable to 'string'`,
+        ],
+      ),
+    )
+  })
+
+  test('safeFix with custom errors', () => {
+    const schema = rc_string.withAutofix((input) => {
+      if (typeof input === 'number' && input > 0) {
+        return { fixed: input.toString(), safeFix: true }
+      }
+      if (typeof input === 'number') {
+        return { errors: ['Number must be positive'] }
+      }
+      return false
+    })
+
+    const result1 = rc_parse(42, schema)
+    const result2 = rc_parse(-5, schema)
+    const result3 = rc_parse([], schema)
+
+    expect(result1).toEqual(successResult('42', false))
+
+    expect(result2.ok).toBe(false)
+    expect(result2.errors).toEqual(['Number must be positive'])
+
+    expect(result3.ok).toBe(false)
+    expect(result3.errors).toEqual([
+      `Type 'array' is not assignable to 'string'`,
+    ])
+  })
+
+  test('safeFix with union types', () => {
+    const safeStringAutofix = rc_string.withAutofix((input) => {
+      if (typeof input === 'number') {
+        return { fixed: input.toString(), safeFix: true }
+      }
+      return false
+    })
+
+    const result = rc_parse(42, rc_union(safeStringAutofix, rc_number))
+
+    expect(result).toEqual(successResult('42', false))
+  })
+
+  test('safeFix disabled with noWarnings option', () => {
+    const schema = rc_string.withAutofix((input) => {
+      if (typeof input === 'number') {
+        return { fixed: input.toString(), safeFix: true }
+      }
+      return false
+    })
+
+    const result = rc_parse(42, schema, { noWarnings: true })
+
+    expect(result.ok).toBe(false)
+    expect(result.errors).toEqual([
+      `Type 'number' is not assignable to 'string'`,
+    ])
+  })
+
+  test('safeFix with mixed scenarios', () => {
+    const schema = rc_string.withAutofix((input) => {
+      if (typeof input === 'number' && input > 0) {
+        return { fixed: input.toString(), safeFix: true }
+      }
+      if (typeof input === 'number') {
+        return { fixed: input.toString(), safeFix: false }
+      }
+      return false
+    })
+
+    const result1 = rc_parse(42, schema)
+    const result2 = rc_parse(-5, schema)
+
+    expect(result1).toEqual(successResult('42', false))
+
+    expect(result2).toEqual(
+      successResult('-5', [
+        `Autofixed from error -> Type 'number' is not assignable to 'string'`,
+      ]),
     )
   })
 })

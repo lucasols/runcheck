@@ -50,7 +50,7 @@ describe('strict parsing', () => {
 
     expect(result).toEqual(
       successResult({ withAutofix: 1, withFallback: 1 }, [
-        "$.withAutofix: Autofixed from error \"Type 'string' is not assignable to 'number'\"",
+        "$.withAutofix: Autofixed from error -> Type 'string' is not assignable to 'number'",
         "$.withFallback: Fallback used, errors -> Type 'string' is not assignable to 'number'",
       ]),
     )

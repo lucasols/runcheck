@@ -64,6 +64,20 @@ type WithFallback<T> = (
   fallback: T | ((invalidInput: unknown) => T),
 ) => RcType<T>
 
+export type AutoFixResult<T> =
+  | false
+  | { errors: string[]; safeFix?: undefined; fixed?: undefined }
+  | {
+      fixed: T
+      errors?: undefined
+      /** do not report autofix as warning */
+      safeFix?: boolean
+    }
+
+type WithAutofix<T> = (
+  customAutofix: (input: unknown) => AutoFixResult<T>,
+) => RcType<T>
+
 type RemoveArrayNever<T> = T extends never[] ? never : T
 
 export type RcOptionalKeyType<T> = RcBase<T, true>
@@ -86,9 +100,7 @@ export type RcBase<T, RequiredKey extends boolean> = {
   readonly orNull: () => RcType<T | null>
   /** RcType | null | undefined */
   readonly orNullish: () => RcType<T | null | undefined>
-  readonly withAutofix: (
-    customAutofix: (input: unknown) => false | { fixed: T },
-  ) => RcType<T>
+  readonly withAutofix: WithAutofix<T>
   readonly default: <D extends NotUndefined<T>>(
     defaultValue: D | (() => D),
   ) => RcType<NotUndefined<T> | RemoveArrayNever<D>>
@@ -133,7 +145,7 @@ export type RcBase<T, RequiredKey extends boolean> = {
   /** @internal */
   readonly _obj_shape_: Record<string, RcType<any>> | undefined
   /** @internal */
-  readonly _autoFix_: ((input: unknown) => false | { fixed: T }) | undefined
+  readonly _autoFix_: ((input: unknown) => AutoFixResult<T>) | undefined
 }
 
 const getUndefined = () => undefined
@@ -252,15 +264,27 @@ export function parse<T>(
       const autofixed = type._autoFix_(input)
 
       if (autofixed) {
-        addWarning(
-          ctx,
-          `Autofixed from error "${getResultErrors(
-            isValid,
+        if (!autofixed.safeFix) {
+          addWarning(
             ctx,
-            type,
-            input,
-          )}"`,
-        )
+            `Autofixed from error -> ${getResultErrors(
+              isValid,
+              ctx,
+              type,
+              input,
+            )}`,
+          )
+        }
+
+        if (autofixed.errors) {
+          return {
+            ok: false,
+            data: undefined,
+            errors: autofixed.errors.map((error) =>
+              getWarningOrErrorWithPath(ctx, error),
+            ),
+          }
+        }
 
         return { ok: true, data: autofixed.fixed, errors: undefined }
       }
