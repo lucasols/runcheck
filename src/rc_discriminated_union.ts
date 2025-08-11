@@ -28,7 +28,7 @@ import {
  *   circle: { radius: rc_number },
  *   rectangle: { width: rc_number, height: rc_number }
  * })
- * 
+ *
  * const result1 = shapeSchema.parse({ type: 'circle', radius: 5 }) // valid
  * const result2 = shapeSchema.parse({ type: 'rectangle', width: 10, height: 20 }) // valid
  * const result3 = shapeSchema.parse({ type: 'triangle', sides: 3 }) // invalid - unknown discriminator
@@ -116,10 +116,10 @@ type OmitDiscriminator<K, D extends Record<string, unknown>> =
  * @returns A builder function that takes a schema mapping matching the specified TypeScript discriminated union
  * @example
  * ```typescript
- * type Shape = 
+ * type Shape =
  *   | { type: 'circle', radius: number }
  *   | { type: 'rectangle', width: number, height: number }
- * 
+ *
  * const shapeBuilder = rc_discriminated_union_builder<Shape, 'type'>('type')
  * const shapeSchema = shapeBuilder({
  *   circle: { radius: rc_number },

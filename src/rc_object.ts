@@ -656,7 +656,7 @@ export type StrictTypeToRcTypeBase<T extends Record<string, any>> = {
  *   age: number
  *   email?: string
  * }
- * 
+ *
  * const userBuilder = rc_obj_builder<User>()
  * const userSchema = userBuilder({
  *   name: rc_string,
