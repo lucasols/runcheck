@@ -1,5 +1,22 @@
 import { RcType, defaultProps, parse } from './runcheck'
 
+/**
+ * Creates an intersection type validator that requires input to satisfy all provided types.
+ * For object types, merges the properties from all types.
+ * For non-object types, input must be valid for all types simultaneously.
+ * @param types - The types to intersect (2-4 types supported)
+ * @returns A runcheck type representing the intersection of all input types
+ * @example
+ * ```typescript
+ * const userBase = rc_object({ name: rc_string })
+ * const userMeta = rc_object({ createdAt: rc_date })
+ * const fullUser = rc_intersection(userBase, userMeta)
+ * // Result: { name: string, createdAt: Date }
+ * 
+ * const result = fullUser.parse({ name: 'John', createdAt: new Date() }) // valid
+ * const result2 = fullUser.parse({ name: 'John' }) // invalid - missing createdAt
+ * ```
+ */
 export function rc_intersection<A, B>(a: RcType<A>, b: RcType<B>): RcType<A & B>
 export function rc_intersection<A, B, C>(
   a: RcType<A>,

@@ -16,6 +16,24 @@ import {
   parse,
 } from './runcheck'
 
+/**
+ * Creates a discriminated union type validator.
+ * Uses a discriminator key to determine which schema to validate against.
+ * @param discriminatorKey - The property name used to discriminate between union members
+ * @param types - An object mapping discriminator values to their corresponding schemas
+ * @returns A runcheck type that validates discriminated union objects
+ * @example
+ * ```typescript
+ * const shapeSchema = rc_discriminated_union('type', {
+ *   circle: { radius: rc_number },
+ *   rectangle: { width: rc_number, height: rc_number }
+ * })
+ * 
+ * const result1 = shapeSchema.parse({ type: 'circle', radius: 5 }) // valid
+ * const result2 = shapeSchema.parse({ type: 'rectangle', width: 10, height: 20 }) // valid
+ * const result3 = shapeSchema.parse({ type: 'triangle', sides: 3 }) // invalid - unknown discriminator
+ * ```
+ */
 export function rc_discriminated_union<
   K extends string,
   T extends Record<string, RcObject | RcBase<any, any>>,
@@ -92,6 +110,23 @@ export function rc_discriminated_union<
 type OmitDiscriminator<K, D extends Record<string, unknown>> =
   D extends any ? Omit<D, K & string> : never
 
+/**
+ * Creates a type-safe discriminated union builder that enforces the structure matches a TypeScript type.
+ * @param discriminatorKey - The property name used to discriminate between union members
+ * @returns A builder function that takes a schema mapping matching the specified TypeScript discriminated union
+ * @example
+ * ```typescript
+ * type Shape = 
+ *   | { type: 'circle', radius: number }
+ *   | { type: 'rectangle', width: number, height: number }
+ * 
+ * const shapeBuilder = rc_discriminated_union_builder<Shape, 'type'>('type')
+ * const shapeSchema = shapeBuilder({
+ *   circle: { radius: rc_number },
+ *   rectangle: { width: rc_number, height: rc_number }
+ * })
+ * ```
+ */
 export function rc_discriminated_union_builder<
   D extends Record<string, unknown>,
   K extends keyof D,

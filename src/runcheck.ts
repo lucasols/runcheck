@@ -428,6 +428,14 @@ export const defaultProps: Omit<RcType<any>, '_parse_' | '_kind_'> = {
   _is_extend_obj_: false,
 }
 
+/**
+ * Runtime type validator for undefined values.
+ * @example
+ * ```typescript
+ * const result = rc_undefined.parse(undefined) // valid
+ * const result2 = rc_undefined.parse(null) // invalid
+ * ```
+ */
 export const rc_undefined: RcType<undefined> = {
   ...(defaultProps as Omit<RcType<undefined>, '_parse_' | '_kind_'>),
   _parse_(input, ctx) {
@@ -436,6 +444,14 @@ export const rc_undefined: RcType<undefined> = {
   _kind_: 'undefined',
 }
 
+/**
+ * Runtime type validator for null values.
+ * @example
+ * ```typescript
+ * const result = rc_null.parse(null) // valid
+ * const result2 = rc_null.parse(undefined) // invalid
+ * ```
+ */
 export const rc_null: RcType<null> = {
   ...(defaultProps as Omit<RcType<null>, '_parse_' | '_kind_'>),
   _parse_(input, ctx) {
@@ -444,6 +460,15 @@ export const rc_null: RcType<null> = {
   _kind_: 'null',
 }
 
+/**
+ * Runtime type validator that accepts any value (always passes validation).
+ * @example
+ * ```typescript
+ * const result = rc_any.parse('anything') // valid
+ * const result2 = rc_any.parse(123) // valid
+ * const result3 = rc_any.parse(null) // valid
+ * ```
+ */
 export const rc_any: RcType<any> = {
   ...defaultProps,
   _parse_(input) {
@@ -452,6 +477,15 @@ export const rc_any: RcType<any> = {
   _kind_: 'any',
 }
 
+/**
+ * Runtime type validator for unknown values (accepts any value but maintains type safety).
+ * @example
+ * ```typescript
+ * const result = rc_unknown.parse('anything') // valid
+ * const result2 = rc_unknown.parse(123) // valid
+ * // result.value is typed as unknown
+ * ```
+ */
 export const rc_unknown: RcType<unknown> = {
   ...defaultProps,
   _parse_(input) {
@@ -460,6 +494,15 @@ export const rc_unknown: RcType<unknown> = {
   _kind_: 'unknown',
 }
 
+/**
+ * Runtime type validator for boolean values.
+ * @example
+ * ```typescript
+ * const result = rc_boolean.parse(true) // valid
+ * const result2 = rc_boolean.parse(false) // valid
+ * const result3 = rc_boolean.parse('true') // invalid
+ * ```
+ */
 export const rc_boolean: RcType<boolean> = {
   ...defaultProps,
   _parse_(input, ctx) {
@@ -468,6 +511,14 @@ export const rc_boolean: RcType<boolean> = {
   _kind_: 'boolean',
 }
 
+/**
+ * Runtime type validator for string values.
+ * @example
+ * ```typescript
+ * const result = rc_string.parse('hello') // valid
+ * const result2 = rc_string.parse(123) // invalid
+ * ```
+ */
 export const rc_string: RcType<string> = {
   ...defaultProps,
   _parse_(input, ctx) {
@@ -476,6 +527,16 @@ export const rc_string: RcType<string> = {
   _kind_: 'string',
 }
 
+/**
+ * Runtime type validator for number values (excludes NaN).
+ * @example
+ * ```typescript
+ * const result = rc_number.parse(42) // valid
+ * const result2 = rc_number.parse(3.14) // valid
+ * const result3 = rc_number.parse('42') // invalid
+ * const result4 = rc_number.parse(NaN) // invalid
+ * ```
+ */
 export const rc_number: RcType<number> = {
   ...defaultProps,
   _parse_(input, ctx) {
@@ -489,6 +550,15 @@ export const rc_number: RcType<number> = {
   _kind_: 'number',
 }
 
+/**
+ * Runtime type validator for Date objects (excludes invalid dates).
+ * @example
+ * ```typescript
+ * const result = rc_date.parse(new Date()) // valid
+ * const result2 = rc_date.parse('2023-01-01') // invalid
+ * const result3 = rc_date.parse(new Date('invalid')) // invalid
+ * ```
+ */
 export const rc_date: RcType<Date> = {
   ...defaultProps,
   _parse_(input, ctx) {
@@ -503,8 +573,18 @@ export const rc_date: RcType<Date> = {
   _kind_: 'date',
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
-export function rc_instanceof<T extends Function>(classToCheck: T): RcType<T> {
+/**
+ * Creates a runtime type validator for instances of a specific class or constructor.
+ * @param classToCheck - The constructor function or class to check instances against
+ * @returns A runcheck type that validates if input is an instance of the given class
+ * @example
+ * ```typescript
+ * const dateType = rc_instanceof(Date)
+ * const result = dateType.parse(new Date()) // valid
+ * const result2 = dateType.parse("2023-01-01") // invalid
+ * ```
+ */
+export function rc_instanceof<T extends new (...args: any[]) => any>(classToCheck: T): RcType<T> {
   return {
     ...defaultProps,
     _parse_(input, ctx) {
@@ -516,6 +596,17 @@ export function rc_instanceof<T extends Function>(classToCheck: T): RcType<T> {
   }
 }
 
+/**
+ * Creates a runtime type validator for literal values.
+ * @param literals - The literal values to match against
+ * @returns A runcheck type that validates if input matches one of the provided literals
+ * @example
+ * ```typescript
+ * const statusType = rc_literals('active', 'inactive', 'pending')
+ * const result = statusType.parse('active') // valid
+ * const result2 = statusType.parse('unknown') // invalid
+ * ```
+ */
 export function rc_literals<T extends (string | number | boolean)[]>(
   ...literals: T
 ): RcType<T[number]> {
@@ -546,6 +637,18 @@ export function rc_literals<T extends (string | number | boolean)[]>(
 
 const maxShallowObjErrors = 1
 
+/**
+ * Creates a union type validator that accepts any of the provided types.
+ * @param types - The types to union together
+ * @returns A runcheck type that validates if input matches any of the provided types
+ * @example
+ * ```typescript
+ * const stringOrNumber = rc_union(rc_string, rc_number)
+ * const result = stringOrNumber.parse("hello") // valid
+ * const result2 = stringOrNumber.parse(42) // valid
+ * const result3 = stringOrNumber.parse(true) // invalid
+ * ```
+ */
 export function rc_union<T extends RcType<any>[]>(
   ...types: T
 ): RcType<RcInferType<T[number]>> {
@@ -646,6 +749,18 @@ export function rc_union<T extends RcType<any>[]>(
 type NotUndefined<T> = Exclude<T, undefined>
 
 /** Generate a schema with valid fallback value for undefined inputs */
+/**
+ * Creates a type with a default value for undefined inputs.
+ * @param schema - The base schema to validate against
+ * @param defaultValue - The default value or function that returns the default value
+ * @returns A runcheck type that uses the default value when input is undefined
+ * @example
+ * ```typescript
+ * const stringWithDefault = rc_default(rc_string, 'default')
+ * const result = stringWithDefault.parse(undefined) // returns 'default'
+ * const result2 = stringWithDefault.parse('hello') // returns 'hello'
+ * ```
+ */
 export function rc_default<T>(
   schema: RcType<T>,
   defaultValue: NotUndefined<T> | (() => NotUndefined<T>),
@@ -687,6 +802,18 @@ export function rc_default<T>(
 
 type NotNullish<T> = Exclude<T, null | undefined>
 
+/**
+ * Creates a type with a default value for null or undefined inputs.
+ * @param schema - The base schema to validate against
+ * @param defaultValue - The default value or function that returns the default value
+ * @returns A runcheck type that uses the default value when input is null or undefined
+ * @example
+ * ```typescript
+ * const stringWithDefault = rc_nullish_default(rc_string, 'default')
+ * const result = stringWithDefault.parse(null) // returns 'default'
+ * const result2 = stringWithDefault.parse(undefined) // returns 'default'
+ * ```
+ */
 export function rc_nullish_default<T>(
   schema: RcType<T>,
   defaultValue: NotNullish<T> | (() => NotNullish<T>),
@@ -727,6 +854,17 @@ export function rc_nullish_default<T>(
 }
 
 /** returns a fallback in case of wrong inputs without adding a warning */
+/**
+ * Creates a type with a fallback value for invalid inputs without adding warnings.
+ * @param schema - The base schema to validate against
+ * @param fallback - The fallback value or function that returns the fallback value
+ * @returns A runcheck type that uses the fallback value when input is invalid
+ * @example
+ * ```typescript
+ * const safeString = rc_safe_fallback(rc_string, 'fallback')
+ * const result = safeString.parse(123) // returns 'fallback' without warnings
+ * ```
+ */
 export function rc_safe_fallback<T>(
   schema: RcType<T>,
   fallback: NoInfer<T> | (() => NoInfer<T>),
@@ -747,6 +885,20 @@ export function rc_safe_fallback<T>(
   }
 }
 
+/**
+ * Creates a record (object with string keys) type validator.
+ * @param valueType - The type to validate for each value in the record
+ * @param options - Configuration options for key validation and loose checking
+ * @param options.checkKey - Optional function to validate keys
+ * @param options.looseCheck - If true, invalid values are ignored instead of causing errors
+ * @returns A runcheck type that validates objects with string keys and typed values
+ * @example
+ * ```typescript
+ * const stringRecord = rc_record(rc_string)
+ * const result = stringRecord.parse({ a: 'hello', b: 'world' }) // valid
+ * const result2 = stringRecord.parse({ a: 'hello', b: 123 }) // invalid
+ * ```
+ */
 export function rc_record<V>(
   valueType: RcType<V>,
   {
@@ -819,6 +971,18 @@ export function rc_record<V>(
 }
 
 /** instead of returning a general error, rejects invalid keys and returns warnings for these items */
+/**
+ * Creates a loose record validator that ignores invalid values instead of rejecting them.
+ * @param valueType - The type to validate for each value in the record
+ * @param options - Configuration options
+ * @param options.checkKey - Optional function to validate keys
+ * @returns A runcheck type that validates objects while ignoring invalid values
+ * @example
+ * ```typescript
+ * const looseStringRecord = rc_loose_record(rc_string)
+ * const result = looseStringRecord.parse({ a: 'hello', b: 123 }) // returns { a: 'hello' }
+ * ```
+ */
 export function rc_loose_record<V>(
   valueType: RcType<V>,
   { checkKey }: { checkKey?: (key: string) => boolean } = {},
@@ -965,6 +1129,18 @@ type ArrayOptions<T extends RcType<any>> = {
   filter?: (item: RcInferType<T>) => boolean | { errors: ErrorWithPath[] }
 }
 
+/**
+ * Creates an array type validator.
+ * @param type - The type to validate for each array element
+ * @param options - Configuration options for uniqueness and filtering
+ * @returns A runcheck type that validates arrays of the specified type
+ * @example
+ * ```typescript
+ * const stringArray = rc_array(rc_string)
+ * const result = stringArray.parse(['hello', 'world']) // valid
+ * const result2 = stringArray.parse(['hello', 123]) // invalid
+ * ```
+ */
 export function rc_array<T extends RcType<any>>(
   type: T,
   options?: ArrayOptions<T>,
@@ -985,6 +1161,16 @@ export function rc_array<T extends RcType<any>>(
   }
 }
 
+/**
+ * Extracts the item type from an array type.
+ * @param type - The array type to extract the item type from
+ * @returns The item type of the array
+ * @example
+ * ```typescript
+ * const stringArray = rc_array(rc_string)
+ * const itemType = rc_get_array_item_type(stringArray) // rc_string
+ * ```
+ */
 export function rc_get_array_item_type<T>(type: RcType<T[]>): RcType<T> {
   if (!type._array_item_type_) {
     throw new Error(`Type does not have an item type`)
@@ -993,6 +1179,17 @@ export function rc_get_array_item_type<T>(type: RcType<T[]>): RcType<T> {
   return type._array_item_type_
 }
 
+/**
+ * Disables loose array validation for a type.
+ * @param type - The type to modify
+ * @param options - Configuration options
+ * @param options.nonRecursive - If true, only affects the immediate array type
+ * @returns The modified type with loose array validation disabled
+ * @example
+ * ```typescript
+ * const strictArray = rc_disable_loose_array(rc_array(rc_string))
+ * ```
+ */
 export function rc_disable_loose_array<T extends RcType<any>>(
   type: T,
   { nonRecursive = false }: { nonRecursive?: boolean } = {},
@@ -1033,6 +1230,17 @@ export function rc_disable_loose_array<T extends RcType<any>>(
 }
 
 /** instead of returning a general error, rejects invalid array items and returns warnings for these items */
+/**
+ * Creates a loose array validator that ignores invalid items instead of rejecting the entire array.
+ * @param type - The type to validate for each array element
+ * @param options - Configuration options for uniqueness and filtering
+ * @returns A runcheck type that validates arrays while filtering out invalid items
+ * @example
+ * ```typescript
+ * const looseStringArray = rc_loose_array(rc_string)
+ * const result = looseStringArray.parse(['hello', 123, 'world']) // returns ['hello', 'world']
+ * ```
+ */
 export function rc_loose_array<T extends RcType<any>>(
   type: T,
   options?: ArrayOptions<T>,
@@ -1053,6 +1261,23 @@ export function rc_loose_array<T extends RcType<any>>(
   }
 }
 
+/**
+ * Creates an array validator with schema-based filtering.
+ * @param filterSchema - The schema to validate items before filtering
+ * @param filterFn - The function to determine if validated items should be included
+ * @param type - The type to validate for included array elements
+ * @param options - Configuration options
+ * @returns A runcheck type that validates and filters arrays based on the schema
+ * @example
+ * ```typescript
+ * const evenNumbers = rc_array_filter_from_schema(
+ *   rc_number,
+ *   (n) => n % 2 === 0,
+ *   rc_number
+ * )
+ * const result = evenNumbers.parse([1, 2, 3, 4]) // returns [2, 4]
+ * ```
+ */
 export function rc_array_filter_from_schema<B, T>(
   filterSchema: RcType<B>,
   filterFn: (item: B) => boolean,
@@ -1096,6 +1321,17 @@ type MapTupleToTypes<T extends readonly [...any[]]> = {
  * Check for a tuple of types
  *
  * TS equivalent example: [string, number, boolean]
+ */
+/**
+ * Creates a tuple type validator for arrays with fixed length and typed elements.
+ * @param types - An array of types corresponding to each position in the tuple
+ * @returns A runcheck type that validates tuples with the specified types
+ * @example
+ * ```typescript
+ * const coordinate = rc_tuple([rc_number, rc_number])
+ * const result = coordinate.parse([10, 20]) // valid
+ * const result2 = coordinate.parse([10, 20, 30]) // invalid - wrong length
+ * ```
  */
 export function rc_tuple<const T extends readonly RcType<any>[]>(
   types: T,
@@ -1160,6 +1396,23 @@ function unwrapOrNull(this: RcParseResult<any>) {
  * Parse a runcheck type. If valid return the valid input, with warning for autofix
  * and fallback, or the errors if invalid
  */
+/**
+ * Parses and validates input against a runcheck type schema.
+ * @param input - The input value to validate
+ * @param type - The runcheck type schema to validate against
+ * @param options - Parse options
+ * @param options.noWarnings - If true, disables fallback and autofix warnings
+ * @returns The parse result containing either the validated value or errors
+ * @example
+ * ```typescript
+ * const result = rc_parse('hello', rc_string)
+ * if (result.ok) {
+ *   console.log(result.value) // 'hello'
+ * } else {
+ *   console.log(result.errors) // validation errors
+ * }
+ * ```
+ */
 export function rc_parse<S>(
   input: any,
   type: RcType<S>,
@@ -1204,6 +1457,17 @@ export function rc_parse<S>(
 export type RcParser<T> = (input: any) => RcParseResult<T>
 
 /** create a reusable parser for a certain type */
+/**
+ * Creates a reusable parser function for a runcheck type.
+ * @param type - The runcheck type to create a parser for
+ * @returns A parser function that can be called with input values
+ * @example
+ * ```typescript
+ * const parseString = rc_parser(rc_string)
+ * const result1 = parseString('hello')
+ * const result2 = parseString(123)
+ * ```
+ */
 export function rc_parser<S>(type: RcType<S>): RcParser<S> {
   return (input: any) => rc_parse(input, type)
 }
@@ -1276,6 +1540,19 @@ export function rc_unwrap<R>(result: RcParseResult<R>): {
   return result
 }
 
+/**
+ * Type guard function that checks if input is valid for a given type.
+ * @param input - The input value to validate
+ * @param type - The runcheck type to validate against
+ * @returns True if input is valid, false otherwise (with type narrowing)
+ * @example
+ * ```typescript
+ * if (rc_is_valid(input, rc_string)) {
+ *   // input is now typed as string
+ *   console.log(input.toUpperCase())
+ * }
+ * ```
+ */
 export function rc_is_valid<S>(input: any, type: RcType<S>): input is S {
   const ctx: ParseResultCtx = {
     warnings_: [],
@@ -1290,10 +1567,42 @@ export function rc_is_valid<S>(input: any, type: RcType<S>): input is S {
   return type._parse_(input, ctx).ok
 }
 
+/**
+ * Creates a validator function that acts as a type guard.
+ * @param type - The runcheck type to create a validator for
+ * @returns A validator function that can be used as a type guard
+ * @example
+ * ```typescript
+ * const isString = rc_validator(rc_string)
+ * if (isString(input)) {
+ *   // input is now typed as string
+ *   console.log(input.length)
+ * }
+ * ```
+ */
 export function rc_validator<S>(type: RcType<S>) {
   return (input: any): input is S => rc_is_valid(input, type)
 }
 
+/**
+ * Creates a recursive type definition for self-referencing data structures.
+ * @param type - A function that returns the recursive type definition
+ * @returns A runcheck type that can handle recursive structures
+ * @example
+ * ```typescript
+ * type TreeNode = {
+ *   value: string
+ *   children?: TreeNode[]
+ * }
+ *
+ * const TreeNode: RcType<TreeNode> = rc_recursive(() =>
+ *   rc_object({
+ *     value: rc_string,
+ *     children: rc_array(TreeNode).optional(),
+ *   })
+ * )
+ * ```
+ */
 export function rc_recursive<T extends RcBase<any, any>>(type: () => T): T {
   let recursiveType: { -readonly [K in keyof T]: T[K] } | undefined = undefined
 
@@ -1378,6 +1687,23 @@ function validateTransformOutput<T>(
 }
 
 /** validate a input or subset of input and transform the valid result */
+/**
+ * Creates a type that validates input and transforms the result.
+ * @param type - The input type to validate against
+ * @param transform - Function to transform the validated input
+ * @param options - Transform options
+ * @param options.outputSchema - Optional schema to validate the transformed output
+ * @param options.disableStrictOutputSchema - If true, allows loose validation of output
+ * @returns A runcheck type that validates input and applies transformation
+ * @example
+ * ```typescript
+ * const upperCaseString = rc_transform(
+ *   rc_string,
+ *   (str) => str.toUpperCase()
+ * )
+ * const result = upperCaseString.parse('hello') // returns 'HELLO'
+ * ```
+ */
 export function rc_transform<Input, Transformed>(
   type: RcType<Input>,
   transform: (input: Input, inputSchema: RcType<Input>) => Transformed,
@@ -1436,6 +1762,19 @@ export function rc_transform<Input, Transformed>(
 }
 
 /** Create transforms which result can be validated with the same schema */
+/**
+ * Creates a narrowing transformation that refines the input type.
+ * @param type - The input type to validate against
+ * @param narrow - Function to narrow the validated input to a more specific type
+ * @returns A runcheck type that validates and narrows the input
+ * @example
+ * ```typescript
+ * const positiveNumber = rc_narrow(
+ *   rc_number,
+ *   (n) => n > 0 ? n : 0
+ * )
+ * ```
+ */
 export function rc_narrow<Input, Narrowed extends Input>(
   type: RcType<Input>,
   narrow: (input: Input, inputSchema: RcType<Input>) => Narrowed,
@@ -1444,6 +1783,28 @@ export function rc_narrow<Input, Narrowed extends Input>(
 }
 
 /** Allows the transform function to return a error if transformation is invalid */
+/**
+ * Creates a transformation that can fail with custom error messages.
+ * @param type - The input type to validate against
+ * @param transform - Function that returns either transformed data or errors
+ * @param options - Transform options
+ * @param options.outputSchema - Optional schema to validate the transformed output
+ * @param options.disableStrictOutputSchema - If true, allows loose validation of output
+ * @returns A runcheck type that validates input and applies fallible transformation
+ * @example
+ * ```typescript
+ * const parseJson = rc_unsafe_transform(
+ *   rc_string,
+ *   (str) => {
+ *     try {
+ *       return { ok: true, data: JSON.parse(str) }
+ *     } catch {
+ *       return { ok: false, errors: 'Invalid JSON' }
+ *     }
+ *   }
+ * )
+ * ```
+ */
 export function rc_unsafe_transform<Input, Transformed>(
   type: RcType<Input>,
   transform: (
@@ -1554,6 +1915,18 @@ type NonArrayObject = {
   [y: number]: never
 }
 
+/**
+ * Assertion function that throws if the parse result contains errors.
+ * @param result - The parse result to assert validity for
+ * @throws Error if the result contains validation errors
+ * @example
+ * ```typescript
+ * const result = rc_parse(input, rc_string)
+ * rc_assert_is_valid(result)
+ * // result is now typed as successful result
+ * console.log(result.value)
+ * ```
+ */
 export function rc_assert_is_valid<S>(
   result: RcParseResult<S>,
 ): asserts result is {
@@ -1586,6 +1959,18 @@ export function snakeCase(str: string): string {
     .join('_')
 }
 
+/**
+ * Parses a JSON string and validates it against a schema.
+ * @param jsonString - The JSON string to parse
+ * @param schema - The runcheck type to validate the parsed JSON against
+ * @param options - Parse options
+ * @returns The parse result containing either the validated JSON value or errors
+ * @example
+ * ```typescript
+ * const userSchema = rc_object({ name: rc_string, age: rc_number })
+ * const result = rc_parse_json('{"name":"John","age":30}', userSchema)
+ * ```
+ */
 export function rc_parse_json<T>(
   jsonString: unknown,
   schema: RcType<T>,
@@ -1633,21 +2018,65 @@ export type Prettify<T> =
 
 export type RcPrettyInferType<T extends RcType<any>> = Prettify<RcInferType<T>>
 
+/**
+ * Type guard function that checks if a value is a runcheck type.
+ * @param value - The value to check
+ * @returns True if the value is a runcheck type, false otherwise
+ * @example
+ * ```typescript
+ * if (isRcType(someValue)) {
+ *   // someValue is now typed as RcType<any>
+ *   const result = someValue.parse(input)
+ * }
+ * ```
+ */
 export function isRcType(value: any): value is RcType<any> {
   return isObject(value) && '__rc_type' in value
 }
 
 /** workaround for the typescript limitation: https://github.com/microsoft/TypeScript/issues/52295 */
+/**
+ * Workaround for TypeScript limitation with union types.
+ * @param type - The type to cast as a union type
+ * @returns The type cast as a proper runcheck union type
+ * @example
+ * ```typescript
+ * const unionType = joinAsRcTypeUnion(someComplexUnionType)
+ * ```
+ */
 export function joinAsRcTypeUnion<T>(
   type: T,
 ): RcType<T extends RcType<infer U> ? U : never> {
   return type as any
 }
 
+/**
+ * Gets the kind/name of a runcheck schema for debugging purposes.
+ * @param schema - The runcheck type to get the kind from
+ * @returns The string representation of the schema kind
+ * @example
+ * ```typescript
+ * const kind = getSchemaKind(rc_string) // returns 'string'
+ * const kind2 = getSchemaKind(rc_array(rc_number)) // returns 'number[]'
+ * ```
+ */
 export function getSchemaKind(schema: RcType<any>): string {
   return schema._kind_
 }
 
+/**
+ * Converts a runcheck type or parse result to a Standard Schema V1.
+ * @param schemaOrResult - The runcheck type or parse result to convert
+ * @param options - Conversion options
+ * @param options.errorOnWarnings - If true, treat warnings as errors
+ * @param options.onWarnings - Callback function to handle warnings
+ * @returns A Standard Schema V1 compatible object
+ * @example
+ * ```typescript
+ * const standardSchema = rc_to_standard(rc_string)
+ * const result = standardSchema['~standard'].validate('hello')
+ * ```
+ */
 export function rc_to_standard<T>(
   schemaOrResult: RcType<T> | RcParseResult<T>,
   {
@@ -1702,6 +2131,17 @@ function parseResultToStandard<T>(
   }
 }
 
+/**
+ * Converts a Standard Schema V1 to a runcheck type.
+ * @param standardSchema - The Standard Schema V1 to convert
+ * @param kind - Optional custom kind name for error messages
+ * @returns A runcheck type that wraps the standard schema
+ * @example
+ * ```typescript
+ * const rcType = rc_from_standard(someStandardSchema)
+ * const result = rcType.parse(input)
+ * ```
+ */
 export function rc_from_standard<T>(
   standardSchema: StandardSchemaV1<any, T>,
   /** use this kind instead of the default one in error messages (standard_schema_${standard.vendor}@${standard.version}) */

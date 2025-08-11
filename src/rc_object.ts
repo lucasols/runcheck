@@ -16,8 +16,19 @@ import {
 } from './runcheck'
 
 /**
- * If the schema key value is undefined uses a value from the fallback key as a safe value
- * Can be used to rename keys from input
+ * Creates a type that uses a fallback key when the primary key is undefined.
+ * Can be used to rename keys from input or provide alternative key names.
+ * @param fallbackKey - The alternative key to use when the primary key is undefined
+ * @param type - The type to validate the value against
+ * @returns A runcheck type that supports fallback key lookup
+ * @example
+ * ```typescript
+ * const userSchema = rc_object({
+ *   name: rc_get_from_key_as_fallback('username', rc_string)
+ * })
+ * // Will look for 'name' first, then 'username' if 'name' is undefined
+ * const result = userSchema.parse({ username: 'john' }) // valid
+ * ```
  */
 export function rc_get_from_key_as_fallback<T extends RcType<any>>(
   fallbackKey: string,
@@ -112,6 +123,23 @@ export type ObjOptions = {
   extends?: boolean
 }
 
+/**
+ * Creates an object type validator with specified shape and options.
+ * @param shape - The object shape defining the expected properties and their types
+ * @param options - Configuration options for the object validator
+ * @param options.normalizeKeysFrom - If 'snake_case', automatically converts camelCase keys to snake_case for lookup
+ * @param options.extends - If true, allows excess properties in the input object
+ * @returns A runcheck type that validates objects with the specified shape
+ * @example
+ * ```typescript
+ * const userSchema = rc_object({
+ *   name: rc_string,
+ *   age: rc_number,
+ *   email: rc_string.optional()
+ * })
+ * const result = userSchema.parse({ name: 'John', age: 30 }) // valid
+ * ```
+ */
 export function rc_object<T extends RcObject>(
   shape: T,
   { normalizeKeysFrom, extends: extendsObj }: ObjOptions = {},
@@ -315,6 +343,21 @@ export function rc_object<T extends RcObject>(
 
 type ExtendsOptions = Omit<ObjOptions, 'extends'>
 
+/**
+ * Creates an object type that extends the input with additional properties.
+ * Unlike strict objects, this allows excess properties from the input to be preserved.
+ * @param shapeOrSchema - Either an object shape or an existing object type
+ * @param options - Configuration options (excluding 'extends' which is always true)
+ * @returns A runcheck type that validates and extends objects
+ * @example
+ * ```typescript
+ * const baseSchema = rc_obj_extends({
+ *   name: rc_string
+ * })
+ * // Input: { name: 'John', extra: 'data' }
+ * // Output: { name: 'John', extra: 'data' } (preserves extra properties)
+ * ```
+ */
 export function rc_obj_extends<T extends RcObject>(
   shape: T,
   options?: ExtendsOptions,
@@ -348,6 +391,18 @@ export function rc_obj_extends(
   }
 }
 
+/**
+ * Extracts the object shape from an object type for inspection or manipulation.
+ * @param type - The object type to extract the shape from
+ * @returns The object shape containing the property types
+ * @throws Error if the type is not an object type
+ * @example
+ * ```typescript
+ * const userSchema = rc_object({ name: rc_string, age: rc_number })
+ * const shape = rc_get_obj_shape(userSchema)
+ * // shape = { name: RcType<string>, age: RcType<number> }
+ * ```
+ */
 export function rc_get_obj_shape<T extends Record<string, any>>(
   type: RcType<T>,
 ): {
@@ -360,7 +415,21 @@ export function rc_get_obj_shape<T extends Record<string, any>>(
   return type._obj_shape_ as T
 }
 
-/** return an error if the obj has more keys than the expected type */
+/**
+ * Creates a strict object type that rejects input with excess properties.
+ * @param shape - The object shape defining the expected properties and their types
+ * @param options - Configuration options for the object validator
+ * @returns A runcheck type that validates objects strictly (no excess properties allowed)
+ * @example
+ * ```typescript
+ * const strictUser = rc_obj_strict({
+ *   name: rc_string,
+ *   age: rc_number
+ * })
+ * const result = strictUser.parse({ name: 'John', age: 30 }) // valid
+ * const result2 = strictUser.parse({ name: 'John', age: 30, extra: 'data' }) // invalid
+ * ```
+ */
 export function rc_obj_strict<T extends RcObject>(
   shape: T,
   options?: ObjOptions,
@@ -371,6 +440,19 @@ export function rc_obj_strict<T extends RcObject>(
   }
 }
 
+/**
+ * Enables strict object validation for a type, rejecting excess properties.
+ * @param type - The type to make strict
+ * @param options - Configuration options
+ * @param options.nonRecursive - If true, only affects the immediate object type, not nested objects
+ * @returns The type with strict object validation enabled
+ * @example
+ * ```typescript
+ * const userSchema = rc_object({ name: rc_string, age: rc_number })
+ * const strictUser = rc_enable_obj_strict(userSchema)
+ * // Now rejects objects with excess properties
+ * ```
+ */
 export function rc_enable_obj_strict<T extends RcType<any>>(
   type: T,
   {
@@ -408,6 +490,19 @@ type AnyObj = Record<string, unknown>
 
 type Extends<T extends AnyObj, W extends AnyObj> = Omit<T, keyof W> & W
 
+/**
+ * Merges multiple object types into a single object type.
+ * Later objects override properties from earlier objects.
+ * @param objs - The object types to merge (2-4 objects supported)
+ * @returns A runcheck type representing the merged object
+ * @example
+ * ```typescript
+ * const base = rc_object({ name: rc_string, age: rc_number })
+ * const extended = rc_object({ email: rc_string, age: rc_string }) // age overrides
+ * const merged = rc_obj_merge(base, extended)
+ * // Result: { name: string, age: string, email: string }
+ * ```
+ */
 export function rc_obj_merge<A extends AnyObj, B extends AnyObj>(
   ...objs: [RcType<A>, RcType<B>]
 ): RcType<Extends<A, B>>
@@ -436,6 +531,19 @@ export function rc_obj_merge(
   return rc_object(finalShape)
 }
 
+/**
+ * Creates a new object type with only the specified properties from the original.
+ * @param obj - The object type to pick properties from
+ * @param keys - The keys to pick from the object
+ * @returns A runcheck type containing only the picked properties
+ * @throws Error if the input is not an object type
+ * @example
+ * ```typescript
+ * const userSchema = rc_object({ name: rc_string, age: rc_number, email: rc_string })
+ * const nameAndAge = rc_obj_pick(userSchema, ['name', 'age'])
+ * // Result: { name: string, age: number }
+ * ```
+ */
 export function rc_obj_pick<O extends AnyObj, K extends keyof O>(
   obj: RcType<O>,
   keys: K[],
@@ -457,6 +565,19 @@ export function rc_obj_pick<O extends AnyObj, K extends keyof O>(
   return rc_object(shape) as any
 }
 
+/**
+ * Creates a new object type without the specified properties from the original.
+ * @param obj - The object type to omit properties from
+ * @param keys - The keys to omit from the object
+ * @returns A runcheck type without the omitted properties
+ * @throws Error if the input is not an object type
+ * @example
+ * ```typescript
+ * const userSchema = rc_object({ name: rc_string, age: rc_number, email: rc_string })
+ * const withoutEmail = rc_obj_omit(userSchema, ['email'])
+ * // Result: { name: string, age: number }
+ * ```
+ */
 export function rc_obj_omit<O extends AnyObj, K extends keyof O>(
   obj: RcType<O>,
   keys: K[],
@@ -524,6 +645,26 @@ export type StrictTypeToRcTypeBase<T extends Record<string, any>> = {
   [K in keyof T]-?: StrictTypeToRcType<T[K]>
 }
 
+/**
+ * Creates a type-safe object builder that enforces the structure matches a TypeScript type.
+ * Useful for creating schemas that must conform to existing TypeScript interfaces.
+ * @returns A builder function that takes a schema matching the specified TypeScript type
+ * @example
+ * ```typescript
+ * interface User {
+ *   name: string
+ *   age: number
+ *   email?: string
+ * }
+ * 
+ * const userBuilder = rc_obj_builder<User>()
+ * const userSchema = userBuilder({
+ *   name: rc_string,
+ *   age: rc_number,
+ *   email: ['optional', rc_string]
+ * })
+ * ```
+ */
 export function rc_obj_builder<T extends Record<string, any>>() {
   return <S extends StrictTypeToRcTypeBase<T>>(
     schema: {
