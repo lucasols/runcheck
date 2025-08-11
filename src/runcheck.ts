@@ -522,7 +522,7 @@ export const rc_date: RcType<Date> = {
  */
 export function rc_instanceof<T extends new (...args: any[]) => any>(
   classToCheck: T,
-): RcType<T> {
+): RcType<InstanceType<T>> {
   return {
     ...defaultProps,
     _parse_(input, ctx) {
@@ -530,7 +530,7 @@ export function rc_instanceof<T extends new (...args: any[]) => any>(
         return input instanceof classToCheck
       })
     },
-    _kind_: `instanceof_${classToCheck.name ? `_${classToCheck.name}` : ''}`,
+    _kind_: `instanceof_${classToCheck.name || 'AnonymousClass'}`,
   }
 }
 
