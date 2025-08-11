@@ -428,14 +428,7 @@ export const defaultProps: Omit<RcType<any>, '_parse_' | '_kind_'> = {
   _is_extend_obj_: false,
 }
 
-/**
- * Runtime type validator for undefined values.
- * @example
- * ```typescript
- * const result = rc_undefined.parse(undefined) // valid
- * const result2 = rc_undefined.parse(null) // invalid
- * ```
- */
+/** Equivalent to ts type: `undefined`. */
 export const rc_undefined: RcType<undefined> = {
   ...(defaultProps as Omit<RcType<undefined>, '_parse_' | '_kind_'>),
   _parse_(input, ctx) {
@@ -444,14 +437,7 @@ export const rc_undefined: RcType<undefined> = {
   _kind_: 'undefined',
 }
 
-/**
- * Runtime type validator for null values.
- * @example
- * ```typescript
- * const result = rc_null.parse(null) // valid
- * const result2 = rc_null.parse(undefined) // invalid
- * ```
- */
+/** Equivalent to ts type: `null`. */
 export const rc_null: RcType<null> = {
   ...(defaultProps as Omit<RcType<null>, '_parse_' | '_kind_'>),
   _parse_(input, ctx) {
@@ -460,15 +446,7 @@ export const rc_null: RcType<null> = {
   _kind_: 'null',
 }
 
-/**
- * Runtime type validator that accepts any value (always passes validation).
- * @example
- * ```typescript
- * const result = rc_any.parse('anything') // valid
- * const result2 = rc_any.parse(123) // valid
- * const result3 = rc_any.parse(null) // valid
- * ```
- */
+/** Equivalent to ts type: `any`. */
 export const rc_any: RcType<any> = {
   ...defaultProps,
   _parse_(input) {
@@ -477,15 +455,7 @@ export const rc_any: RcType<any> = {
   _kind_: 'any',
 }
 
-/**
- * Runtime type validator for unknown values (accepts any value but maintains type safety).
- * @example
- * ```typescript
- * const result = rc_unknown.parse('anything') // valid
- * const result2 = rc_unknown.parse(123) // valid
- * // result.value is typed as unknown
- * ```
- */
+/** Equivalent to ts type: `unknown`. */
 export const rc_unknown: RcType<unknown> = {
   ...defaultProps,
   _parse_(input) {
@@ -494,15 +464,7 @@ export const rc_unknown: RcType<unknown> = {
   _kind_: 'unknown',
 }
 
-/**
- * Runtime type validator for boolean values.
- * @example
- * ```typescript
- * const result = rc_boolean.parse(true) // valid
- * const result2 = rc_boolean.parse(false) // valid
- * const result3 = rc_boolean.parse('true') // invalid
- * ```
- */
+/** Equivalent to ts type: `boolean`. */
 export const rc_boolean: RcType<boolean> = {
   ...defaultProps,
   _parse_(input, ctx) {
@@ -511,14 +473,7 @@ export const rc_boolean: RcType<boolean> = {
   _kind_: 'boolean',
 }
 
-/**
- * Runtime type validator for string values.
- * @example
- * ```typescript
- * const result = rc_string.parse('hello') // valid
- * const result2 = rc_string.parse(123) // invalid
- * ```
- */
+/** Equivalent to ts type: `string`. */
 export const rc_string: RcType<string> = {
   ...defaultProps,
   _parse_(input, ctx) {
@@ -527,16 +482,7 @@ export const rc_string: RcType<string> = {
   _kind_: 'string',
 }
 
-/**
- * Runtime type validator for number values (excludes NaN).
- * @example
- * ```typescript
- * const result = rc_number.parse(42) // valid
- * const result2 = rc_number.parse(3.14) // valid
- * const result3 = rc_number.parse('42') // invalid
- * const result4 = rc_number.parse(NaN) // invalid
- * ```
- */
+/** Equivalent to ts type: `number`. Excludes `NaN`. */
 export const rc_number: RcType<number> = {
   ...defaultProps,
   _parse_(input, ctx) {
@@ -550,15 +496,7 @@ export const rc_number: RcType<number> = {
   _kind_: 'number',
 }
 
-/**
- * Runtime type validator for Date objects (excludes invalid dates).
- * @example
- * ```typescript
- * const result = rc_date.parse(new Date()) // valid
- * const result2 = rc_date.parse('2023-01-01') // invalid
- * const result3 = rc_date.parse(new Date('invalid')) // invalid
- * ```
- */
+/** Equivalent to ts type: `Date`. Excludes invalid dates. */
 export const rc_date: RcType<Date> = {
   ...defaultProps,
   _parse_(input, ctx) {
@@ -573,18 +511,10 @@ export const rc_date: RcType<Date> = {
   _kind_: 'date',
 }
 
-/**
- * Creates a runtime type validator for instances of a specific class or constructor.
- * @param classToCheck - The constructor function or class to check instances against
- * @returns A runcheck type that validates if input is an instance of the given class
- * @example
- * ```typescript
- * const dateType = rc_instanceof(Date)
- * const result = dateType.parse(new Date()) // valid
- * const result2 = dateType.parse("2023-01-01") // invalid
- * ```
- */
-export function rc_instanceof<T extends new (...args: any[]) => any>(classToCheck: T): RcType<T> {
+/** Validates class instances using `instanceof` checks. */
+export function rc_instanceof<T extends new (...args: any[]) => any>(
+  classToCheck: T,
+): RcType<T> {
   return {
     ...defaultProps,
     _parse_(input, ctx) {
@@ -596,17 +526,7 @@ export function rc_instanceof<T extends new (...args: any[]) => any>(classToChec
   }
 }
 
-/**
- * Creates a runtime type validator for literal values.
- * @param literals - The literal values to match against
- * @returns A runcheck type that validates if input matches one of the provided literals
- * @example
- * ```typescript
- * const statusType = rc_literals('active', 'inactive', 'pending')
- * const result = statusType.parse('active') // valid
- * const result2 = statusType.parse('unknown') // invalid
- * ```
- */
+/** Validates literal values like `'hello' | true | 1`. */
 export function rc_literals<T extends (string | number | boolean)[]>(
   ...literals: T
 ): RcType<T[number]> {
@@ -637,18 +557,7 @@ export function rc_literals<T extends (string | number | boolean)[]>(
 
 const maxShallowObjErrors = 1
 
-/**
- * Creates a union type validator that accepts any of the provided types.
- * @param types - The types to union together
- * @returns A runcheck type that validates if input matches any of the provided types
- * @example
- * ```typescript
- * const stringOrNumber = rc_union(rc_string, rc_number)
- * const result = stringOrNumber.parse("hello") // valid
- * const result2 = stringOrNumber.parse(42) // valid
- * const result3 = stringOrNumber.parse(true) // invalid
- * ```
- */
+/** Validates union types like `string | number`. */
 export function rc_union<T extends RcType<any>[]>(
   ...types: T
 ): RcType<RcInferType<T[number]>> {
@@ -749,18 +658,7 @@ export function rc_union<T extends RcType<any>[]>(
 type NotUndefined<T> = Exclude<T, undefined>
 
 /** Generate a schema with valid fallback value for undefined inputs */
-/**
- * Creates a type with a default value for undefined inputs.
- * @param schema - The base schema to validate against
- * @param defaultValue - The default value or function that returns the default value
- * @returns A runcheck type that uses the default value when input is undefined
- * @example
- * ```typescript
- * const stringWithDefault = rc_default(rc_string, 'default')
- * const result = stringWithDefault.parse(undefined) // returns 'default'
- * const result2 = stringWithDefault.parse('hello') // returns 'hello'
- * ```
- */
+/** Provides default value for `undefined` inputs. */
 export function rc_default<T>(
   schema: RcType<T>,
   defaultValue: NotUndefined<T> | (() => NotUndefined<T>),
@@ -802,18 +700,7 @@ export function rc_default<T>(
 
 type NotNullish<T> = Exclude<T, null | undefined>
 
-/**
- * Creates a type with a default value for null or undefined inputs.
- * @param schema - The base schema to validate against
- * @param defaultValue - The default value or function that returns the default value
- * @returns A runcheck type that uses the default value when input is null or undefined
- * @example
- * ```typescript
- * const stringWithDefault = rc_nullish_default(rc_string, 'default')
- * const result = stringWithDefault.parse(null) // returns 'default'
- * const result2 = stringWithDefault.parse(undefined) // returns 'default'
- * ```
- */
+/** Provides default value for `null | undefined` inputs. */
 export function rc_nullish_default<T>(
   schema: RcType<T>,
   defaultValue: NotNullish<T> | (() => NotNullish<T>),
@@ -854,17 +741,7 @@ export function rc_nullish_default<T>(
 }
 
 /** returns a fallback in case of wrong inputs without adding a warning */
-/**
- * Creates a type with a fallback value for invalid inputs without adding warnings.
- * @param schema - The base schema to validate against
- * @param fallback - The fallback value or function that returns the fallback value
- * @returns A runcheck type that uses the fallback value when input is invalid
- * @example
- * ```typescript
- * const safeString = rc_safe_fallback(rc_string, 'fallback')
- * const result = safeString.parse(123) // returns 'fallback' without warnings
- * ```
- */
+/** Provides fallback value for invalid inputs without warnings. */
 export function rc_safe_fallback<T>(
   schema: RcType<T>,
   fallback: NoInfer<T> | (() => NoInfer<T>),
@@ -885,20 +762,7 @@ export function rc_safe_fallback<T>(
   }
 }
 
-/**
- * Creates a record (object with string keys) type validator.
- * @param valueType - The type to validate for each value in the record
- * @param options - Configuration options for key validation and loose checking
- * @param options.checkKey - Optional function to validate keys
- * @param options.looseCheck - If true, invalid values are ignored instead of causing errors
- * @returns A runcheck type that validates objects with string keys and typed values
- * @example
- * ```typescript
- * const stringRecord = rc_record(rc_string)
- * const result = stringRecord.parse({ a: 'hello', b: 'world' }) // valid
- * const result2 = stringRecord.parse({ a: 'hello', b: 123 }) // invalid
- * ```
- */
+/** Validates `Record<string, T>`. Supports key validation and loose checking. */
 export function rc_record<V>(
   valueType: RcType<V>,
   {
@@ -971,18 +835,7 @@ export function rc_record<V>(
 }
 
 /** instead of returning a general error, rejects invalid keys and returns warnings for these items */
-/**
- * Creates a loose record validator that ignores invalid values instead of rejecting them.
- * @param valueType - The type to validate for each value in the record
- * @param options - Configuration options
- * @param options.checkKey - Optional function to validate keys
- * @returns A runcheck type that validates objects while ignoring invalid values
- * @example
- * ```typescript
- * const looseStringRecord = rc_loose_record(rc_string)
- * const result = looseStringRecord.parse({ a: 'hello', b: 123 }) // returns { a: 'hello' }
- * ```
- */
+/** Validates `Record<string, T>`. Filters out invalid values instead of rejecting. */
 export function rc_loose_record<V>(
   valueType: RcType<V>,
   { checkKey }: { checkKey?: (key: string) => boolean } = {},
@@ -1129,18 +982,7 @@ type ArrayOptions<T extends RcType<any>> = {
   filter?: (item: RcInferType<T>) => boolean | { errors: ErrorWithPath[] }
 }
 
-/**
- * Creates an array type validator.
- * @param type - The type to validate for each array element
- * @param options - Configuration options for uniqueness and filtering
- * @returns A runcheck type that validates arrays of the specified type
- * @example
- * ```typescript
- * const stringArray = rc_array(rc_string)
- * const result = stringArray.parse(['hello', 'world']) // valid
- * const result2 = stringArray.parse(['hello', 123]) // invalid
- * ```
- */
+/** Validates arrays of type `T[]`. Supports unique value checking. */
 export function rc_array<T extends RcType<any>>(
   type: T,
   options?: ArrayOptions<T>,
@@ -1230,17 +1072,7 @@ export function rc_disable_loose_array<T extends RcType<any>>(
 }
 
 /** instead of returning a general error, rejects invalid array items and returns warnings for these items */
-/**
- * Creates a loose array validator that ignores invalid items instead of rejecting the entire array.
- * @param type - The type to validate for each array element
- * @param options - Configuration options for uniqueness and filtering
- * @returns A runcheck type that validates arrays while filtering out invalid items
- * @example
- * ```typescript
- * const looseStringArray = rc_loose_array(rc_string)
- * const result = looseStringArray.parse(['hello', 123, 'world']) // returns ['hello', 'world']
- * ```
- */
+/** Validates arrays of type `T[]`. Filters out invalid elements instead of rejecting the array. */
 export function rc_loose_array<T extends RcType<any>>(
   type: T,
   options?: ArrayOptions<T>,
@@ -1322,17 +1154,7 @@ type MapTupleToTypes<T extends readonly [...any[]]> = {
  *
  * TS equivalent example: [string, number, boolean]
  */
-/**
- * Creates a tuple type validator for arrays with fixed length and typed elements.
- * @param types - An array of types corresponding to each position in the tuple
- * @returns A runcheck type that validates tuples with the specified types
- * @example
- * ```typescript
- * const coordinate = rc_tuple([rc_number, rc_number])
- * const result = coordinate.parse([10, 20]) // valid
- * const result2 = coordinate.parse([10, 20, 30]) // invalid - wrong length
- * ```
- */
+/** Validates tuples like `[T, T]` with fixed length. */
 export function rc_tuple<const T extends readonly RcType<any>[]>(
   types: T,
 ): RcType<MapTupleToTypes<T>> {
