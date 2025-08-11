@@ -432,6 +432,69 @@ test('rc_object key name normalization', () => {
   )
 })
 
+describe('rc_object with extends option', () => {
+  test('rc_object with extends: true behaves like rc_obj_extends', () => {
+    const schema = rc_object(
+      {
+        name: rc_string,
+        id: rc_number,
+      },
+      { extends: true },
+    )
+
+    expect(rc_parse({ name: 'hello', id: 1, extra: 'world' }, schema)).toEqual(
+      successResult({ name: 'hello', id: 1, extra: 'world' }),
+    )
+  })
+
+  test('rc_object with extends: false behaves like regular object', () => {
+    const schema = rc_object(
+      {
+        name: rc_string,
+        id: rc_number,
+      },
+      { extends: false },
+    )
+
+    expect(rc_parse({ name: 'hello', id: 1, extra: 'world' }, schema)).toEqual(
+      successResult({ name: 'hello', id: 1 }),
+    )
+  })
+
+  test('rc_object without extends option behaves like regular object', () => {
+    const schema = rc_object({
+      name: rc_string,
+      id: rc_number,
+    })
+
+    expect(rc_parse({ name: 'hello', id: 1, extra: 'world' }, schema)).toEqual(
+      successResult({ name: 'hello', id: 1 }),
+    )
+  })
+
+  test('rc_object with extends: true and normalizeKeysFrom works together', () => {
+    const schema = rc_object(
+      {
+        userName: rc_string,
+        userId: rc_number,
+      },
+      { extends: true, normalizeKeysFrom: 'snake_case' },
+    )
+
+    expect(
+      rc_parse({ user_name: 'hello', user_id: 1, extra: 'world' }, schema),
+    ).toEqual(
+      successResult({
+        userName: 'hello',
+        userId: 1,
+        extra: 'world',
+        user_name: 'hello',
+        user_id: 1,
+      }),
+    )
+  })
+})
+
 test('rc_get_obj_schema', () => {
   const baseSchema = rc_object({
     userId: rc_number,
@@ -472,6 +535,56 @@ describe('rc_extends_obj', () => {
 
     expect(rc_parse({ name: 1, a: 2, c: 3 }, schema)).toEqual(
       successResult({ newKeyName: 1, a: 2, c: 3, name: 1 }),
+    )
+  })
+
+  test('extends object using existing object schema', () => {
+    const baseSchema = rc_object({
+      name: rc_string,
+      id: rc_number,
+    })
+
+    const schema = rc_obj_extends(baseSchema)
+
+    expect(rc_parse({ name: 'hello', id: 1, extra: 'world' }, schema)).toEqual(
+      successResult({ name: 'hello', id: 1, extra: 'world' }),
+    )
+  })
+
+  test('extends object using existing object schema preserves validation', () => {
+    const baseSchema = rc_object({
+      name: rc_string,
+      id: rc_number,
+    })
+
+    const schema = rc_obj_extends(baseSchema)
+
+    expect(rc_parse({ name: 123, id: 1, extra: 'world' }, schema)).toEqual(
+      errorResult(`$.name: Type 'number' is not assignable to 'string'`),
+    )
+  })
+
+  test('extends object using existing object schema with options should ignore options', () => {
+    const baseSchema = rc_object({
+      userName: rc_string,
+      userId: rc_number,
+    })
+
+    const schema = rc_obj_extends(baseSchema, {
+      normalizeKeysFrom: 'snake_case',
+    })
+
+    // Options should be ignored when using existing schema - it should use the original keys
+    expect(
+      rc_parse({ userName: 'hello', userId: 1, extra: 'world' }, schema),
+    ).toEqual(successResult({ userName: 'hello', userId: 1, extra: 'world' }))
+  })
+
+  test('throws error when using non-object schema', () => {
+    const stringSchema = rc_string as any
+
+    expect(() => rc_obj_extends(stringSchema)).toThrow(
+      'rc_obj_extends: schema must be an object type',
     )
   })
 })

@@ -108,11 +108,13 @@ function unwrapToObjSchema(input: unknown): RcType<any> {
 
 export type ObjOptions = {
   normalizeKeysFrom?: 'snake_case'
+  /** excess keys are not removed if extends is true */
+  extends?: boolean
 }
 
 export function rc_object<T extends RcObject>(
   shape: T,
-  { normalizeKeysFrom }: ObjOptions = {},
+  { normalizeKeysFrom, extends: extendsObj }: ObjOptions = {},
 ): RcObjTypeReturn<T> {
   const objShape: Record<string, RcType<any>> = {}
 
@@ -127,9 +129,10 @@ export function rc_object<T extends RcObject>(
   return {
     ...defaultProps,
     _obj_shape_: objShape,
-    _kind_: 'object',
+    _kind_: extendsObj ? 'extends_object' : 'object',
     _detailed_obj_shape_: '',
     _is_object_: true,
+    _is_extend_obj_: !!extendsObj,
     _parse_(inputObj, ctx) {
       return parse<TypeOfObjectType<T>>(this, inputObj, ctx, () => {
         if (!isObject(inputObj)) {
@@ -310,12 +313,36 @@ export function rc_object<T extends RcObject>(
   }
 }
 
+type ExtendsOptions = Omit<ObjOptions, 'extends'>
+
 export function rc_obj_extends<T extends RcObject>(
   shape: T,
-  options?: ObjOptions,
-): RcObjTypeReturn<T> {
+  options?: ExtendsOptions,
+): RcObjTypeReturn<T>
+export function rc_obj_extends<T extends Record<string, any>>(
+  schema: RcType<T>,
+  options?: ExtendsOptions,
+): RcType<T>
+export function rc_obj_extends(
+  shapeOrSchema: RcObject | RcType<Record<string, any>>,
+  options?: ExtendsOptions,
+): RcType<Record<string, any>> {
+  // If it's an existing RcType with object shape, use it directly
+  if (isRcType(shapeOrSchema)) {
+    if (!shapeOrSchema._obj_shape_) {
+      throw new Error('rc_obj_extends: schema must be an object type')
+    }
+
+    return {
+      ...shapeOrSchema,
+      _kind_: `extends_object`,
+      _is_extend_obj_: true,
+    }
+  }
+
+  // Otherwise, treat it as a shape and create a new object
   return {
-    ...rc_object(shape, options),
+    ...rc_object(shapeOrSchema as any, options),
     _kind_: `extends_object`,
     _is_extend_obj_: true,
   }
