@@ -31,14 +31,18 @@ pnpm add runcheck
 | `rc_number`                      | `number`                                          |
 | `rc_boolean`                     | `boolean`                                         |
 | `rc_any`                         | `any`                                             |
+| `rc_unknown`                     | `unknown`                                         |
 | `rc_null`                        | `null`                                            |
 | `rc_undefined`                   | `undefined`                                       |
 | `rc_date`                        | `Date`                                            |
-| `rc_intanceof(instance: T)`      | Classes typecheck in general                      |
+| `rc_instanceof(instance: T)`     | Classes typecheck in general                      |
 | `rc_literals(...literals: T[])`  | Type literal in general like `hello`, `true`, `1` |
 | `rc_union(...types: T[])`        | Union types in general like `string \| 1`         |
 | `rc_array<T>(type: T)`           | `T[]`                                             |
+| `rc_loose_array<T>(type: T)`     | `T[]` (filters invalid items)                     |
 | `rc_tuple<T>(...types: T[])`     | `[T, T]`                                          |
+| `rc_record<T>(type: T)`          | `Record<string, T>`                               |
+| `rc_loose_record<T>(type: T)`    | `Record<string, T>` (filters invalid values)      |
 | `rc_intersection(...types: T[])` | Intersection types like `{a:string} & {b:string}` |
 
 # Array types:
@@ -100,7 +104,7 @@ const shape = rc_object({
 })
 ```
 
-The `rc_object` will allow extra properties but, any extra propertie will be striped in parsing. To allow extra in parsing properties, use `rc_extends_obj`.
+The `rc_object` will allow extra properties but any extra properties will be stripped in parsing. To allow extra properties in parsing, use `rc_obj_extends`.
 
 # Marking optional keys
 
@@ -114,7 +118,7 @@ const shape = rc_object({
 })
 
 /*
-infered type will be:
+inferred type will be:
 {
   name?: string | undefined,
   age: number,
@@ -324,10 +328,20 @@ const result = rc_parse(
 There are also some predefined autofixed types that you can import:
 
 ```ts
-import { rc_string_autofix, rc_boolean_autofix } from 'runcheck/autofixable'
+import {
+  rc_string_autofix,
+  rc_boolean_autofix,
+  rc_number_autofix,
+} from 'runcheck/autofixable'
 
 // use like any other type
 ```
+
+| Autofix type         | Equivalent to | Autofixes                                          |
+| -------------------- | ------------- | -------------------------------------------------- |
+| `rc_boolean_autofix` | `boolean`     | `0 \| 1 \| 'true' \| 'false' \| null \| undefined` |
+| `rc_string_autofix`  | `string`      | valid `number` inputs                              |
+| `rc_number_autofix`  | `number`      | valid numeric `string` inputs                      |
 
 # Performing custom checks
 
@@ -357,7 +371,7 @@ You can also use the `RcPrettyInferType<typeof schema>` to get a more readable t
 
 # Type modifiers
 
-You can use also modiers like `rc_string.optional()` to extend the rc types:
+You can use also modifiers like `rc_string.optional()` to extend the rc types:
 
 | runcheck modifier       | ts type equivalent       |
 | ----------------------- | ------------------------ |
@@ -379,7 +393,7 @@ type MenuTree = {
 const menuTreeSchema: RcType<MenuTree[]> = rc_array(
   rc_object({
     name: rc_string,
-    // you can safely autorefence the schema here
+    // you can safely auto-reference the schema here
     children: rc_recursive(() => menuTreeSchema),
   }),
 )
@@ -400,45 +414,20 @@ const result = rc_parse(
 )
 ```
 
-Use the `outputSchema` option to create a type that validates both the input and the output of the transform. So if the input matches the `outputSchema` the transform will be ignored.
+## `rc_unsafe_transform`
+
+For simpler cases where you don't need output validation, use `rc_unsafe_transform`:
 
 ```ts
-const input = 'hello'
+const schema = rc_unsafe_transform(rc_string, (input) => input.toUpperCase())
 
-const schema = rc_transform(rc_string, (input) => input.length, {
-  outputSchema: rc_number,
-})
-
-const result = rc_parse(input, schema)
-
+const result = rc_parse('hello', schema)
 if (result.ok) {
-  // this will be valid too
-  const transformedResult = rc_parse(result.data, schema)
+  console.log(result.data) // 'HELLO'
 }
-
-// Be carefull: `outputSchema` will be used only if the input type is invalid
-
-const schema = rc_transform(
-  rc_union(rc_string, rc_number),
-  (input) => String(input).toUperCase(),
-  {
-    // this will be ignored because has an equivalent type to the input
-    outputSchema: rc_string,
-  },
-)
-
-// use a more strict input type to avoid this
-
-const schema = rc_transform(
-  rc_union(rc_string, rc_number).where((input) => isNotUperCase(input)),
-  (input) => String(input).toUperCase(),
-  {
-    outputSchema: rc_string.where((input) => isUperCase(input)),
-  },
-)
 ```
 
-## Tranformed types which result can be validated with same schema
+## Transformed types which result can be validated with same schema
 
 You may want to create a transformed type which result can be validated with the same schema. For this you can use the `rc_narrow` type. Example:
 
@@ -481,6 +470,23 @@ if (result.ok) {
 
 If you need to use default in nullish values you can use `rc_nullish_default`.
 
+# Safe fallback types
+
+You can use `rc_safe_fallback` to provide a fallback value that is validated against the schema, ensuring type safety.
+
+```ts
+const input = 'invalid'
+
+const result = rc_parse(
+  input,
+  rc_safe_fallback(rc_number, 42), // 42 must be a valid number
+)
+
+if (result.ok) {
+  result.data // = 42 (type-safe)
+}
+```
+
 # Advanced object types
 
 ## `rc_get_from_key_as_fallback`
@@ -514,9 +520,9 @@ const shape = rc_object(
 rc_parse({ name: 'John', age: 20, is_cool: true }, shape) // will not return an error and will normalize the response to { name: 'John', age: 20, isCool: true }
 ```
 
-## `rc_get_obj_schema`
+## `rc_get_obj_shape`
 
-Allows to get a subset of a object schema. Example:
+Extracts the object shape from an object type for inspection or manipulation:
 
 ```ts
 const shape = rc_object({
@@ -525,7 +531,28 @@ const shape = rc_object({
   isCool: rc_boolean,
 })
 
-const nameSchema = rc_get_obj_schema(shape).name
+const objShape = rc_get_obj_shape(shape)
+// objShape = { name: RcType<string>, age: RcType<number>, isCool: RcType<boolean> }
+const nameSchema = objShape.name
+```
+
+## `rc_enable_obj_strict`
+
+Enables strict object validation for a type, rejecting excess properties:
+
+```ts
+const userSchema = rc_object({ name: rc_string, age: rc_number })
+const strictUser = rc_enable_obj_strict(userSchema)
+// Now rejects objects with excess properties
+
+const result = strictUser.parse({ name: 'John', age: 30 }) // valid
+const result2 = strictUser.parse({ name: 'John', age: 30, extra: 'data' }) // invalid
+```
+
+Use the `nonRecursive` option to only affect the immediate object type:
+
+```ts
+const strictUser = rc_enable_obj_strict(userSchema, { nonRecursive: true })
 ```
 
 ## `rc_obj_extends`
@@ -660,6 +687,21 @@ const result = rc_unwrap(
 // | { state: 'error', code: number }
 ```
 
+## `rc_discriminated_union_builder`
+
+Creates a type-safe discriminated union builder that enforces the structure matches a TypeScript type:
+
+```ts
+type Shape =
+  | { type: 'circle'; radius: number }
+  | { type: 'rectangle'; width: number; height: number }
+
+const shapeSchema = rc_discriminated_union_builder<Shape, 'type'>('type')({
+  circle: { radius: rc_number },
+  rectangle: { width: rc_number, height: rc_number },
+})
+```
+
 # `rc_array_filter_from_schema`
 
 Creates a two passes array validation. The first will validate the items against the filter schema and filter the item. The second will perform the type check against the filtered items.
@@ -688,4 +730,69 @@ const result = rc_parse(
 )
 
 // result.value === [{ value: 'hello' }]
+```
+
+# JSON Parsing
+
+You can use `rc_parse_json` to parse and validate JSON strings directly:
+
+```ts
+import { rc_parse_json } from 'runcheck'
+
+const userSchema = rc_object({ name: rc_string, age: rc_number })
+const result = rc_parse_json('{"name":"John","age":30}', userSchema)
+
+if (result.ok) {
+  console.log(result.data) // { name: 'John', age: 30 }
+}
+```
+
+# Standard Schema Integration
+
+Runcheck supports Standard Schema V1 for interoperability with other validation libraries:
+
+## Converting to Standard Schema
+
+```ts
+import { rc_to_standard } from 'runcheck'
+
+const rcSchema = rc_object({ name: rc_string, age: rc_number })
+const standardSchema = rc_to_standard(rcSchema)
+
+// Use with other Standard Schema compatible libraries
+```
+
+## Converting from Standard Schema
+
+```ts
+import { rc_from_standard } from 'runcheck'
+
+// Convert a Standard Schema to runcheck type
+const rcSchema = rc_from_standard(someStandardSchema)
+```
+
+# Additional Utilities
+
+## Type Guards
+
+Use `isRcType` to check if a value is a runcheck type:
+
+```ts
+import { isRcType } from 'runcheck'
+
+if (isRcType(someValue)) {
+  // someValue is now typed as RcType<any>
+  const result = someValue.parse(input)
+}
+```
+
+## Schema Inspection
+
+Use `getSchemaKind` to get the string representation of a schema:
+
+```ts
+import { getSchemaKind } from 'runcheck'
+
+const kind = getSchemaKind(rc_string) // returns 'string'
+const kind2 = getSchemaKind(rc_array(rc_number)) // returns 'number[]'
 ```

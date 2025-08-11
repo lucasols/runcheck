@@ -511,7 +511,15 @@ export const rc_date: RcType<Date> = {
   _kind_: 'date',
 }
 
-/** Validates class instances using `instanceof` checks. */
+/** Validates class instances using `instanceof` checks.
+ *
+ * @example
+ * ```typescript
+ * const userSchema = rc_instanceof(User) // schema is equivalent to `User` type
+ * const result = userSchema.parse(new User('John', 30)) // valid
+ * const result2 = userSchema.parse(new Admin('John', 30)) // invalid
+ * ```
+ */
 export function rc_instanceof<T extends new (...args: any[]) => any>(
   classToCheck: T,
 ): RcType<T> {
