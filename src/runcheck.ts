@@ -110,6 +110,10 @@ export type RcBase<T, RequiredKey extends boolean> = {
 
   readonly or: <O>(schema: RcType<O>) => RcType<T | O>
   readonly parse: (input: unknown, options?: ParseOptions) => RcParseResult<T>
+  readonly parseJson: (
+    jsonString: string,
+    options?: ParseOptions,
+  ) => RcParseResult<T>
 
   // This should not be stripped out because it is used in type inference
   readonly _optional_key_?: RequiredKey
@@ -181,6 +185,14 @@ function parseMethod<T>(
   options: ParseOptions,
 ): RcParseResult<T> {
   return rc_parse(input, this, options)
+}
+
+function parseJsonMethod<T>(
+  this: RcType<T>,
+  jsonString: string,
+  options: ParseOptions,
+): RcParseResult<T> {
+  return rc_parse_json(jsonString, this, options)
 }
 
 /** @internal */
@@ -412,6 +424,7 @@ export const defaultProps: Omit<RcType<any>, '_parse_' | '_kind_'> = {
   nullishDefault: nullishDefaultMethod as any,
   or: orMethod as any,
   parse: parseMethod as any,
+  parseJson: parseJsonMethod as any,
   _array_item_type_: undefined,
   _fallback_: undefined,
   _predicate_: undefined,
