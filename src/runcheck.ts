@@ -150,6 +150,8 @@ export type RcBase<T, RequiredKey extends boolean> = {
   readonly _obj_shape_: Record<string, RcType<any>> | undefined
   /** @internal */
   readonly _autoFix_: ((input: unknown) => AutoFixResult<T>) | undefined
+  /** @internal */
+  readonly _literal_values_: T[] | undefined
 }
 
 const getUndefined = () => undefined
@@ -547,10 +549,21 @@ export function rc_instanceof<T extends new (...args: any[]) => any>(
   }
 }
 
+type LiteralType = string | number | boolean
+
 /** Validates literal values like `'hello' | true | 1`. */
-export function rc_literals<T extends (string | number | boolean)[]>(
+export function rc_literals<T extends LiteralType[]>(
   ...literals: T
-): RcType<T[number]> {
+): RcType<T[number]>
+export function rc_literals<const T extends readonly LiteralType[]>(
+  literals: T,
+): RcType<T[number]>
+export function rc_literals(
+  ...args: LiteralType[] | [LiteralType[]]
+): RcType<LiteralType> {
+  const literals: LiteralType[] =
+    Array.isArray(args[0]) ? args[0] : (args as LiteralType[])
+
   if (literals.length === 0) {
     throw new Error('rc_literal requires at least one literal')
   }
@@ -569,11 +582,25 @@ export function rc_literals<T extends (string | number | boolean)[]>(
       })
     },
     _show_value_in_error_: true,
+    _literal_values_: literals,
     _kind_:
       literals.length == 1 ?
         normalizedTypeOf(literals[0], true)
       : literals.map((literal) => normalizedTypeOf(literal, true)).join(' | '),
   }
+}
+
+/**
+ * Get the values of a literal type.
+ * @param type - The literal type to get the values of
+ * @returns The values of the literal type
+ */
+export function rc_get_literal_values<T>(type: RcType<T>): T[] {
+  if (!type._literal_values_) {
+    throw new Error('Type is not a literal type')
+  }
+
+  return type._literal_values_
 }
 
 const maxShallowObjErrors = 1
