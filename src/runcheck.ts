@@ -603,6 +603,96 @@ export function rc_get_literal_values<T>(type: RcType<T>): T[] {
   return type._literal_values_
 }
 
+/**
+ * Validates a string that starts with `prefix`.
+ *
+ * Infers the template-literal type `` `${prefix}${string}` ``.
+ *
+ * @example
+ * ```typescript
+ * const schema = rc_string_starts_with('user_') // RcType<`user_${string}`>
+ * schema.parse('user_42') // ok
+ * schema.parse('admin_42') // error
+ * ```
+ */
+export function rc_string_starts_with<const P extends string>(
+  prefix: P,
+): RcType<`${P}${string}`> {
+  return {
+    ...defaultProps,
+    _parse_(input, ctx) {
+      return parse(
+        this,
+        input,
+        ctx,
+        () => typeof input === 'string' && input.startsWith(prefix),
+      )
+    },
+    _show_value_in_error_: true,
+    _kind_: `\`${prefix}\${string}\``,
+  }
+}
+
+/**
+ * Validates a string that ends with `suffix`.
+ *
+ * Infers the template-literal type `` `${string}${suffix}` ``.
+ *
+ * @example
+ * ```typescript
+ * const schema = rc_string_ends_with('.png') // RcType<`${string}.png`>
+ * schema.parse('avatar.png') // ok
+ * schema.parse('avatar.jpg') // error
+ * ```
+ */
+export function rc_string_ends_with<const S extends string>(
+  suffix: S,
+): RcType<`${string}${S}`> {
+  return {
+    ...defaultProps,
+    _parse_(input, ctx) {
+      return parse(
+        this,
+        input,
+        ctx,
+        () => typeof input === 'string' && input.endsWith(suffix),
+      )
+    },
+    _show_value_in_error_: true,
+    _kind_: `\`\${string}${suffix}\``,
+  }
+}
+
+/**
+ * Validates a string that contains `substring`.
+ *
+ * Infers the template-literal type `` `${string}${substring}${string}` ``.
+ *
+ * @example
+ * ```typescript
+ * const schema = rc_string_contains('@') // RcType<`${string}@${string}`>
+ * schema.parse('a@b') // ok
+ * schema.parse('ab') // error
+ * ```
+ */
+export function rc_string_contains<const S extends string>(
+  substring: S,
+): RcType<`${string}${S}${string}`> {
+  return {
+    ...defaultProps,
+    _parse_(input, ctx) {
+      return parse(
+        this,
+        input,
+        ctx,
+        () => typeof input === 'string' && input.includes(substring),
+      )
+    },
+    _show_value_in_error_: true,
+    _kind_: `\`\${string}${substring}\${string}\``,
+  }
+}
+
 const maxShallowObjErrors = 1
 
 /** Validates union types like `string | number`. */

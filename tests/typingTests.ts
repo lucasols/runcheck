@@ -15,6 +15,9 @@ import {
   rc_obj_pick,
   rc_object,
   rc_string,
+  rc_string_contains,
+  rc_string_ends_with,
+  rc_string_starts_with,
   rc_undefined,
   rc_union,
 } from '../src/runcheck'
@@ -45,6 +48,17 @@ test('obj types optional keys', () => {
       }
     >
   >()
+})
+
+test('string template literal helpers infer template-literal types', () => {
+  type StartsWith = RcInferType<ReturnType<typeof rc_string_starts_with<'user_'>>>
+  expectType<Equal<StartsWith, `user_${string}`>>()
+
+  type EndsWith = RcInferType<ReturnType<typeof rc_string_ends_with<'.png'>>>
+  expectType<Equal<EndsWith, `${string}.png`>>()
+
+  type Contains = RcInferType<ReturnType<typeof rc_string_contains<'@'>>>
+  expectType<Equal<Contains, `${string}@${string}`>>()
 })
 
 function union(a: string | number) {

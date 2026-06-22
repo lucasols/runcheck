@@ -22,6 +22,9 @@ pnpm add runcheck
 | `rc_date`                        | `Date`                                            |
 | `rc_instanceof(instance: T)`     | Classes typecheck in general                      |
 | `rc_literals(...literals: T[])`  | Type literal in general like `hello`, `true`, `1` |
+| `rc_string_starts_with(p)`       | `` `${p}${string}` ``                             |
+| `rc_string_ends_with(s)`         | `` `${string}${s}` ``                             |
+| `rc_string_contains(s)`          | `` `${string}${s}${string}` ``                    |
 | `rc_union(...types: T[])`        | Union types in general like `string \| 1`         |
 | `rc_array<T>(type: T)`           | `T[]`                                             |
 | `rc_loose_array<T>(type: T)`     | `T[]` (filters invalid items)                     |
