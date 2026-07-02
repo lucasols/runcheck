@@ -1838,6 +1838,118 @@ export function rc_unsafe_transform<Input, Transformed>(
   }
 }
 
+/** try to fix an invalid input and revalidate the fixed value with the same schema */
+/**
+ * Creates a type that attempts to fix an invalid input once and revalidates
+ * the fixed value against the same schema. If the fixed value is still
+ * invalid, the original result is returned. If the fix succeeds, validation
+ * passes and the original errors are reported as warnings.
+ * @param type - The type to validate against
+ * @param tryFix - Function that receives the invalid input and the errors and
+ * warnings of the failed parse. Returns `{ fixed: value }` to revalidate the
+ * fixed value, or `false` to skip fixing
+ * @returns A runcheck type that tries to fix invalid inputs
+ * @example
+ * ```typescript
+ * const schema = rc_try_fix(
+ *   rc_object({ name: rc_string, age: rc_number }),
+ *   (input) => {
+ *     if (typeof input === 'string') {
+ *       const parsed: unknown = JSON.parse(input)
+ *       return { fixed: parsed }
+ *     }
+ *     return false
+ *   },
+ * )
+ * ```
+ */
+export function rc_try_fix<T>(
+  type: RcType<T>,
+  tryFix: (
+    input: unknown,
+    failedParse: { errors: string[]; warnings: string[] },
+  ) => { fixed: unknown } | false,
+): RcType<T> {
+  return {
+    ...defaultProps,
+    _kind_: type._kind_,
+    _parse_(input, ctx) {
+      return parse(this, input, ctx, (): IsValid<T> => {
+        // failed parses can leave child path/short-circuit state in ctx, so
+        // it needs to be restored before reusing the ctx in a new parse
+        const parentPath = ctx.path_
+        const parentObjErrShortCircuit = ctx.objErrShortCircuit_
+        const parentObjErrKeyIndex = ctx.objErrKeyIndex_
+        const warningsStart = ctx.warnings_.length
+
+        const result = type._parse_(input, ctx)
+
+        if (result.ok) {
+          return { errors: false, data: result.data }
+        }
+
+        if (ctx.noWarnings_) {
+          return { errors: result.errors, data: undefined }
+        }
+
+        const attemptWarnings = ctx.warnings_.splice(warningsStart)
+
+        ctx.path_ = parentPath
+        ctx.objErrShortCircuit_ = parentObjErrShortCircuit
+        ctx.objErrKeyIndex_ = parentObjErrKeyIndex
+
+        const fixResult = tryFix(input, {
+          errors: result.errors,
+          warnings: attemptWarnings,
+        })
+
+        if (fixResult) {
+          const fixedParseResult = type._parse_(fixResult.fixed, ctx)
+
+          if (fixedParseResult.ok) {
+            const fixedWarnings = ctx.warnings_.splice(warningsStart)
+
+            const dedupedWarnings = new Set<string>()
+
+            for (const error of result.errors) {
+              const pathEnd = error.startsWith('$') ? error.indexOf(': ') : -1
+
+              dedupedWarnings.add(
+                pathEnd === -1 ?
+                  `Fixed error -> ${error}`
+                : `${error.slice(0, pathEnd)}: Fixed error -> ${error.slice(
+                    pathEnd + 2,
+                  )}`,
+              )
+            }
+
+            for (const warning of fixedWarnings) {
+              dedupedWarnings.add(warning)
+            }
+
+            for (const warning of dedupedWarnings) {
+              ctx.warnings_.push(warning)
+            }
+
+            return { errors: false, data: fixedParseResult.data }
+          }
+
+          ctx.warnings_.length = warningsStart
+          ctx.path_ = parentPath
+          ctx.objErrShortCircuit_ = parentObjErrShortCircuit
+          ctx.objErrKeyIndex_ = parentObjErrKeyIndex
+        }
+
+        for (const warning of attemptWarnings) {
+          ctx.warnings_.push(warning)
+        }
+
+        return { errors: result.errors, data: undefined }
+      })
+    },
+  }
+}
+
 export function normalizedTypeOf(
   input: unknown,
   showValueInError: boolean,

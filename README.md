@@ -331,6 +331,32 @@ import {
 | `rc_string_autofix`  | `string`      | valid `number` inputs                              |
 | `rc_number_autofix`  | `number`      | valid numeric `string` inputs                      |
 
+## `rc_try_fix`
+
+Use `rc_try_fix` to try to fix an invalid input and revalidate the fixed value with the same schema. Unlike `withAutofix`, the fix function doesn't need to return an already valid value, as the fixed value is validated again.
+
+```ts
+const schema = rc_try_fix(
+  rc_object({ name: rc_string, age: rc_number }),
+  (input, { errors, warnings }) => {
+    // try to fix stringified json inputs
+    if (typeof input === 'string') {
+      const parsed: unknown = JSON.parse(input)
+      return { fixed: parsed }
+    }
+
+    // return false to skip fixing
+    return false
+  },
+)
+
+const result = rc_parse('{"name":"John","age":30}', schema)
+// passes, with the fixed errors reported as warnings:
+// `Fixed error -> Type 'string' is not assignable to 'object{ name: string, age: number }'`
+```
+
+The fix is attempted only once: if the fixed value is still invalid, the original result is returned. If the fix succeeds, the errors of the original parse are reported as warnings (`Fixed error -> ...`) alongside any warnings from the revalidation, deduplicated.
+
 # Performing custom checks
 
 You can also use `rc_[type].where(customCheckFunction)` to perform custom checks.
