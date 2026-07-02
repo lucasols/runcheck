@@ -14,6 +14,10 @@ pnpm add runcheck
 | -------------------------------- | ------------------------------------------------- |
 | `rc_string`                      | `string`                                          |
 | `rc_number`                      | `number`                                          |
+| `rc_coerce_number`               | `number` (coerces numeric strings)                |
+| `rc_coerce_string`               | `string` (coerces numbers)                        |
+| `rc_coerce_boolean`              | `boolean` (coerces boolean like inputs)           |
+| `rc_coerce_date`                 | `Date` (coerces date strings and epoch numbers)   |
 | `rc_boolean`                     | `boolean`                                         |
 | `rc_any`                         | `any`                                             |
 | `rc_unknown`                     | `unknown`                                         |
@@ -330,6 +334,24 @@ import {
 | `rc_boolean_autofix` | `boolean`     | `0 \| 1 \| 'true' \| 'false' \| null \| undefined` |
 | `rc_string_autofix`  | `string`      | valid `number` inputs                              |
 | `rc_number_autofix`  | `number`      | valid numeric `string` inputs                      |
+
+## Coerce types
+
+If loose inputs are expected instead of being errors, use the coerce types. Unlike autofix, they coerce inputs without emitting warnings and also work in `noWarnings` mode:
+
+```ts
+import { rc_coerce_number, rc_coerce_string } from 'runcheck'
+
+rc_parse('12', rc_coerce_number) // { data: 12, warnings: false }
+rc_parse(12, rc_coerce_string) // { data: '12', warnings: false }
+```
+
+| Coerce type         | Equivalent to | Coerces                                                            |
+| ------------------- | ------------- | ------------------------------------------------------------------ |
+| `rc_coerce_number`  | `number`      | finite numeric `string` inputs (excludes `''`)                     |
+| `rc_coerce_string`  | `string`      | `number` inputs (excludes `NaN`)                                   |
+| `rc_coerce_boolean` | `boolean`     | `0 \| 1 \| 'true' \| 'false'` inputs                               |
+| `rc_coerce_date`    | `Date`        | date `string` and epoch `number` inputs (`new Date()` parse rules) |
 
 ## `rc_try_fix`
 

@@ -4,6 +4,10 @@ import {
   getSchemaKind,
   rc_any,
   rc_boolean,
+  rc_coerce_boolean,
+  rc_coerce_date,
+  rc_coerce_number,
+  rc_coerce_string,
   rc_date,
   rc_instanceof,
   rc_is_valid,
@@ -86,6 +90,217 @@ describe('rc_number', () => {
         rc_number.where((input) => input < 2),
       ),
     ).toEqual(errorResult(`Predicate failed for type 'number'`))
+  })
+})
+
+describe('rc_coerce_number', () => {
+  test('pass number inputs as is', () => {
+    const result: RcParseResult<number> = rc_parse(1.5, rc_coerce_number)
+
+    expect(result).toEqual(successResult(1.5))
+  })
+
+  test('coerce numeric strings without warnings', () => {
+    expect(rc_parse('1', rc_coerce_number)).toEqual(successResult(1))
+    expect(rc_parse('-1.5', rc_coerce_number)).toEqual(successResult(-1.5))
+    expect(rc_parse('1e3', rc_coerce_number)).toEqual(successResult(1000))
+    expect(rc_parse(' 12 ', rc_coerce_number)).toEqual(successResult(12))
+  })
+
+  test('coercion works in noWarnings mode', () => {
+    expect(rc_parse('42', rc_coerce_number, { noWarnings: true })).toEqual(
+      successResult(42),
+    )
+  })
+
+  test('fail', () => {
+    expect(rc_parse('not a number', rc_coerce_number)).toEqual(
+      errorResult(
+        `Type 'string' is not assignable to 'number_or_numeric_string'`,
+      ),
+    )
+
+    expect(rc_parse('', rc_coerce_number)).toEqual(
+      errorResult(
+        `Type 'string' is not assignable to 'number_or_numeric_string'`,
+      ),
+    )
+
+    expect(rc_parse('  ', rc_coerce_number)).toEqual(
+      errorResult(
+        `Type 'string' is not assignable to 'number_or_numeric_string'`,
+      ),
+    )
+
+    expect(rc_parse('Infinity', rc_coerce_number)).toEqual(
+      errorResult(
+        `Type 'string' is not assignable to 'number_or_numeric_string'`,
+      ),
+    )
+
+    expect(rc_parse('1e999', rc_coerce_number)).toEqual(
+      errorResult(
+        `Type 'string' is not assignable to 'number_or_numeric_string'`,
+      ),
+    )
+
+    expect(rc_parse(NaN, rc_coerce_number)).toEqual(
+      errorResult(`Type 'NaN' is not assignable to 'number_or_numeric_string'`),
+    )
+
+    expect(rc_parse(null, rc_coerce_number)).toEqual(
+      errorResult(
+        `Type 'null' is not assignable to 'number_or_numeric_string'`,
+      ),
+    )
+  })
+
+  test('modifiers', () => {
+    expect(rc_parse(null, rc_coerce_number.orNull())).toEqual(
+      successResult(null),
+    )
+
+    expect(
+      rc_parse(
+        '3',
+        rc_coerce_number.where((input) => input > 2),
+      ),
+    ).toEqual(successResult(3))
+
+    expect(
+      rc_parse(
+        '1',
+        rc_coerce_number.where((input) => input > 2),
+      ),
+    ).toEqual(
+      errorResult(`Predicate failed for type 'number_or_numeric_string'`),
+    )
+  })
+})
+
+describe('rc_coerce_string', () => {
+  test('pass string inputs as is', () => {
+    const result: RcParseResult<string> = rc_parse('hello', rc_coerce_string)
+
+    expect(result).toEqual(successResult('hello'))
+  })
+
+  test('coerce numbers without warnings', () => {
+    expect(rc_parse(1, rc_coerce_string)).toEqual(successResult('1'))
+    expect(rc_parse(-1.5, rc_coerce_string)).toEqual(successResult('-1.5'))
+  })
+
+  test('coercion works in noWarnings mode', () => {
+    expect(rc_parse(42, rc_coerce_string, { noWarnings: true })).toEqual(
+      successResult('42'),
+    )
+  })
+
+  test('fail', () => {
+    expect(rc_parse(NaN, rc_coerce_string)).toEqual(
+      errorResult(`Type 'NaN' is not assignable to 'string_or_number'`),
+    )
+
+    expect(rc_parse(true, rc_coerce_string)).toEqual(
+      errorResult(`Type 'boolean' is not assignable to 'string_or_number'`),
+    )
+
+    expect(rc_parse(null, rc_coerce_string)).toEqual(
+      errorResult(`Type 'null' is not assignable to 'string_or_number'`),
+    )
+  })
+})
+
+describe('rc_coerce_boolean', () => {
+  test('pass boolean inputs as is', () => {
+    const result: RcParseResult<boolean> = rc_parse(true, rc_coerce_boolean)
+
+    expect(result).toEqual(successResult(true))
+    expect(rc_parse(false, rc_coerce_boolean)).toEqual(successResult(false))
+  })
+
+  test('coerce boolean like inputs without warnings', () => {
+    expect(rc_parse(1, rc_coerce_boolean)).toEqual(successResult(true))
+    expect(rc_parse(0, rc_coerce_boolean)).toEqual(successResult(false))
+    expect(rc_parse('true', rc_coerce_boolean)).toEqual(successResult(true))
+    expect(rc_parse('false', rc_coerce_boolean)).toEqual(successResult(false))
+  })
+
+  test('coercion works in noWarnings mode', () => {
+    expect(rc_parse(1, rc_coerce_boolean, { noWarnings: true })).toEqual(
+      successResult(true),
+    )
+  })
+
+  test('fail', () => {
+    expect(rc_parse(2, rc_coerce_boolean)).toEqual(
+      errorResult(
+        `Type 'number' is not assignable to 'boolean_or_boolean_like'`,
+      ),
+    )
+
+    expect(rc_parse('TRUE', rc_coerce_boolean)).toEqual(
+      errorResult(
+        `Type 'string' is not assignable to 'boolean_or_boolean_like'`,
+      ),
+    )
+
+    expect(rc_parse(null, rc_coerce_boolean)).toEqual(
+      errorResult(`Type 'null' is not assignable to 'boolean_or_boolean_like'`),
+    )
+
+    expect(rc_parse(undefined, rc_coerce_boolean)).toEqual(
+      errorResult(
+        `Type 'undefined' is not assignable to 'boolean_or_boolean_like'`,
+      ),
+    )
+  })
+})
+
+describe('rc_coerce_date', () => {
+  test('pass Date inputs as is', () => {
+    const date = new Date(2023, 0, 15)
+    const result: RcParseResult<Date> = rc_parse(date, rc_coerce_date)
+
+    expect(result).toEqual(successResult(date))
+  })
+
+  test('coerce date strings and epoch numbers without warnings', () => {
+    expect(rc_parse('2023-01-15T10:30:00.000Z', rc_coerce_date)).toEqual(
+      successResult(new Date('2023-01-15T10:30:00.000Z')),
+    )
+
+    expect(rc_parse(1673778600000, rc_coerce_date)).toEqual(
+      successResult(new Date(1673778600000)),
+    )
+  })
+
+  test('coercion works in noWarnings mode', () => {
+    expect(
+      rc_parse('2023-01-15', rc_coerce_date, { noWarnings: true }),
+    ).toEqual(successResult(new Date('2023-01-15')))
+  })
+
+  test('fail', () => {
+    expect(rc_parse('not a date', rc_coerce_date)).toEqual(
+      errorResult(`Type 'string' is not assignable to 'date_or_date_like'`),
+    )
+
+    expect(rc_parse('', rc_coerce_date)).toEqual(
+      errorResult(`Type 'string' is not assignable to 'date_or_date_like'`),
+    )
+
+    expect(rc_parse(NaN, rc_coerce_date)).toEqual(
+      errorResult(`Type 'NaN' is not assignable to 'date_or_date_like'`),
+    )
+
+    expect(rc_parse(new Date('invalid'), rc_coerce_date)).toEqual(
+      errorResult(`Type 'object' is not assignable to 'date_or_date_like'`),
+    )
+
+    expect(rc_parse(null, rc_coerce_date)).toEqual(
+      errorResult(`Type 'null' is not assignable to 'date_or_date_like'`),
+    )
   })
 })
 

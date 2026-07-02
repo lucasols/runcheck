@@ -511,6 +511,106 @@ export const rc_number: RcType<number> = {
   _kind_: 'number',
 }
 
+/**
+ * Equivalent to ts type: `number`. Excludes `NaN`. Coerces finite numeric
+ * `string` inputs without warnings, unlike autofix.
+ */
+export const rc_coerce_number: RcType<number> = {
+  ...defaultProps,
+  _parse_(input, ctx) {
+    return parse(this, input, ctx, () => {
+      if (typeof input === 'number') {
+        return !Number.isNaN(input)
+      }
+
+      if (typeof input === 'string' && input.trim() !== '') {
+        const coerced = Number(input)
+
+        if (Number.isFinite(coerced)) {
+          return { data: coerced, errors: false }
+        }
+      }
+
+      return false
+    })
+  },
+  _kind_: 'number_or_numeric_string',
+}
+
+/**
+ * Equivalent to ts type: `string`. Coerces `number` inputs (excluding `NaN`)
+ * without warnings, unlike autofix.
+ */
+export const rc_coerce_string: RcType<string> = {
+  ...defaultProps,
+  _parse_(input, ctx) {
+    return parse(this, input, ctx, () => {
+      if (typeof input === 'string') return true
+
+      if (typeof input === 'number' && !Number.isNaN(input)) {
+        return { data: String(input), errors: false }
+      }
+
+      return false
+    })
+  },
+  _kind_: 'string_or_number',
+}
+
+/**
+ * Equivalent to ts type: `boolean`. Coerces `0 | 1 | 'true' | 'false'` inputs
+ * without warnings, unlike autofix.
+ */
+export const rc_coerce_boolean: RcType<boolean> = {
+  ...defaultProps,
+  _parse_(input, ctx) {
+    return parse(this, input, ctx, () => {
+      if (typeof input === 'boolean') return true
+
+      if (input === 0 || input === 1) {
+        return { data: input === 1, errors: false }
+      }
+
+      if (input === 'true' || input === 'false') {
+        return { data: input === 'true', errors: false }
+      }
+
+      return false
+    })
+  },
+  _kind_: 'boolean_or_boolean_like',
+}
+
+/**
+ * Equivalent to ts type: `Date`. Coerces date `string` or epoch `number`
+ * inputs (following `new Date()` parsing rules) without warnings, unlike
+ * autofix. Excludes invalid dates.
+ */
+export const rc_coerce_date: RcType<Date> = {
+  ...defaultProps,
+  _parse_(input, ctx) {
+    return parse(this, input, ctx, () => {
+      if (input instanceof Date) {
+        return !Number.isNaN(input.getTime())
+      }
+
+      if (
+        (typeof input === 'string' && input.trim() !== '') ||
+        typeof input === 'number'
+      ) {
+        const coerced = new Date(input)
+
+        if (!Number.isNaN(coerced.getTime())) {
+          return { data: coerced, errors: false }
+        }
+      }
+
+      return false
+    })
+  },
+  _kind_: 'date_or_date_like',
+}
+
 /** Equivalent to ts type: `Date`. Excludes invalid dates. */
 export const rc_date: RcType<Date> = {
   ...defaultProps,
