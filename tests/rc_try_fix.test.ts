@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'vitest'
 import { rc_number_autofix } from '../src/autofixable'
 import {
+  rc_intersection,
   rc_number,
   rc_object,
   rc_parse,
@@ -164,6 +165,30 @@ describe('rc_try_fix', () => {
     expect(result).toEqual(
       successResult('fallback', [
         `Fallback used, errors -> Type 'number' is not assignable to 'string'`,
+      ]),
+    )
+  })
+
+  test('wrapped object schemas keep working inside rc_intersection', () => {
+    const schema = rc_intersection(
+      rc_try_fix(rc_object({ a: rc_number }), (input) => {
+        if (typeof input === 'object' && input !== null && 'a' in input) {
+          return { fixed: { ...input, a: Number(input.a) } }
+        }
+        return false
+      }),
+      rc_object({ b: rc_string }),
+    )
+
+    // valid input, the fix never fires: data of both members must be merged
+    expect(rc_parse({ a: 1, b: 'x' }, schema)).toEqual(
+      successResult({ a: 1, b: 'x' }),
+    )
+
+    // invalid input: the fixed member data must be merged
+    expect(rc_parse({ a: '1', b: 'x' }, schema)).toEqual(
+      successResult({ a: 1, b: 'x' }, [
+        `$.a: Fixed error -> Type 'string' is not assignable to 'number'`,
       ]),
     )
   })

@@ -1,4 +1,4 @@
-import { RcType, defaultProps, parse } from './runcheck'
+import { RcType, defaultProps, isObject, parse } from './runcheck'
 
 /**
  * Creates an intersection type validator that requires input to satisfy all provided types.
@@ -63,7 +63,15 @@ export function rc_intersection(...types: RcType<any>[]): RcType<any> {
 
             return false
           } else {
-            if (type._is_object_) {
+            if (
+              type._is_object_ ||
+              // safety net for object schemas wrapped in types that don't
+              // propagate the object metadata, e.g. transforms: a result that
+              // is an object with a new identity was reconstructed by the
+              // type, so it should be merged. Pass-through results (rc_any,
+              // rc_instanceof, etc.) keep the input identity and are skipped
+              (result.data !== input && isObject(result.data))
+            ) {
               objResultData = { ...(objResultData || {}), ...result.data }
             }
           }

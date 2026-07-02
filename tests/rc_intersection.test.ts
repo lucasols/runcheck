@@ -8,7 +8,9 @@ import {
   rc_parse,
   rc_record,
   rc_string,
+  rc_transform,
   rc_union,
+  rc_unknown,
 } from '../src/runcheck'
 import { rc_discriminated_union } from "../src/rc_discriminated_union"
 import { errorResult, successResult } from './testUtils'
@@ -107,6 +109,26 @@ describe('rc_record and rc_object', () => {
     expect(rc_parse({ a: 'hello', b: 'world', extra: '1' }, shape)).toEqual(
       errorResult("$.extra: Type 'string' is not assignable to 'boolean'"),
     )
+  })
+})
+
+describe('object results from types without object metadata', () => {
+  test('reconstructed object results are merged, e.g. from transforms', () => {
+    const shape = rc_intersection(
+      rc_transform(rc_object({ a: rc_number }), (obj) => obj),
+      rc_object({ extra: rc_boolean }),
+    )
+
+    expect(rc_parse({ a: 1, extra: true }, shape)).toEqual(
+      successResult({ a: 1, extra: true }),
+    )
+  })
+
+  test('pass-through results keeping the input identity are not merged', () => {
+    const shape = rc_intersection(rc_unknown, rc_object({ a: rc_number }))
+
+    // the excess key from the pass-through rc_unknown member should not leak
+    expect(rc_parse({ a: 1, b: 2 }, shape)).toEqual(successResult({ a: 1 }))
   })
 })
 

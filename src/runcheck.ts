@@ -1871,8 +1871,9 @@ export function rc_try_fix<T>(
   ) => { fixed: unknown } | false,
 ): RcType<T> {
   return {
-    ...defaultProps,
-    _kind_: type._kind_,
+    // spreading the wrapped type keeps its metadata, e.g. _is_object_ which
+    // rc_intersection and rc_union rely on to merge and handle object members
+    ...type,
     _parse_(input, ctx) {
       return parse(this, input, ctx, (): IsValid<T> => {
         // failed parses can leave child path/short-circuit state in ctx, so
