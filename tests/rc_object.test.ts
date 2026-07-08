@@ -992,6 +992,19 @@ describe('rc_strict_obj', () => {
     )
   })
 
+  test('strict object keeps strictness with modifiers', () => {
+    const input = { id: 4, user: 'hello', excess: 'world' }
+
+    const result = rc_parse(
+      input,
+      rc_obj_strict({ user: rc_string, id: rc_number }).optional(),
+    )
+
+    expect(result).toEqual(
+      errorResult(`Key 'excess' is not defined in the object shape`),
+    )
+  })
+
   test('rc_enable_obj_strict: use a obj type as input', () => {
     const objSchema = rc_object({ user: rc_string, id: rc_number })
 

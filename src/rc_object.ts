@@ -209,7 +209,7 @@ export function rc_object<T extends RcObject>(
           }
         }
 
-        const isStrict = this._kind_ === 'strict_obj' || ctx.strictObj_
+        const isStrict = this._is_strict_obj_ || ctx.strictObj_
 
         const excessKeys =
           isStrict ? new Set<string>(Object.keys(inputObj)) : undefined
@@ -439,6 +439,7 @@ export function rc_obj_strict<T extends RcObject>(
   return {
     ...rc_object(shape, options),
     _kind_: `strict_obj`,
+    _is_strict_obj_: true,
   }
 }
 
@@ -473,6 +474,7 @@ export function rc_enable_obj_strict<T extends RcType<any>>(
     return {
       ...type,
       _kind_: `strict_obj`,
+      _is_strict_obj_: true,
     }
   }
 

@@ -182,6 +182,8 @@ export type RcBase<T, RequiredKey extends boolean> = {
   /** @internal */
   readonly _is_extend_obj_: boolean
   /** @internal */
+  readonly _is_strict_obj_: boolean
+  /** @internal */
   readonly _is_object_: boolean
   /** @internal */
   readonly _array_item_type_: RcType<any> | undefined
@@ -515,6 +517,7 @@ export const defaultProps: Omit<RcType<any>, '_parse_' | '_kind_'> = {
   _detailed_obj_shape_: undefined,
   _is_object_: false,
   _is_extend_obj_: false,
+  _is_strict_obj_: false,
   _shape_: undefined,
 }
 

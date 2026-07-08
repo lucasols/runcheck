@@ -33,6 +33,7 @@ import {
   rc_obj_pick,
   rc_obj_strict,
   rc_object,
+  rc_parse,
   rc_record,
   rc_recursive,
   rc_string,
@@ -84,6 +85,19 @@ test('literal shapes', () => {
     kind: 'literal',
     values: ['a', 1, true],
   })
+})
+
+test('mutating literal shape values does not affect the schema', () => {
+  const schema = rc_literals('a', 'b')
+
+  const shape = rc_get_shape(schema)
+
+  if (shape.kind !== 'literal') throw new Error('expected literal shape')
+
+  shape.values.push('c')
+
+  expect(rc_parse('c', schema).ok).toBe(false)
+  expect(rc_get_shape(schema)).toEqual({ kind: 'literal', values: ['a', 'b'] })
 })
 
 test('string template shapes are represented as string', () => {
@@ -478,6 +492,18 @@ describe('shape is preserved through validation-only wrappers', () => {
 
     expect(rc_get_shape(rc_string.optional().default('default'))).toEqual({
       kind: 'string',
+    })
+  })
+
+  test('default keeps strict object excessKeys', () => {
+    const schema = rc_default(rc_obj_strict({ a: rc_string }).optional(), {
+      a: 'x',
+    })
+
+    expect(rc_get_shape(schema)).toEqual({
+      kind: 'object',
+      properties: { a: { kind: 'string' } },
+      excessKeys: 'error',
     })
   })
 })
