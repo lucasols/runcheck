@@ -3,6 +3,24 @@ export {
   rc_discriminated_union_builder,
 } from './rc_discriminated_union'
 export { rc_intersection } from './rc_intersection'
+export { rc_get_shape } from './rc_get_shape'
+export type {
+  RcShape,
+  RcPrimitiveShape,
+  RcLiteralShape,
+  RcCoerceShape,
+  RcOptionalShape,
+  RcNullableShape,
+  RcNullishShape,
+  RcObjectShape,
+  RcRecordShape,
+  RcArrayShape,
+  RcTupleShape,
+  RcUnionShape,
+  RcIntersectionShape,
+  RcDiscriminatedUnionShape,
+  RcRecursiveShape,
+} from './rc_get_shape'
 export {
   rc_enable_obj_strict,
   rc_get_from_key_as_fallback,
@@ -86,6 +104,33 @@ export type RcType<T> = RcBase<T, false>
 
 type Schema<T> = (t: T) => T
 
+/**
+ * Compact schema shape metadata stored on types at creation time. Resolved
+ * lazily to a full `RcShape` tree by `rc_get_shape`.
+ * @internal
+ */
+export type InternalShapeMarker =
+  | 'string'
+  | 'number'
+  | 'boolean'
+  | 'date'
+  | 'null'
+  | 'undefined'
+  | 'any'
+  | 'unknown'
+  | { kind: 'literal'; values: (string | number | boolean)[] }
+  | { kind: 'coerce'; target: 'string' | 'number' | 'boolean' | 'date' }
+  | { kind: 'union'; types: readonly RcBase<any, any>[] }
+  | { kind: 'intersection'; types: readonly RcBase<any, any>[] }
+  | { kind: 'tuple'; types: readonly RcBase<any, any>[] }
+  | { kind: 'record'; valueType: RcBase<any, any> }
+  | {
+      kind: 'discriminated_union'
+      key: string
+      types: Record<string, RcBase<any, any>>
+    }
+  | { kind: 'recursive'; getType: () => RcBase<any, any> }
+
 export type RcBase<T, RequiredKey extends boolean> = {
   __rc_type: Schema<T>
   readonly withFallback: WithFallback<T>
@@ -152,6 +197,8 @@ export type RcBase<T, RequiredKey extends boolean> = {
   readonly _autoFix_: ((input: unknown) => AutoFixResult<T>) | undefined
   /** @internal */
   readonly _literal_values_: T[] | undefined
+  /** @internal */
+  readonly _shape_: InternalShapeMarker | undefined
 }
 
 const getUndefined = () => undefined
@@ -441,6 +488,7 @@ export const defaultProps: Omit<RcType<any>, '_parse_' | '_kind_'> = {
   _detailed_obj_shape_: undefined,
   _is_object_: false,
   _is_extend_obj_: false,
+  _shape_: undefined,
 }
 
 /** Equivalent to ts type: `undefined`. */
@@ -450,6 +498,7 @@ export const rc_undefined: RcType<undefined> = {
     return parse(this, input, ctx, () => input === undefined)
   },
   _kind_: 'undefined',
+  _shape_: 'undefined',
 }
 
 /** Equivalent to ts type: `null`. */
@@ -459,6 +508,7 @@ export const rc_null: RcType<null> = {
     return parse(this, input, ctx, () => input === null)
   },
   _kind_: 'null',
+  _shape_: 'null',
 }
 
 /** Equivalent to ts type: `any`. */
@@ -468,6 +518,7 @@ export const rc_any: RcType<any> = {
     return { ok: true, data: input, errors: undefined }
   },
   _kind_: 'any',
+  _shape_: 'any',
 }
 
 /** Equivalent to ts type: `unknown`. */
@@ -477,6 +528,7 @@ export const rc_unknown: RcType<unknown> = {
     return { ok: true, data: input, errors: undefined }
   },
   _kind_: 'unknown',
+  _shape_: 'unknown',
 }
 
 /** Equivalent to ts type: `boolean`. */
@@ -486,6 +538,7 @@ export const rc_boolean: RcType<boolean> = {
     return parse(this, input, ctx, () => typeof input === 'boolean')
   },
   _kind_: 'boolean',
+  _shape_: 'boolean',
 }
 
 /** Equivalent to ts type: `string`. */
@@ -495,6 +548,7 @@ export const rc_string: RcType<string> = {
     return parse(this, input, ctx, () => typeof input === 'string')
   },
   _kind_: 'string',
+  _shape_: 'string',
 }
 
 /** Equivalent to ts type: `number`. Excludes `NaN`. */
@@ -509,6 +563,7 @@ export const rc_number: RcType<number> = {
     )
   },
   _kind_: 'number',
+  _shape_: 'number',
 }
 
 /**
@@ -535,6 +590,7 @@ export const rc_coerce_number: RcType<number> = {
     })
   },
   _kind_: 'number_or_numeric_string',
+  _shape_: { kind: 'coerce', target: 'number' },
 }
 
 /**
@@ -555,6 +611,7 @@ export const rc_coerce_string: RcType<string> = {
     })
   },
   _kind_: 'string_or_number',
+  _shape_: { kind: 'coerce', target: 'string' },
 }
 
 /**
@@ -579,6 +636,7 @@ export const rc_coerce_boolean: RcType<boolean> = {
     })
   },
   _kind_: 'boolean_or_boolean_like',
+  _shape_: { kind: 'coerce', target: 'boolean' },
 }
 
 /**
@@ -609,6 +667,7 @@ export const rc_coerce_date: RcType<Date> = {
     })
   },
   _kind_: 'date_or_date_like',
+  _shape_: { kind: 'coerce', target: 'date' },
 }
 
 /** Equivalent to ts type: `Date`. Excludes invalid dates. */
@@ -624,6 +683,7 @@ export const rc_date: RcType<Date> = {
     })
   },
   _kind_: 'date',
+  _shape_: 'date',
 }
 
 /** Validates class instances using `instanceof` checks.
@@ -683,6 +743,7 @@ export function rc_literals(
     },
     _show_value_in_error_: true,
     _literal_values_: literals,
+    _shape_: { kind: 'literal', values: literals },
     _kind_:
       literals.length == 1 ?
         normalizedTypeOf(literals[0], true)
@@ -729,6 +790,7 @@ export function rc_string_starts_with<const P extends string>(
       )
     },
     _show_value_in_error_: true,
+    _shape_: 'string',
     _kind_: `\`${prefix}\${string}\``,
   }
 }
@@ -759,6 +821,7 @@ export function rc_string_ends_with<const S extends string>(
       )
     },
     _show_value_in_error_: true,
+    _shape_: 'string',
     _kind_: `\`\${string}${suffix}\``,
   }
 }
@@ -789,6 +852,7 @@ export function rc_string_contains<const S extends string>(
       )
     },
     _show_value_in_error_: true,
+    _shape_: 'string',
     _kind_: `\`\${string}${substring}\${string}\``,
   }
 }
@@ -822,6 +886,7 @@ export function rc_union<T extends RcType<any>[]>(
     ...defaultProps,
     _kind_: kind,
     _is_object_: allIsObject,
+    _shape_: { kind: 'union', types },
     _parse_(input, ctx) {
       return parse(this, input, ctx, () => {
         const basePath = ctx.path_
@@ -1012,6 +1077,7 @@ export function rc_record<V>(
     ...defaultProps,
     _kind_: `record<string, ${valueType._kind_}>`,
     _is_object_: true,
+    _shape_: { kind: 'record', valueType },
     _parse_(inputObj, ctx) {
       return parse<Record<string, V>>(this, inputObj, ctx, () => {
         if (!isObject(inputObj)) return false
@@ -1399,6 +1465,7 @@ export function rc_tuple<const T extends readonly RcType<any>[]>(
   return {
     ...defaultProps,
     _kind_: `[${types.map((type) => type._kind_).join(', ')}]`,
+    _shape_: { kind: 'tuple', types },
     _parse_(input, ctx) {
       return parse(this, input, ctx, () => {
         if (!Array.isArray(input)) return false
@@ -1666,9 +1733,12 @@ export function rc_validator<S>(type: RcType<S>) {
 export function rc_recursive<T extends RcBase<any, any>>(type: () => T): T {
   let recursiveType: { -readonly [K in keyof T]: T[K] } | undefined = undefined
 
+  const shapeMarker: InternalShapeMarker = { kind: 'recursive', getType: type }
+
   return {
     ...defaultProps,
     _kind_: 'recursive',
+    _shape_: shapeMarker,
     _parse_(input, ctx) {
       if (!recursiveType) {
         recursiveType = {

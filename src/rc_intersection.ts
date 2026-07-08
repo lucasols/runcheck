@@ -49,6 +49,7 @@ export function rc_intersection(...types: RcType<any>[]): RcType<any> {
     ...defaultProps,
     _kind_: kind,
     _is_object_: allIsObject,
+    _shape_: { kind: 'intersection', types },
     _parse_(input, ctx) {
       return parse(this, input, ctx, () => {
         let objResultData: Record<string, unknown> | null = null
