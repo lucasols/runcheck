@@ -26,9 +26,9 @@ pnpm build:no-test      # Build without running tests
 
 ### Other Commands
 ```bash
-# Benchmarking
-pnpm benchmark          # Run benchmarks
-pnpm benchmark-to-ref   # Benchmark against reference
+# Benchmarking (mitata, current build vs latest published version)
+pnpm benchmark          # Build and compare against the published version
+pnpm benchmark:coerce   # Compare coerce strategies on the current build
 
 # Publishing
 pnpm pre-publish        # Pre-publish checks and build

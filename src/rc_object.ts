@@ -151,7 +151,13 @@ export function rc_object<T extends RcObject>(
   }
 
   const shapeEntries = Object.entries(objShape).map(([key, type]) => {
-    return { key, type }
+    return {
+      key,
+      type,
+      // computed lazily on first parse to keep schema creation cheap
+      subPath: null as string | null,
+      snakeCaseKey: normalizeKeysFrom === 'snake_case' ? snakeCase(key) : '',
+    }
   })
 
   return {
@@ -202,7 +208,7 @@ export function rc_object<T extends RcObject>(
           }
         }
 
-        const isStrict = this._kind_ === 'strict_obj' || ctx.strictObj_
+        const isStrict = this._is_strict_obj_ || ctx.strictObj_
 
         const excessKeys =
           isStrict ? new Set<string>(Object.keys(inputObj)) : undefined
@@ -261,8 +267,11 @@ export function rc_object<T extends RcObject>(
           const typekey = key as keyof T
           i += 1
 
-          const subPath =
-            key === '' || key.includes(' ') ? `['${key}']` : `.${key}`
+          let subPath = shapeEntry.subPath
+          if (subPath === null) {
+            subPath = key === '' || key.includes(' ') ? `['${key}']` : `.${key}`
+            shapeEntry.subPath = subPath
+          }
 
           const path = `${parentPath}${subPath}`
 
@@ -276,11 +285,9 @@ export function rc_object<T extends RcObject>(
             keyToDeleteFromExcessKeys = type._alternative_key_
           }
 
-          if (input === undefined && normalizeKeysFrom === 'snake_case') {
-            const snakeCaseKey = snakeCase(key)
-
-            input = inputObj[snakeCaseKey]
-            keyToDeleteFromExcessKeys = snakeCaseKey
+          if (input === undefined && shapeEntry.snakeCaseKey) {
+            input = inputObj[shapeEntry.snakeCaseKey]
+            keyToDeleteFromExcessKeys = shapeEntry.snakeCaseKey
           }
 
           excessKeys?.delete(keyToDeleteFromExcessKeys)
@@ -437,6 +444,7 @@ export function rc_obj_strict<T extends RcObject>(
   return {
     ...rc_object(shape, options),
     _kind_: `strict_obj`,
+    _is_strict_obj_: true,
   }
 }
 
@@ -471,6 +479,7 @@ export function rc_enable_obj_strict<T extends RcType<any>>(
     return {
       ...type,
       _kind_: `strict_obj`,
+      _is_strict_obj_: true,
     }
   }
 

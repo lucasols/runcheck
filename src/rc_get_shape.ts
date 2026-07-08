@@ -148,7 +148,7 @@ function getBaseShape(type: RcBase<any, any>): RcShape {
 
     switch (marker.kind) {
       case 'literal':
-        return { kind: 'literal', values: marker.values }
+        return { kind: 'literal', values: marker.values.slice() }
       case 'coerce':
         return { kind: 'coerce', target: marker.target }
       case 'union':
@@ -188,7 +188,7 @@ function getBaseShape(type: RcBase<any, any>): RcShape {
       properties: getShapesRecord(type._obj_shape_),
       excessKeys:
         type._is_extend_obj_ ? 'preserve'
-        : type._kind_.endsWith('strict_obj') ? 'error'
+        : type._is_strict_obj_ ? 'error'
         : 'strip',
     }
   }
