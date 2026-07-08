@@ -14,7 +14,8 @@
     "build": "pnpm test && pnpm lint && pnpm build:no-test",
     "build:no-test": "tsup --minify --dts",
     "build-test": "tsup --config tsup.test.config.ts",
-    "pre-publish": "pnpm build"
+    "pre-publish": "pnpm build",
+    "benchmark:parse": "pnpm build:no-test && node benchmarks/parse.mitata.mjs"
   },
   "files": [
     "dist"

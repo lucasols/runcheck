@@ -215,7 +215,9 @@ function addWarning(ctx: ParseResultCtx, warning: string) {
 }
 
 function addWarnings(ctx: ParseResultCtx, warnings: string[]) {
-  warnings.forEach((warning) => addWarning(ctx, warning))
+  for (const warning of warnings) {
+    addWarning(ctx, warning)
+  }
 }
 
 type IsValid<T> =
@@ -223,32 +225,33 @@ type IsValid<T> =
   | { data: T; errors: false }
   | { data: undefined; errors: ErrorWithPath[] }
 
-export function parse<T>(
+function parseIf<T>(
   type: RcType<T>,
   input: unknown,
   ctx: ParseResultCtx,
-  checkIfIsValid: () => IsValid<T>,
+  isValid: IsValid<T>,
 ): InternalParseResult<T> {
-  if (type._optional_) {
-    if (input === undefined) {
-      return { ok: true, data: input as T, errors: undefined }
-    }
+  if (type._optional_ && input === undefined) {
+    return { ok: true, data: input as T, errors: undefined }
   }
 
-  if (type._orNullish_) {
-    if (input === null || input === undefined) {
-      return { ok: true, data: input as T, errors: undefined }
-    }
+  if (type._orNullish_ && (input === null || input === undefined)) {
+    return { ok: true, data: input as T, errors: undefined }
   }
 
-  if (type._orNull_) {
-    if (input === null) {
-      return { ok: true, data: input as T, errors: undefined }
-    }
+  if (type._orNull_ && input === null) {
+    return { ok: true, data: input as T, errors: undefined }
   }
 
-  const isValid = checkIfIsValid()
+  return parseResolved(type, input, ctx, isValid)
+}
 
+function parseResolved<T>(
+  type: RcType<T>,
+  input: unknown,
+  ctx: ParseResultCtx,
+  isValid: IsValid<T>,
+): InternalParseResult<T> {
   if (isValid) {
     if (isValid === true || !isValid.errors) {
       const validResult = isValid === true ? (input as T) : isValid.data
@@ -291,12 +294,15 @@ export function parse<T>(
         }
 
         if (autofixed.errors) {
+          const errors: ErrorWithPath[] = []
+          for (const error of autofixed.errors) {
+            errors.push(getWarningOrErrorWithPath(ctx, error))
+          }
+
           return {
             ok: false,
             data: undefined,
-            errors: autofixed.errors.map((error) =>
-              getWarningOrErrorWithPath(ctx, error),
-            ),
+            errors,
           }
         }
 
@@ -313,6 +319,27 @@ export function parse<T>(
         isValid.errors
       : [getWarningOrErrorWithPath(ctx, getErrorMsg(type, input))],
   }
+}
+
+export function parse<T>(
+  type: RcType<T>,
+  input: unknown,
+  ctx: ParseResultCtx,
+  checkIfIsValid: () => IsValid<T>,
+): InternalParseResult<T> {
+  if (type._optional_ && input === undefined) {
+    return { ok: true, data: input as T, errors: undefined }
+  }
+
+  if (type._orNullish_ && (input === null || input === undefined)) {
+    return { ok: true, data: input as T, errors: undefined }
+  }
+
+  if (type._orNull_ && input === null) {
+    return { ok: true, data: input as T, errors: undefined }
+  }
+
+  return parseResolved(type, input, ctx, checkIfIsValid())
 }
 
 function getResultErrors(
@@ -447,7 +474,7 @@ export const defaultProps: Omit<RcType<any>, '_parse_' | '_kind_'> = {
 export const rc_undefined: RcType<undefined> = {
   ...(defaultProps as Omit<RcType<undefined>, '_parse_' | '_kind_'>),
   _parse_(input, ctx) {
-    return parse(this, input, ctx, () => input === undefined)
+    return parseIf(this, input, ctx, input === undefined)
   },
   _kind_: 'undefined',
 }
@@ -456,7 +483,7 @@ export const rc_undefined: RcType<undefined> = {
 export const rc_null: RcType<null> = {
   ...(defaultProps as Omit<RcType<null>, '_parse_' | '_kind_'>),
   _parse_(input, ctx) {
-    return parse(this, input, ctx, () => input === null)
+    return parseIf(this, input, ctx, input === null)
   },
   _kind_: 'null',
 }
@@ -483,7 +510,7 @@ export const rc_unknown: RcType<unknown> = {
 export const rc_boolean: RcType<boolean> = {
   ...defaultProps,
   _parse_(input, ctx) {
-    return parse(this, input, ctx, () => typeof input === 'boolean')
+    return parseIf(this, input, ctx, typeof input === 'boolean')
   },
   _kind_: 'boolean',
 }
@@ -492,7 +519,7 @@ export const rc_boolean: RcType<boolean> = {
 export const rc_string: RcType<string> = {
   ...defaultProps,
   _parse_(input, ctx) {
-    return parse(this, input, ctx, () => typeof input === 'string')
+    return parseIf(this, input, ctx, typeof input === 'string')
   },
   _kind_: 'string',
 }
@@ -501,11 +528,11 @@ export const rc_string: RcType<string> = {
 export const rc_number: RcType<number> = {
   ...defaultProps,
   _parse_(input, ctx) {
-    return parse(
+    return parseIf(
       this,
       input,
       ctx,
-      () => typeof input === 'number' && !Number.isNaN(input),
+      typeof input === 'number' && !Number.isNaN(input),
     )
   },
   _kind_: 'number',

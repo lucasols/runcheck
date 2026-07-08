@@ -151,7 +151,14 @@ export function rc_object<T extends RcObject>(
   }
 
   const shapeEntries = Object.entries(objShape).map(([key, type]) => {
-    return { key, type }
+    const subPath = key === '' || key.includes(' ') ? `['${key}']` : `.${key}`
+
+    return {
+      key,
+      type,
+      subPath,
+      snakeCaseKey: normalizeKeysFrom === 'snake_case' ? snakeCase(key) : '',
+    }
   })
 
   return {
@@ -261,10 +268,7 @@ export function rc_object<T extends RcObject>(
           const typekey = key as keyof T
           i += 1
 
-          const subPath =
-            key === '' || key.includes(' ') ? `['${key}']` : `.${key}`
-
-          const path = `${parentPath}${subPath}`
+          const path = `${parentPath}${shapeEntry.subPath}`
 
           ctx.path_ = path
 
@@ -276,11 +280,9 @@ export function rc_object<T extends RcObject>(
             keyToDeleteFromExcessKeys = type._alternative_key_
           }
 
-          if (input === undefined && normalizeKeysFrom === 'snake_case') {
-            const snakeCaseKey = snakeCase(key)
-
-            input = inputObj[snakeCaseKey]
-            keyToDeleteFromExcessKeys = snakeCaseKey
+          if (input === undefined && shapeEntry.snakeCaseKey) {
+            input = inputObj[shapeEntry.snakeCaseKey]
+            keyToDeleteFromExcessKeys = shapeEntry.snakeCaseKey
           }
 
           excessKeys?.delete(keyToDeleteFromExcessKeys)
