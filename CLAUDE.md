@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to coding agents when working with code in this repository.
 
 ## Project Overview
 
@@ -9,6 +9,7 @@ Runcheck is a lightweight TypeScript runtime type validation library with autofi
 ## Development Commands
 
 ### Essential Commands
+
 ```bash
 # Testing
 pnpm test:watch          # Run tests with UI and type checking in watch mode
@@ -25,6 +26,7 @@ pnpm build:no-test      # Build without running tests
 ```
 
 ### Other Commands
+
 ```bash
 # Benchmarking
 pnpm benchmark          # Run benchmarks
@@ -37,12 +39,14 @@ pnpm pre-publish        # Pre-publish checks and build
 ## Code Architecture
 
 ### Core Type System
+
 - **Central types**: `RcType<T>` and `RcBase<T, RequiredKey>` form the foundation
 - **Internal parsing**: `InternalParseResult<T>` with context tracking (`ParseResultCtx`)
 - **Result types**: `RcOkResult<T>` and `RcErrorResult<T>` for type-safe results
 - **Functional composition**: Types are immutable and composable via methods like `.optional()`, `.where()`, `.withFallback()`
 
 ### Key Patterns
+
 1. **Immutable type composition**: Each modifier returns a new type instance
 2. **Context-aware parsing**: Parsing context tracks path, warnings, and strict mode
 3. **Error path tracking**: Detailed error messages with full property paths
@@ -50,13 +54,15 @@ pnpm pre-publish        # Pre-publish checks and build
 5. **Performance optimizations**: Short-circuiting, memoization, and V8 deoptimization prevention
 
 ### Main Source Files
+
 - `src/runcheck.ts`: Core library and type definitions
-- `src/autofixable.ts`: Predefined autofix types 
+- `src/autofixable.ts`: Predefined autofix types
 - `src/rc_object.ts`: Object validation logic
 - `src/rc_discriminated_union.ts`: Discriminated union types
 - `src/rc_intersection.ts`: Intersection types
 
 ### Type System Features
+
 - **Union types**: `rc_union` with intelligent error handling
 - **Object validation**: Flexible object schemas with optional/required keys
 - **Array validation**: Both strict and loose array validation modes
