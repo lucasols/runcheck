@@ -1,0 +1,7 @@
+{
+  "name": "runcheck-published",
+  "private": true,
+  "dependencies": {
+    "runcheck": "^1.19.0"
+  }
+}
