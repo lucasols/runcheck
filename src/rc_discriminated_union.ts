@@ -61,6 +61,11 @@ export function rc_discriminated_union<
     ...defaultProps,
     _kind_: `discriminated_union`,
     _is_object_: true,
+    _shape_: {
+      kind: 'discriminated_union',
+      key: discriminatorKey,
+      types: preComputedTypesShape,
+    },
     _parse_(input, ctx) {
       return parse<any>(this, input, ctx, () => {
         if (!isObject(input)) {

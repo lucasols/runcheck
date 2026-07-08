@@ -832,3 +832,46 @@ import { getSchemaKind } from 'runcheck'
 const kind = getSchemaKind(rc_string) // returns 'string'
 const kind2 = getSchemaKind(rc_array(rc_number)) // returns 'number[]'
 ```
+
+## `rc_get_shape`
+
+Use `rc_get_shape` to extract the full shape of a schema as a typed tree, for use in schema conversions (e.g. to zod or JSON Schema) and other schema introspection:
+
+```ts
+import { rc_get_shape, RcShape } from 'runcheck'
+
+const schema = rc_object({
+  name: rc_string,
+  age: rc_number.optional(),
+})
+
+const shape: RcShape = rc_get_shape(schema)
+// {
+//   kind: 'object',
+//   properties: {
+//     name: { kind: 'string' },
+//     age: { kind: 'optional', shape: { kind: 'number' } },
+//   },
+//   excessKeys: 'strip',
+// }
+```
+
+`RcShape` is a discriminated union on `kind`:
+
+- `'string' | 'number' | 'boolean' | 'date' | 'null' | 'undefined' | 'any' | 'unknown'`: primitive types
+- `literal`: literal values with a `values` array
+- `coerce`: coerce types with a `target` of `'string' | 'number' | 'boolean' | 'date'`
+- `optional` / `nullable` / `nullish`: modifier wrappers with the wrapped `shape`
+- `object`: `properties` record and `excessKeys` behavior (`'strip'` for `rc_object`, `'error'` for `rc_obj_strict`, `'preserve'` for `rc_obj_extends`)
+- `record` / `array` / `tuple`: with `valueShape` / `itemShape` / `shapes`
+- `union` / `intersection`: with member `shapes`
+- `discriminated_union`: with `discriminatorKey` and a `shapes` record mapping discriminator values to member shapes (the member shapes do not include the discriminator key)
+- `recursive`: with a lazy `getShape()` to support circular references, handle cycles when consuming it
+
+Shape extraction is lazy and adds no overhead to schema creation or parsing.
+
+Some notes:
+
+- `where` predicates, `withFallback`/`withAutofix` values and `rc_default` values are transparent: the shape of the underlying schema is returned
+- String template schemas (`rc_string_starts_with`, etc.) are represented as `{ kind: 'string' }`
+- Schemas without a clear static shape (transforms, `rc_instanceof`, standard schemas, etc.) return `{ kind: 'unknown' }`
