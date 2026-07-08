@@ -525,7 +525,11 @@ export const defaultProps: Omit<RcType<any>, '_parse_' | '_kind_'> = {
 export const rc_undefined: RcType<undefined> = {
   ...(defaultProps as Omit<RcType<undefined>, '_parse_' | '_kind_'>),
   _parse_(input, ctx) {
-    return parseIf(this, input, ctx, input === undefined)
+    if (input === undefined) {
+      return { ok: true, data: input, errors: undefined }
+    }
+
+    return parseIf(this, input, ctx, false)
   },
   _kind_: 'undefined',
   _shape_: 'undefined',
@@ -535,7 +539,11 @@ export const rc_undefined: RcType<undefined> = {
 export const rc_null: RcType<null> = {
   ...(defaultProps as Omit<RcType<null>, '_parse_' | '_kind_'>),
   _parse_(input, ctx) {
-    return parseIf(this, input, ctx, input === null)
+    if (input === null) {
+      return { ok: true, data: input, errors: undefined }
+    }
+
+    return parseIf(this, input, ctx, false)
   },
   _kind_: 'null',
   _shape_: 'null',
@@ -564,8 +572,10 @@ export const rc_unknown: RcType<unknown> = {
 /** Equivalent to ts type: `boolean`. */
 export const rc_boolean: RcType<boolean> = {
   ...defaultProps,
+  // the closure form measures faster than an inlined early-return fast path
+  // here: v8 optimizes it better when parsing mixed true/false inputs
   _parse_(input, ctx) {
-    return parseIf(this, input, ctx, typeof input === 'boolean')
+    return parse(this, input, ctx, () => typeof input === 'boolean')
   },
   _kind_: 'boolean',
   _shape_: 'boolean',
@@ -575,7 +585,11 @@ export const rc_boolean: RcType<boolean> = {
 export const rc_string: RcType<string> = {
   ...defaultProps,
   _parse_(input, ctx) {
-    return parseIf(this, input, ctx, typeof input === 'string')
+    if (typeof input === 'string') {
+      return { ok: true, data: input, errors: undefined }
+    }
+
+    return parseIf(this, input, ctx, false)
   },
   _kind_: 'string',
   _shape_: 'string',
@@ -585,12 +599,11 @@ export const rc_string: RcType<string> = {
 export const rc_number: RcType<number> = {
   ...defaultProps,
   _parse_(input, ctx) {
-    return parseIf(
-      this,
-      input,
-      ctx,
-      typeof input === 'number' && !Number.isNaN(input),
-    )
+    if (typeof input === 'number' && !Number.isNaN(input)) {
+      return { ok: true, data: input, errors: undefined }
+    }
+
+    return parseIf(this, input, ctx, false)
   },
   _kind_: 'number',
   _shape_: 'number',

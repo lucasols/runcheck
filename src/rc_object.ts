@@ -151,12 +151,11 @@ export function rc_object<T extends RcObject>(
   }
 
   const shapeEntries = Object.entries(objShape).map(([key, type]) => {
-    const subPath = key === '' || key.includes(' ') ? `['${key}']` : `.${key}`
-
     return {
       key,
       type,
-      subPath,
+      // computed lazily on first parse to keep schema creation cheap
+      subPath: null as string | null,
       snakeCaseKey: normalizeKeysFrom === 'snake_case' ? snakeCase(key) : '',
     }
   })
@@ -268,7 +267,13 @@ export function rc_object<T extends RcObject>(
           const typekey = key as keyof T
           i += 1
 
-          const path = `${parentPath}${shapeEntry.subPath}`
+          let subPath = shapeEntry.subPath
+          if (subPath === null) {
+            subPath = key === '' || key.includes(' ') ? `['${key}']` : `.${key}`
+            shapeEntry.subPath = subPath
+          }
+
+          const path = `${parentPath}${subPath}`
 
           ctx.path_ = path
 

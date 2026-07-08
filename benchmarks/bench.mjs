@@ -23,6 +23,10 @@ try {
 const currentLabel = 'current build'
 const publishedLabel = `runcheck@${publishedVersion} (published)`
 
+// results are written to this sink so v8 cannot dead-code-eliminate the
+// parse calls, which would make sub-10ns benches measure nothing
+let sink
+
 const validateData = Object.freeze({
   number: 1,
   negNumber: -1,
@@ -96,9 +100,14 @@ function getSchemas(rc) {
 const cur = getSchemas(current)
 const pub = getSchemas(published)
 
-const strings = Array.from({ length: 1024 }, (_, i) => `string${i}`)
+// primitive parses are only a few ns each, so each bench iteration parses a
+// batch of mixed values to keep per-iteration work well above jit/measurement
+// noise
+const booleans = Array.from({ length: 64 }, (_, i) => i % 2 === 0)
+const numbers = Array.from({ length: 64 }, (_, i) => i + 0.5)
+const strings = Array.from({ length: 64 }, (_, i) => `string${i}`)
 
-const deoptObjects = Array.from({ length: 1024 }, (_, i) => ({
+const deoptObjects = Array.from({ length: 64 }, (_, i) => ({
   string: `string${i}`,
   [`key${i}`]: i,
 }))
@@ -126,89 +135,93 @@ const discriminatedUnionArray = Array.from({ length: 100 }, (_, i) => ({
   union: i % 2 === 0 ? 'foo' : { type: 'qux', baz: 'qux', str: `${i}` },
 }))
 
-group('parse boolean', () => {
+group('parse boolean (64 values)', () => {
   baseline(currentLabel, () => {
-    current.rc_unwrap(current.rc_parse(true, current.rc_boolean))
+    for (const value of booleans) {
+      sink = current.rc_unwrap(current.rc_parse(value, current.rc_boolean))
+    }
   })
 
   bench(publishedLabel, () => {
-    published.rc_unwrap(published.rc_parse(true, published.rc_boolean))
+    for (const value of booleans) {
+      sink = published.rc_unwrap(
+        published.rc_parse(value, published.rc_boolean),
+      )
+    }
   })
 })
 
-group('parse number', () => {
+group('parse number (64 values)', () => {
   baseline(currentLabel, () => {
-    current.rc_unwrap(current.rc_parse(1.5, current.rc_number))
+    for (const value of numbers) {
+      sink = current.rc_unwrap(current.rc_parse(value, current.rc_number))
+    }
   })
 
   bench(publishedLabel, () => {
-    published.rc_unwrap(published.rc_parse(1.5, published.rc_number))
+    for (const value of numbers) {
+      sink = published.rc_unwrap(published.rc_parse(value, published.rc_number))
+    }
   })
 })
 
-group('parse string', () => {
-  let ci = 0
-  let pi = 0
-
+group('parse string (64 values)', () => {
   baseline(currentLabel, () => {
-    current.rc_unwrap(
-      current.rc_parse(strings[ci++ & 1023], current.rc_string),
-    )
+    for (const value of strings) {
+      sink = current.rc_unwrap(current.rc_parse(value, current.rc_string))
+    }
   })
 
   bench(publishedLabel, () => {
-    published.rc_unwrap(
-      published.rc_parse(strings[pi++ & 1023], published.rc_string),
-    )
+    for (const value of strings) {
+      sink = published.rc_unwrap(published.rc_parse(value, published.rc_string))
+    }
   })
 })
 
 group('parse nested object', () => {
   baseline(currentLabel, () => {
-    current.rc_unwrap(current.rc_parse(validateData, cur.obj))
+    sink = current.rc_unwrap(current.rc_parse(validateData, cur.obj))
   })
 
   bench(publishedLabel, () => {
-    published.rc_unwrap(published.rc_parse(validateData, pub.obj))
+    sink = published.rc_unwrap(published.rc_parse(validateData, pub.obj))
   })
 })
 
-group('parse object with unknown keys (v8 deopt)', () => {
-  let ci = 0
-  let pi = 0
-
+group('parse object with unknown keys (v8 deopt, 64 values)', () => {
   baseline(currentLabel, () => {
-    current.rc_unwrap(
-      current.rc_parse(deoptObjects[ci++ & 1023], cur.stringObj),
-    )
+    for (const value of deoptObjects) {
+      sink = current.rc_unwrap(current.rc_parse(value, cur.stringObj))
+    }
   })
 
   bench(publishedLabel, () => {
-    published.rc_unwrap(
-      published.rc_parse(deoptObjects[pi++ & 1023], pub.stringObj),
-    )
+    for (const value of deoptObjects) {
+      sink = published.rc_unwrap(published.rc_parse(value, pub.stringObj))
+    }
   })
 })
 
 group('parse large array', () => {
   baseline(currentLabel, () => {
-    current.rc_unwrap(current.rc_parse(largeArray, cur.largeArray))
+    sink = current.rc_unwrap(current.rc_parse(largeArray, cur.largeArray))
   })
 
   bench(publishedLabel, () => {
-    published.rc_unwrap(published.rc_parse(largeArray, pub.largeArray))
+    sink = published.rc_unwrap(published.rc_parse(largeArray, pub.largeArray))
   })
 })
 
 group('parse large array with union', () => {
   baseline(currentLabel, () => {
-    current.rc_unwrap(
+    sink = current.rc_unwrap(
       current.rc_parse(largeArrayWithUnion, cur.largeArrayWithUnion),
     )
   })
 
   bench(publishedLabel, () => {
-    published.rc_unwrap(
+    sink = published.rc_unwrap(
       published.rc_parse(largeArrayWithUnion, pub.largeArrayWithUnion),
     )
   })
@@ -216,13 +229,13 @@ group('parse large array with union', () => {
 
 group('parse discriminated union', () => {
   baseline(currentLabel, () => {
-    current.rc_unwrap(
+    sink = current.rc_unwrap(
       current.rc_parse(discriminatedUnionArray, cur.discriminatedUnion),
     )
   })
 
   bench(publishedLabel, () => {
-    published.rc_unwrap(
+    sink = published.rc_unwrap(
       published.rc_parse(discriminatedUnionArray, pub.discriminatedUnion),
     )
   })
@@ -230,12 +243,14 @@ group('parse discriminated union', () => {
 
 group('schema creation', () => {
   baseline(currentLabel, () => {
-    getSchemas(current)
+    sink = getSchemas(current)
   })
 
   bench(publishedLabel, () => {
-    getSchemas(published)
+    sink = getSchemas(published)
   })
 })
 
 await run()
+
+globalThis.__benchSink = sink
