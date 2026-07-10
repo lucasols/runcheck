@@ -1,5 +1,5 @@
 import { execSync } from 'node:child_process'
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -26,13 +26,9 @@ if (installedVersion === latestVersion) {
   console.log(`Installing published runcheck@${latestVersion}...`)
 
   mkdirSync(publishedDir, { recursive: true })
-  writeFileSync(
-    join(publishedDir, 'package.json'),
-    `${JSON.stringify({ name: 'runcheck-published', private: true }, null, 2)}\n`,
-  )
 
   execSync(
-    `npm install runcheck@${latestVersion} --no-audit --no-fund --no-package-lock`,
+    `npm install runcheck@${latestVersion} --no-save --no-audit --no-fund --no-package-lock`,
     { cwd: publishedDir, stdio: 'inherit' },
   )
 }
