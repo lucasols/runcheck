@@ -8,7 +8,10 @@ let publishedVersion
 try {
   publishedVersion = JSON.parse(
     readFileSync(
-      new URL('./published/node_modules/runcheck/package.json', import.meta.url),
+      new URL(
+        './published/node_modules/runcheck/package.json',
+        import.meta.url,
+      ),
       'utf8',
     ),
   ).version
@@ -60,6 +63,12 @@ function getSchemas(rc) {
   return {
     obj: objSchema,
     stringObj: rc.rc_object({ string: rc.rc_string }),
+    numberArray: rc.rc_array(rc.rc_number),
+    numberRecord: rc.rc_record(rc.rc_number),
+    strictObject: rc.rc_obj_strict({
+      string: rc.rc_string,
+      number: rc.rc_number,
+    }),
     largeArray: rc.rc_array(
       rc.rc_object({
         string: rc.rc_string,
@@ -111,6 +120,16 @@ const deoptObjects = Array.from({ length: 64 }, (_, i) => ({
   string: `string${i}`,
   [`key${i}`]: i,
 }))
+
+const numberArray = Array.from({ length: 100 }, (_, i) => i + 0.5)
+const invalidNumberArray = [...numberArray.slice(0, -1), 'invalid']
+const numberRecord = Object.fromEntries(
+  Array.from({ length: 100 }, (_, i) => [`key${i}`, i + 0.5]),
+)
+const invalidNestedObject = {
+  ...validateData,
+  deeplyNested: { ...validateData.deeplyNested, bool: 'invalid' },
+}
 
 const largeArray = Array.from({ length: 100 }, (_, i) => ({
   string: `string${i}`,
@@ -186,6 +205,60 @@ group('parse nested object', () => {
 
   bench(publishedLabel, () => {
     sink = published.rc_unwrap(published.rc_parse(validateData, pub.obj))
+  })
+})
+
+group('reject invalid nested object', () => {
+  baseline(currentLabel, () => {
+    sink = current.rc_parse(invalidNestedObject, cur.obj)
+  })
+
+  bench(publishedLabel, () => {
+    sink = published.rc_parse(invalidNestedObject, pub.obj)
+  })
+})
+
+group('parse number array (100 values)', () => {
+  baseline(currentLabel, () => {
+    sink = current.rc_unwrap(current.rc_parse(numberArray, cur.numberArray))
+  })
+
+  bench(publishedLabel, () => {
+    sink = published.rc_unwrap(published.rc_parse(numberArray, pub.numberArray))
+  })
+})
+
+group('reject number array at last item (100 values)', () => {
+  baseline(currentLabel, () => {
+    sink = current.rc_parse(invalidNumberArray, cur.numberArray)
+  })
+
+  bench(publishedLabel, () => {
+    sink = published.rc_parse(invalidNumberArray, pub.numberArray)
+  })
+})
+
+group('parse number record (100 values)', () => {
+  baseline(currentLabel, () => {
+    sink = current.rc_unwrap(current.rc_parse(numberRecord, cur.numberRecord))
+  })
+
+  bench(publishedLabel, () => {
+    sink = published.rc_unwrap(
+      published.rc_parse(numberRecord, pub.numberRecord),
+    )
+  })
+})
+
+group('parse strict object', () => {
+  const input = { string: 'value', number: 1 }
+
+  baseline(currentLabel, () => {
+    sink = current.rc_unwrap(current.rc_parse(input, cur.strictObject))
+  })
+
+  bench(publishedLabel, () => {
+    sink = published.rc_unwrap(published.rc_parse(input, pub.strictObject))
   })
 })
 
