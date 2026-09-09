@@ -13,8 +13,47 @@ import {
   rc_undefined,
   rc_literals,
   rc_parse,
+  rc_loose_record,
+  rc_transform,
 } from '../src/runcheck'
 import { errorResult, successResult } from './testUtils'
+
+describe.each([
+  { name: 'rc_record', record: rc_record },
+  { name: 'rc_loose_record', record: rc_loose_record },
+])('$name parsed values', ({ record }) => {
+  test('returns transformed values without mutating the input', () => {
+    const parse: RcParser<Record<string, number>> = rc_parser(
+      record(rc_transform(rc_string, (value) => value.length)),
+    )
+    const input = { first: 'hello', second: 'hi' }
+
+    expect(parse(input)).toEqual(successResult({ first: 5, second: 2 }))
+    expect(input).toEqual({ first: 'hello', second: 'hi' })
+  })
+
+  test('preserves nested defaults and removes excess object properties', () => {
+    const parse = rc_parser(
+      record(rc_object({ name: rc_string.default('Untitled') })),
+    )
+
+    expect(parse({ first: {}, second: { name: 'Logo', extra: true } })).toEqual(
+      successResult({ first: { name: 'Untitled' }, second: { name: 'Logo' } }),
+    )
+  })
+})
+
+test('rc_loose_record transforms valid values and warns about rejected values', () => {
+  const parse = rc_parser(
+    rc_loose_record(rc_transform(rc_string, (value) => value.length)),
+  )
+
+  expect(parse({ first: 'hello', invalid: false, last: 'hi' })).toEqual(
+    successResult({ first: 5, last: 2 }, [
+      "$.invalid: Type 'boolean' is not assignable to 'string_transform'",
+    ]),
+  )
+})
 
 describe('rc_record', () => {
   const parse: RcParser<Record<string, string>> = rc_parser(
@@ -180,9 +219,9 @@ describe('rc_record', () => {
     expect(result).toEqual(
       errorResult(
         "$.test.ops|union 3|.required: Type 'undefined' is not assignable to 'boolean'",
-        "$.test.ops: not matches any other union member",
+        '$.test.ops: not matches any other union member',
         "$.test.channels|union 3|.required: Type 'undefined' is not assignable to 'boolean'",
-        "$.test.channels: not matches any other union member",
+        '$.test.channels: not matches any other union member',
       ),
     )
   })

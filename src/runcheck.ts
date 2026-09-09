@@ -1125,7 +1125,7 @@ export function rc_record<V>(
       return parse<Record<string, V>>(this, inputObj, ctx, () => {
         if (!isObject(inputObj)) return false
 
-        const resultObj: Record<any, string> = {} as any
+        const resultObj: Record<string, V> = {}
         const resultErrors: ErrorWithPath[] = []
 
         const parentPath = ctx.path_
@@ -1144,12 +1144,10 @@ export function rc_record<V>(
             continue
           }
 
-          const input = inputObj[key]
-
           const parseResult = valueType._parse_(inputValue, ctx)
 
           if (parseResult.ok) {
-            resultObj[key] = input
+            resultObj[key] = parseResult.data
           }
           //
           else {
@@ -1175,7 +1173,7 @@ export function rc_record<V>(
 
         ctx.path_ = parentPath
 
-        return { errors: false, data: resultObj as any }
+        return { errors: false, data: resultObj }
       })
     },
   }
