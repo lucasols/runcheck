@@ -73,8 +73,8 @@ describe('rc_discriminated_union', () => {
 
     expect(rc_parse({ type: 'a', value: 1 }, shapeInUnion)).toEqual(
       errorResult(
+        "$|union 1|: Type 'object' is not assignable to 'string'",
         "$|union 2||type: a|.value: Type 'number' is not assignable to 'string'",
-        'not matches any other union member',
       ),
     )
   })
@@ -84,8 +84,8 @@ describe('rc_discriminated_union', () => {
 
     expect(rc_parse({ type: 'e', value: 'hello' }, shapeInUnion)).toEqual(
       errorResult(
+        "$|union 1|: Type 'object' is not assignable to 'string'",
         "$|union 2|.type: Type 'string(e)' is not a valid discriminator",
-        'not matches any other union member',
       ),
     )
   })

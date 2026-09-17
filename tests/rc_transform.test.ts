@@ -382,7 +382,8 @@ test('rc_unsafe_transform in union', () => {
   expect(rc_parse('123', schema)).toEqual(successResult(123))
   expect(rc_parse('hello', schema)).toEqual(
     errorResult(
-      "Type 'string' is not assignable to 'number | string_transform'",
+      "$|union 1|: Type 'string' is not assignable to 'number'",
+      '$|union 2|: hello is not a number',
     ),
   )
 })
@@ -401,7 +402,8 @@ test('rc_transform in union inside object', () => {
 
   expect(rc_parse({ hello: 'hello' }, schema)).toEqual(
     errorResult(
-      "$.hello: Type 'string' is not assignable to 'number | string_transform'",
+      "$.hello|union 1|: Type 'string' is not assignable to 'number'",
+      '$.hello|union 2|: hello is not a number',
     ),
   )
 })

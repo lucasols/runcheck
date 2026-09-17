@@ -11,3 +11,4 @@ last-build-version.txt
 .quokka.ts
 src-ref
 benchmarks/published
+.vscode/review-state.json

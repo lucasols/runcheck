@@ -1406,13 +1406,16 @@ describe('detailed shape description in error message', () => {
     )
   })
 
-  test('error in union is not detailed', () => {
+  test('error in union includes each member type', () => {
     const schema = rc_union(rc_string, rc_obj_strict({ a: rc_string }))
 
     const result = rc_parse(1, schema)
 
     expect(result).toEqual(
-      errorResult("Type 'number' is not assignable to 'string | strict_obj'"),
+      errorResult(
+        "$|union 1|: Type 'number' is not assignable to 'string'",
+        "$|union 2|: Type 'number' is not assignable to 'strict_obj'",
+      ),
     )
   })
 })

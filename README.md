@@ -67,9 +67,14 @@ filters.optional().parse(undefined) // ok
 ```
 
 Bounds are inclusive and apply to the parsed array, after filtering, loose item
-rejection, and duplicate removal in loose arrays. An array outside the bounds
-fails as a whole, including in loose mode. `maxLength: Infinity` means no upper
-bound. Bounds are used as supplied, without validating the configuration.
+rejection, and duplicate removal in loose arrays. Strict arrays reject length
+violations. Loose arrays return the retained items with a warning, including
+when the result is empty or exceeds `maxLength`. This also applies to
+`rc_array_filter_from_schema` with `loose: true`. Disabling loose validation or
+using `noWarnings: true` makes length violations errors.
+
+`maxLength: Infinity` means no upper bound. Bounds are used as supplied, without
+validating the configuration.
 
 ## Checking unique values
 
@@ -99,14 +104,17 @@ const shape = rc_array(
 # Union errors
 
 Simple unions such as `string | number` and literal unions keep a single compact
-type mismatch message. Unions with structured or custom failures retain property
-paths, member labels, and predicate errors. Deeper object failures (members that
+type mismatch message. Plain type mismatches at the same property with the same
+received type are combined, for example:
+`$.type: Type 'string(guest)' is not assignable to 'string(user) | string(admin)'`.
+Other structured or custom failures retain property paths, member labels, and
+predicate errors. Deeper object failures (members that
 matched earlier properties) are reported first and never hidden by the default
 limit. Up to five other members are detailed; additional members are summarized.
 Every member is still checked for a match, regardless of this reporting limit.
 
 Set `unionErrorLimit` per parse to change the limit, or use `Infinity` to show all
-members' errors in schema order, including simple type mismatches. The option also
+members' errors in schema order without collapsing them, including simple type mismatches. The option also
 applies to nested unions and `.or()` schemas:
 
 ```ts

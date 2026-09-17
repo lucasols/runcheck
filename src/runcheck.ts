@@ -905,6 +905,55 @@ export function rc_string_contains<const S extends string>(
   }
 }
 
+// Error formatting only: called after all union members have failed.
+function collapseUnionPropertyErrors(
+  errors: ErrorWithPath[],
+  basePath: string,
+): ErrorWithPath[] {
+  const prefix = `$${basePath}|union `
+  const groups = new Map<
+    string,
+    { index: number; member: string; expected: Set<string> }
+  >()
+  const result: ErrorWithPath[] = []
+
+  for (const error of errors) {
+    const match =
+      error.startsWith(prefix) ?
+        /^(\d+)\|((?:\.|\[).*?): Type '(.+)' is not assignable to '(.+)'$/.exec(
+          error.slice(prefix.length),
+        )
+      : null
+
+    if (!match) {
+      result.push(error)
+      continue
+    }
+
+    const member = match[1]!
+    const path = match[2]!
+    const received = match[3]!
+    const expected = match[4]!
+    const message = `$${basePath}${path}: Type '${received}' is not assignable to `
+    const group = groups.get(message)
+
+    if (group && group.member !== member) {
+      group.expected.add(expected)
+      result[group.index] =
+        `${message}'${[...group.expected].join(' | ')}'` as ErrorWithPath
+    } else {
+      groups.set(message, {
+        index: result.length,
+        member,
+        expected: new Set([expected]),
+      })
+      result.push(error)
+    }
+  }
+
+  return result
+}
+
 /** Validates union types like `string | number`. */
 export function rc_union<T extends RcType<any>[]>(
   ...types: T
@@ -1017,7 +1066,13 @@ export function rc_union<T extends RcType<any>[]>(
           )
         }
 
-        return { errors, data: undefined }
+        return {
+          errors:
+            ctx.unionErrorLimit_ !== Infinity && errors.length > 1 ?
+              collapseUnionPropertyErrors(errors, basePath)
+            : errors,
+          data: undefined,
+        }
       })
     },
   }
@@ -1339,9 +1394,8 @@ function checkArrayItems(
 
           adjustedLooseErrors.push(newError as ErrorWithPath)
         }
-
-        addWarnings(ctx, adjustedLooseErrors)
       }
+      addWarnings(ctx, adjustedLooseErrors)
     }
 
     ctx.path_ = parentPath
@@ -1349,25 +1403,25 @@ function checkArrayItems(
     const minLength = options?.minLength
     const maxLength = options?.maxLength
     if (minLength !== undefined && arrayResult.length < minLength) {
-      return {
-        errors: [
-          getWarningOrErrorWithPath(
-            ctx,
-            `Array length must be at least ${minLength} (got ${arrayResult.length})`,
-          ),
-        ],
-        data: undefined,
+      const error = getWarningOrErrorWithPath(
+        ctx,
+        `Array length must be at least ${minLength} (got ${arrayResult.length})`,
+      )
+      if (useLooseMode) {
+        ctx.warnings_.push(error)
+      } else {
+        return { errors: [error], data: undefined }
       }
     }
     if (maxLength !== undefined && arrayResult.length > maxLength) {
-      return {
-        errors: [
-          getWarningOrErrorWithPath(
-            ctx,
-            `Array length must be at most ${maxLength} (got ${arrayResult.length})`,
-          ),
-        ],
-        data: undefined,
+      const error = getWarningOrErrorWithPath(
+        ctx,
+        `Array length must be at most ${maxLength} (got ${arrayResult.length})`,
+      )
+      if (useLooseMode) {
+        ctx.warnings_.push(error)
+      } else {
+        return { errors: [error], data: undefined }
       }
     }
 

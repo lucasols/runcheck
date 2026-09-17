@@ -219,9 +219,11 @@ describe('rc_record', () => {
     expect(result).toEqual(
       errorResult(
         "$.test.ops|union 3|.required: Type 'undefined' is not assignable to 'boolean'",
-        '$.test.ops: not matches any other union member',
+        "$.test.ops|union 1|: Type 'object' is not assignable to 'undefined'",
+        "$.test.ops|union 2|: Type 'object' is not assignable to 'string(*)'",
         "$.test.channels|union 3|.required: Type 'undefined' is not assignable to 'boolean'",
-        '$.test.channels: not matches any other union member',
+        "$.test.channels|union 1|: Type 'object' is not assignable to 'undefined'",
+        "$.test.channels|union 2|: Type 'object' is not assignable to 'string(*)'",
       ),
     )
   })

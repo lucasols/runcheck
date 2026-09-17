@@ -524,3 +524,296 @@ test('reproduce bug in rc_loose_array', () => {
     ),
   )
 })
+
+describe.each([
+  {
+    name: 'strict',
+    create: (minLength: number, maxLength: number) =>
+      rc_array(rc_string, { minLength, maxLength }),
+  },
+  {
+    name: 'filtered',
+    create: (minLength: number, maxLength: number) =>
+      rc_array_filter_from_schema(rc_string, () => true, rc_string, {
+        minLength,
+        maxLength,
+      }),
+  },
+])('$name array length bounds', ({ create }) => {
+  test('enforces inclusive bounds, including empty input', () => {
+    const schema = create(1, 2)
+    expect(schema.parse([])).toEqual(
+      errorResult('Array length must be at least 1 (got 0)'),
+    )
+    expect(schema.parse(['a'])).toEqual(successResult(['a']))
+    expect(schema.parse(['a', 'b'])).toEqual(successResult(['a', 'b']))
+    expect(schema.parse(['a', 'b', 'c'])).toEqual(
+      errorResult('Array length must be at most 2 (got 3)'),
+    )
+    expect(create(0, 0).parse([])).toEqual(successResult([]))
+    expect(create(0, 0).parse(['a'])).toEqual(
+      errorResult('Array length must be at most 0 (got 1)'),
+    )
+    expect(create(0, Infinity).parse(['a', 'b', 'c'])).toEqual(
+      successResult(['a', 'b', 'c']),
+    )
+  })
+
+  test('reports min and max violations on nested object properties', () => {
+    const schema = rc_object({
+      settings: rc_object({
+        required: create(2, 3),
+        limited: create(0, 1),
+      }),
+    })
+
+    expect(
+      schema.parse({ settings: { required: [], limited: ['a', 'b'] } }),
+    ).toEqual(
+      errorResult(
+        '$.settings.required: Array length must be at least 2 (got 0)',
+        '$.settings.limited: Array length must be at most 1 (got 2)',
+      ),
+    )
+    expect(
+      schema.parse({ settings: { required: ['a', 'b'], limited: ['c'] } }),
+    ).toEqual(
+      successResult({ settings: { required: ['a', 'b'], limited: ['c'] } }),
+    )
+  })
+
+  test('reports the array path and respects optional and fallback modifiers', () => {
+    const schema = create(1, 2)
+    expect(rc_object({ items: schema }).parse({ items: [] })).toEqual(
+      errorResult('$.items: Array length must be at least 1 (got 0)'),
+    )
+    expect(schema.optional().parse(undefined)).toEqual(successResult(undefined))
+    expect(schema.withFallback(['default']).parse([])).toEqual(
+      successResult(
+        ['default'],
+        ['Fallback used, errors -> Array length must be at least 1 (got 0)'],
+      ),
+    )
+    expect(
+      schema.withFallback(['default']).parse([], { noWarnings: true }),
+    ).toEqual(errorResult('Array length must be at least 1 (got 0)'))
+  })
+})
+
+test('length bounds use the retained items after filtering, rejection, and deduplication', () => {
+  expect(
+    rc_array(rc_number, { minLength: 1, filter: (n) => n > 0 }).parse([-1]),
+  ).toEqual(errorResult('Array length must be at least 1 (got 0)'))
+  expect(
+    rc_array(rc_number, { maxLength: 1, filter: (n) => n > 0 }).parse([-1, 1]),
+  ).toEqual(successResult([1]))
+  expect(
+    rc_loose_array(rc_number, { minLength: 2, unique: true }).parse([
+      1,
+      1,
+      'bad',
+    ]),
+  ).toEqual(
+    successResult(
+      [1],
+      [
+        '$[1]: Rejected, error -> number value is not unique',
+        "$[2]: Rejected, error -> Type 'string' is not assignable to 'number'",
+        'Array length must be at least 2 (got 1)',
+      ],
+    ),
+  )
+  expect(rc_loose_array(rc_number, { maxLength: 1 }).parse([1, 'bad'])).toEqual(
+    successResult(
+      [1],
+      ["$[1]: Rejected, error -> Type 'string' is not assignable to 'number'"],
+    ),
+  )
+  expect(
+    rc_array_filter_from_schema(rc_number, (n) => n > 0, rc_number, {
+      minLength: 1,
+    }).parse([-1]),
+  ).toEqual(errorResult('Array length must be at least 1 (got 0)'))
+  expect(
+    rc_array_filter_from_schema(rc_number, (n) => n > 0, rc_number, {
+      maxLength: 1,
+    }).parse([-1, 1]),
+  ).toEqual(successResult([1]))
+})
+
+test('disabling loose arrays preserves bounds and keeps nonrecursive children loose', () => {
+  const schema = rc_disable_loose_array(
+    rc_loose_array(rc_loose_array(rc_number), { minLength: 1, maxLength: 1 }),
+    { nonRecursive: true },
+  )
+  expect(schema.parse([[1, 'bad']])).toEqual(
+    successResult(
+      [[1]],
+      [
+        "$[0][1]: Rejected, error -> Type 'string' is not assignable to 'number'",
+      ],
+    ),
+  )
+  expect(schema.parse([])).toEqual(
+    errorResult('Array length must be at least 1 (got 0)'),
+  )
+  expect(schema.parse([[1], [2]])).toEqual(
+    errorResult('Array length must be at most 1 (got 2)'),
+  )
+  expect(schema.parse(['bad'])).toEqual(
+    errorResult("$[0]: Type 'string' is not assignable to 'number[]'"),
+  )
+  expect(rc_disable_loose_array(schema).parse([[1, 'bad']])).toEqual(
+    errorResult("$[0][1]: Type 'string' is not assignable to 'number'"),
+  )
+})
+
+describe.each([
+  {
+    name: 'loose',
+    create: (minLength: number, maxLength: number) =>
+      rc_loose_array(rc_string, { minLength, maxLength }),
+  },
+  {
+    name: 'filtered loose',
+    create: (minLength: number, maxLength: number) =>
+      rc_array_filter_from_schema(
+        rc_string,
+        (value) => value !== 'skip',
+        rc_string,
+        { loose: true, minLength, maxLength },
+      ),
+  },
+])('$name array length warnings', ({ create }) => {
+  test('warns on length violations and preserves the retained array', () => {
+    const schema = create(1, 2)
+    expect(schema.parse([])).toEqual(
+      successResult([], ['Array length must be at least 1 (got 0)']),
+    )
+    expect(schema.parse(['a'])).toEqual(successResult(['a']))
+    expect(schema.parse(['a', 'b'])).toEqual(successResult(['a', 'b']))
+    expect(schema.parse(['a', 'b', 'c'])).toEqual(
+      successResult(
+        ['a', 'b', 'c'],
+        ['Array length must be at most 2 (got 3)'],
+      ),
+    )
+    expect(create(0, 0).parse([])).toEqual(successResult([]))
+    expect(create(0, 0).parse(['a'])).toEqual(
+      successResult(['a'], ['Array length must be at most 0 (got 1)']),
+    )
+    expect(schema.parse([1])).toEqual(
+      successResult(
+        [],
+        [
+          "$[0]: Rejected, error -> Type 'number' is not assignable to 'string'",
+          'Array length must be at least 1 (got 0)',
+        ],
+      ),
+    )
+    expect(rc_object({ items: schema }).parse({ items: [] })).toEqual(
+      successResult({ items: [] }, [
+        '$.items: Array length must be at least 1 (got 0)',
+      ]),
+    )
+    expect(schema.withFallback(['fallback']).parse([])).toEqual(
+      successResult([], ['Array length must be at least 1 (got 0)']),
+    )
+  })
+
+  test('warns at nested object properties without rejecting the enclosing object', () => {
+    const schema = rc_object({
+      settings: rc_object({
+        required: create(2, 3),
+        limited: create(0, 1),
+      }),
+    })
+    const input = { settings: { required: ['a'], limited: ['b', 'c'] } }
+
+    expect(schema.parse(input)).toEqual(
+      successResult(input, [
+        '$.settings.required: Array length must be at least 2 (got 1)',
+        '$.settings.limited: Array length must be at most 1 (got 2)',
+      ]),
+    )
+    expect(schema.parse(input, { noWarnings: true })).toEqual(
+      errorResult(
+        '$.settings.required: Array length must be at least 2 (got 1)',
+        '$.settings.limited: Array length must be at most 1 (got 2)',
+      ),
+    )
+  })
+
+  test('rejects length violations when loose mode is disabled', () => {
+    const schema = create(1, 2)
+    expect(schema.parse([], { noWarnings: true })).toEqual(
+      errorResult('Array length must be at least 1 (got 0)'),
+    )
+    expect(schema.parse(['a', 'b', 'c'], { noWarnings: true })).toEqual(
+      errorResult('Array length must be at most 2 (got 3)'),
+    )
+    expect(rc_disable_loose_array(schema).parse([])).toEqual(
+      errorResult('Array length must be at least 1 (got 0)'),
+    )
+    expect(
+      rc_disable_loose_array(schema, { nonRecursive: true }).parse([
+        'a',
+        'b',
+        'c',
+      ]),
+    ).toEqual(errorResult('Array length must be at most 2 (got 3)'))
+  })
+})
+
+test('nested array length errors include enclosing object-array indexes', () => {
+  const schema = rc_object({
+    groups: rc_array(
+      rc_object({
+        settings: rc_object({
+          tags: rc_array(rc_string, { minLength: 1, maxLength: 2 }),
+        }),
+      }),
+    ),
+  })
+
+  expect(
+    schema.parse({
+      groups: [{ settings: { tags: ['valid'] } }, { settings: { tags: [] } }],
+    }),
+  ).toEqual(
+    errorResult(
+      '$.groups[1].settings.tags: Array length must be at least 1 (got 0)',
+    ),
+  )
+  expect(
+    schema.parse({ groups: [{ settings: { tags: ['a', 'b', 'c'] } }] }),
+  ).toEqual(
+    errorResult(
+      '$.groups[0].settings.tags: Array length must be at most 2 (got 3)',
+    ),
+  )
+})
+
+test('nested loose length warnings use the array property path after removing items', () => {
+  const schema = rc_object({
+    settings: rc_object({
+      rejected: rc_loose_array(rc_number, { minLength: 2 }),
+      filtered: rc_array_filter_from_schema(
+        rc_string,
+        (value) => value !== 'skip',
+        rc_string,
+        { minLength: 1, loose: true },
+      ),
+    }),
+  })
+
+  expect(
+    schema.parse({ settings: { rejected: [1, 'bad'], filtered: ['skip'] } }),
+  ).toEqual(
+    successResult({ settings: { rejected: [1], filtered: [] } }, [
+      "$.settings.rejected[1]: Rejected, error -> Type 'string' is not assignable to 'number'",
+      '$.settings.rejected: Array length must be at least 2 (got 1)',
+      '$.settings.filtered: Array length must be at least 1 (got 0)',
+    ]),
+  )
+})
