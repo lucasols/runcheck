@@ -105,6 +105,95 @@ test('preserve deeper member errors beyond the shallow error limit', () => {
   )
 })
 
+describe('nested union failures at the shallow reporting limit', () => {
+  const shallow = [
+    rc_object({ first: rc_string }),
+    rc_object({ second: rc_string }),
+    rc_object({ third: rc_string }),
+    rc_object({ fourth: rc_string }),
+    rc_object({ fifth: rc_string }),
+  ]
+  const deep = rc_object({ a: rc_number, b: rc_number })
+  const schema = rc_object({
+    filter: rc_union(
+      ...shallow,
+      rc_union(deep, rc_object({ other: rc_string })),
+    ),
+  })
+  const input = { filter: { a: 1 } }
+  const shallowErrors = [
+    "$.filter|union 1|.first: Type 'undefined' is not assignable to 'string'",
+    "$.filter|union 2|.second: Type 'undefined' is not assignable to 'string'",
+    "$.filter|union 3|.third: Type 'undefined' is not assignable to 'string'",
+    "$.filter|union 4|.fourth: Type 'undefined' is not assignable to 'string'",
+    "$.filter|union 5|.fifth: Type 'undefined' is not assignable to 'string'",
+  ]
+  const deepError =
+    "$.filter|union 6||union 1|.b: Type 'undefined' is not assignable to 'number'"
+  const otherError =
+    "$.filter|union 6||union 2|.other: Type 'undefined' is not assignable to 'string'"
+
+  test('preserves deeper failures in a sixth nested member with the default limit', () => {
+    expect(schema.parse(input)).toEqual(
+      errorResult(deepError, otherError, ...shallowErrors),
+    )
+  })
+
+  test('preserves deeper failures with a smaller custom limit', () => {
+    expect(schema.parse(input, { unionErrorLimit: 1 })).toEqual(
+      errorResult(
+        deepError,
+        otherError,
+        shallowErrors[0]!,
+        '$.filter: not matches any other union member',
+      ),
+    )
+  })
+
+  test('keeps schema order when all errors are requested', () => {
+    expect(schema.parse(input, { unionErrorLimit: Infinity })).toEqual(
+      errorResult(...shallowErrors, deepError, otherError),
+    )
+  })
+
+  test('propagates deeper failures through multiple nested unions', () => {
+    const multiple = rc_object({
+      filter: rc_union(...shallow, rc_union(rc_union(deep))),
+    })
+    expect(multiple.parse(input)).toEqual(
+      errorResult(
+        "$.filter|union 6||union 1||union 1|.b: Type 'undefined' is not assignable to 'number'",
+        ...shallowErrors,
+      ),
+    )
+  })
+
+  test('still limits nested unions with only shallow failures', () => {
+    const shallowOnly = rc_object({
+      filter: rc_union(...shallow, rc_union(rc_object({ other: rc_string }))),
+    })
+    expect(shallowOnly.parse(input)).toEqual(
+      errorResult(
+        ...shallowErrors,
+        '$.filter: not matches any other union member',
+      ),
+    )
+  })
+
+  test('a later successful member restores context for sibling properties', () => {
+    const recovered = rc_object({
+      filter: rc_union(...shallow, rc_union(deep, rc_object({ a: rc_number }))),
+      sibling: rc_string,
+    })
+    expect(recovered.parse({ ...input, sibling: 'ok' })).toEqual(
+      successResult({ ...input, sibling: 'ok' }),
+    )
+    expect(recovered.parse({ ...input, sibling: 1 })).toEqual(
+      errorResult("$.sibling: Type 'number' is not assignable to 'string'"),
+    )
+  })
+})
+
 test('show union in error', () => {
   const shape = rc_object({
     obj: rc_record(

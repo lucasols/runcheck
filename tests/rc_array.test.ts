@@ -641,6 +641,78 @@ test('length bounds use the retained items after filtering, rejection, and dedup
   ).toEqual(successResult([1]))
 })
 
+describe.each([
+  { mode: 'recursive', nonRecursive: false },
+  { mode: 'nonrecursive', nonRecursive: true },
+])('modifiers after disabling loose arrays ($mode)', ({ nonRecursive }) => {
+  const schema = rc_disable_loose_array(
+    rc_loose_array(rc_number, { minLength: 1 }),
+    { nonRecursive },
+  )
+
+  test('honors optional and nullable modifiers without changing the original', () => {
+    expect(schema.optional().parse(undefined)).toEqual(successResult(undefined))
+    expect(schema.orNull().parse(null)).toEqual(successResult(null))
+    expect(schema.orNullish().parse(undefined)).toEqual(
+      successResult(undefined),
+    )
+    expect(schema.orNullish().parse(null)).toEqual(successResult(null))
+    expect(schema.parse(undefined)).toEqual(
+      errorResult("Type 'undefined' is not assignable to 'number[]'"),
+    )
+    expect(schema.optional().parse([])).toEqual(
+      errorResult('Array length must be at least 1 (got 0)'),
+    )
+    expect(schema.optional().parse([1, 'bad'])).toEqual(
+      errorResult("$[1]: Type 'string' is not assignable to 'number'"),
+    )
+  })
+
+  test('honors optional keys on nested object properties', () => {
+    const object = rc_object({
+      nested: rc_object({ items: schema.optionalKey() }),
+    })
+    expect(object.parse({ nested: {} })).toEqual(
+      successResult({ nested: { items: undefined } }),
+    )
+  })
+
+  test('honors later fallback unless warnings are disabled', () => {
+    const withFallback = schema.withFallback([1])
+    expect(withFallback.parse('bad')).toEqual(
+      successResult(
+        [1],
+        [
+          "Fallback used, errors -> Type 'string' is not assignable to 'number[]'",
+        ],
+      ),
+    )
+    expect(withFallback.parse('bad', { noWarnings: true })).toEqual(
+      errorResult("Type 'string' is not assignable to 'number[]'"),
+    )
+  })
+
+  test('honors later autofix unless warnings are disabled', () => {
+    let calls = 0
+    const withAutofix = schema.withAutofix(() => {
+      calls++
+      return { fixed: [2] }
+    })
+    expect(withAutofix.parse('bad')).toEqual(
+      successResult(
+        [2],
+        [
+          "Autofixed from error -> Type 'string' is not assignable to 'number[]'",
+        ],
+      ),
+    )
+    expect(withAutofix.parse('bad', { noWarnings: true })).toEqual(
+      errorResult("Type 'string' is not assignable to 'number[]'"),
+    )
+    expect(calls).toBe(1)
+  })
+})
+
 test('disabling loose arrays preserves bounds and keeps nonrecursive children loose', () => {
   const schema = rc_disable_loose_array(
     rc_loose_array(rc_loose_array(rc_number), { minLength: 1, maxLength: 1 }),
