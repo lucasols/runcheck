@@ -73,7 +73,13 @@ type ParseResultCtx = {
   noWarnings_: boolean
   noLooseArray_: boolean | 'nonRecursive'
   unionErrorLimit_: number
+  deferredErrorType_: RcType<any> | undefined
+  deferredErrorPath_: string
 }
+
+// A union materializes these errors only if every member fails. Match both the
+// schema and path so nested failures still reach predicates and fixes normally.
+const deferredTypeErrors: ErrorWithPath[] = []
 
 type InternalParseResult<T> =
   | { ok: true; data: T; errors: undefined }
@@ -279,8 +285,9 @@ function parseIf<T>(
   type: RcType<T>,
   input: unknown,
   ctx: ParseResultCtx,
-  isValid: IsValid<T>,
+  isValid: boolean,
 ): InternalParseResult<T> {
+  if (isValid) return { ok: true, data: input as T, errors: undefined }
   if (type._optional_ && input === undefined) {
     return { ok: true, data: input as T, errors: undefined }
   }
@@ -293,23 +300,16 @@ function parseIf<T>(
     return { ok: true, data: input as T, errors: undefined }
   }
 
-  return parseResolved(type, input, ctx, isValid)
+  return parseFailure(type, input, ctx, isValid)
 }
 
-function parseResolved<T>(
+// Keep fallback, autofix and diagnostic work out of the common success path.
+function parseFailure<T>(
   type: RcType<T>,
   input: unknown,
   ctx: ParseResultCtx,
-  isValid: IsValid<T>,
+  isValid: false | { data: undefined; errors: ErrorWithPath[] },
 ): InternalParseResult<T> {
-  if (isValid) {
-    if (isValid === true || !isValid.errors) {
-      const validResult = isValid === true ? (input as T) : isValid.data
-
-      return { ok: true, data: validResult, errors: undefined }
-    }
-  }
-
   if (!ctx.noWarnings_) {
     const fb = type._fallback_
 
@@ -365,8 +365,11 @@ function parseResolved<T>(
     ok: false,
     data: undefined,
     errors:
-      isValid ?
-        isValid.errors
+      isValid ? isValid.errors
+      : (
+        ctx.deferredErrorType_ === type && ctx.deferredErrorPath_ === ctx.path_
+      ) ?
+        deferredTypeErrors
       : [getWarningOrErrorWithPath(ctx, getErrorMsg(type, input))],
   }
 }
@@ -389,7 +392,15 @@ export function parse<T>(
     return { ok: true, data: input as T, errors: undefined }
   }
 
-  return parseResolved(type, input, ctx, checkIfIsValid())
+  const isValid = checkIfIsValid()
+  if (isValid && (isValid === true || !isValid.errors)) {
+    return {
+      ok: true,
+      data: isValid === true ? (input as T) : isValid.data,
+      errors: undefined,
+    }
+  }
+  return parseFailure(type, input, ctx, isValid)
 }
 
 function getResultErrors(
@@ -425,35 +436,37 @@ function where(
   return {
     ...schema,
     _parse_(input, ctx) {
-      return parse(this, input, ctx, () => {
-        const result = schema._parse_(input, ctx)
+      if (
+        (this._optional_ && input === undefined) ||
+        (this._orNullish_ && (input === null || input === undefined)) ||
+        (this._orNull_ && input === null)
+      ) {
+        return { ok: true, data: input, errors: undefined }
+      }
 
-        if (!result.ok) {
-          return {
-            errors: result.errors,
-            data: undefined,
-          }
-        }
+      const result = schema._parse_(input, ctx)
+      if (!result.ok) {
+        return parseFailure(this, input, ctx, {
+          errors: result.errors,
+          data: undefined,
+        })
+      }
 
-        const predicateResult = predicate(result.data)
+      const predicateResult = predicate(result.data)
+      if (predicateResult === true) return result
 
-        if (predicateResult !== true) {
-          return {
-            errors: [
-              getWarningOrErrorWithPath(
-                ctx,
-                `Predicate failed${
-                  predicateResult === false ?
-                    ` for type '${this._kind_}'`
-                  : `: ${predicateResult.error}`
-                }`,
-              ),
-            ],
-            data: undefined,
-          }
-        }
-
-        return { errors: false, data: result.data }
+      return parseFailure(this, input, ctx, {
+        errors: [
+          getWarningOrErrorWithPath(
+            ctx,
+            `Predicate failed${
+              predicateResult === false ?
+                ` for type '${this._kind_}'`
+              : `: ${predicateResult.error}`
+            }`,
+          ),
+        ],
+        data: undefined,
       })
     },
   }
@@ -577,10 +590,8 @@ export const rc_unknown: RcType<unknown> = {
 /** Equivalent to ts type: `boolean`. */
 export const rc_boolean: RcType<boolean> = {
   ...defaultProps,
-  // the closure form measures faster than an inlined early-return fast path
-  // here: v8 optimizes it better when parsing mixed true/false inputs
   _parse_(input, ctx) {
-    return parse(this, input, ctx, () => typeof input === 'boolean')
+    return parseIf(this, input, ctx, typeof input === 'boolean')
   },
   _kind_: 'boolean',
   _shape_: 'boolean',
@@ -911,41 +922,81 @@ function collapseUnionPropertyErrors(
   basePath: string,
 ): ErrorWithPath[] {
   const prefix = `$${basePath}|union `
+  const expectedSeparator = "' is not assignable to '"
+
+  // Two-member unions need no grouping table or per-group allocations.
+  if (errors.length === 2) {
+    const first = errors[0]!
+    const second = errors[1]!
+    const firstMemberEnd = first.indexOf('|', prefix.length)
+    const secondMemberEnd = second.indexOf('|', prefix.length)
+    const firstExpected = first.lastIndexOf(expectedSeparator)
+    const secondExpected = second.lastIndexOf(expectedSeparator)
+    const firstType = first.indexOf(": Type '", firstMemberEnd + 1)
+    if (
+      !first.startsWith(prefix) ||
+      !second.startsWith(prefix) ||
+      (first[firstMemberEnd + 1] !== '.' &&
+        first[firstMemberEnd + 1] !== '[') ||
+      firstType === -1 ||
+      firstExpected <= firstType ||
+      secondExpected === -1 ||
+      !first.endsWith("'") ||
+      !second.endsWith("'") ||
+      first.slice(prefix.length, firstMemberEnd) ===
+        second.slice(prefix.length, secondMemberEnd) ||
+      first.slice(firstMemberEnd + 1, firstExpected) !==
+        second.slice(secondMemberEnd + 1, secondExpected)
+    ) {
+      return errors
+    }
+
+    const firstKind = first.slice(firstExpected + expectedSeparator.length, -1)
+    const secondKind = second.slice(
+      secondExpected + expectedSeparator.length,
+      -1,
+    )
+    return [
+      `$${basePath}${first.slice(firstMemberEnd + 1, firstExpected)}${expectedSeparator}${firstKind}${firstKind === secondKind ? '' : ` | ${secondKind}`}'` as ErrorWithPath,
+    ]
+  }
+
   const groups = new Map<
     string,
-    { index: number; member: string; expected: Set<string> }
+    { index: number; member: string; expected: string[] }
   >()
   const result: ErrorWithPath[] = []
 
   for (const error of errors) {
-    const match =
-      error.startsWith(prefix) ?
-        /^(\d+)\|((?:\.|\[).*?): Type '(.+)' is not assignable to '(.+)'$/.exec(
-          error.slice(prefix.length),
-        )
-      : null
-
-    if (!match) {
+    const memberEnd = error.indexOf('|', prefix.length)
+    const pathStart = memberEnd + 1
+    const typeStart = error.indexOf(": Type '", pathStart)
+    const expectedStart = error.lastIndexOf(expectedSeparator)
+    if (
+      !error.startsWith(prefix) ||
+      (error[pathStart] !== '.' && error[pathStart] !== '[') ||
+      typeStart === -1 ||
+      expectedStart <= typeStart ||
+      !error.endsWith("'")
+    ) {
       result.push(error)
       continue
     }
 
-    const member = match[1]!
-    const path = match[2]!
-    const received = match[3]!
-    const expected = match[4]!
-    const message = `$${basePath}${path}: Type '${received}' is not assignable to `
+    const member = error.slice(prefix.length, memberEnd)
+    const expected = error.slice(expectedStart + expectedSeparator.length, -1)
+    const message = `$${basePath}${error.slice(pathStart, expectedStart + expectedSeparator.length - 1)}`
     const group = groups.get(message)
 
     if (group && group.member !== member) {
-      group.expected.add(expected)
+      if (!group.expected.includes(expected)) group.expected.push(expected)
       result[group.index] =
-        `${message}'${[...group.expected].join(' | ')}'` as ErrorWithPath
+        `${message}'${group.expected.join(' | ')}'` as ErrorWithPath
     } else {
       groups.set(message, {
         index: result.length,
         member,
-        expected: new Set([expected]),
+        expected: [expected],
       })
       result.push(error)
     }
@@ -965,6 +1016,7 @@ export function rc_union<T extends RcType<any>[]>(
   let kind = ''
   let allIsObject = false
   let canUseCompactErrors = true
+  const memberPaths = types.map((_, index) => `|union ${index + 1}|`)
 
   for (const type of types) {
     if (kind) {
@@ -987,92 +1039,112 @@ export function rc_union<T extends RcType<any>[]>(
     _is_object_: allIsObject,
     _shape_: { kind: 'union', types },
     _parse_(input, ctx) {
-      return parse(this, input, ctx, () => {
-        const basePath = ctx.path_
-        const memberErrors: ErrorWithPath[][] = []
-        let deeperErrors: ErrorWithPath[] | undefined
-        const parentShortCircuit = ctx.objErrShortCircuit_
-        const parentKeyIndex = ctx.objErrKeyIndex_
-        const warningsLength = ctx.warnings_.length
+      if (
+        (this._optional_ && input === undefined) ||
+        (this._orNullish_ && (input === null || input === undefined)) ||
+        (this._orNull_ && input === null)
+      ) {
+        return { ok: true, data: input, errors: undefined }
+      }
 
-        let i = 0
-        for (const type of types) {
-          i += 1
-          ctx.path_ = `${basePath}|union ${i}|`
-          ctx.objErrShortCircuit_ =
-            parentShortCircuit || ctx.unionErrorLimit_ !== Infinity
-          ctx.objErrKeyIndex_ = 0
+      const basePath = ctx.path_
+      let memberErrors: (ErrorWithPath[] | number)[] | undefined
+      let deeperErrors: ErrorWithPath[] | undefined
+      const parentShortCircuit = ctx.objErrShortCircuit_
+      const parentKeyIndex = ctx.objErrKeyIndex_
+      const warningsLength = ctx.warnings_.length
+      const parentDeferredType = ctx.deferredErrorType_
+      const parentDeferredPath = ctx.deferredErrorPath_
+      const reportAll = ctx.unionErrorLimit_ === Infinity
+      ctx.objErrShortCircuit_ = parentShortCircuit || !reportAll
 
-          const result = type._parse_(input, ctx)
-          const errorKeyIndex = ctx.objErrKeyIndex_
+      for (let i = 0; i < types.length; i++) {
+        const type = types[i]!
+        ctx.path_ = basePath + memberPaths[i]!
+        ctx.deferredErrorType_ = type
+        ctx.deferredErrorPath_ = ctx.path_
+        ctx.objErrKeyIndex_ = 0
 
-          ctx.path_ = basePath
+        const result = type._parse_(input, ctx)
+        const errorKeyIndex = ctx.objErrKeyIndex_
+
+        ctx.path_ = basePath
+        ctx.objErrKeyIndex_ = parentKeyIndex
+
+        if (result.ok) {
           ctx.objErrShortCircuit_ = parentShortCircuit
-          ctx.objErrKeyIndex_ = parentKeyIndex
-
-          if (result.ok) {
-            return { data: result.data, errors: false }
-          }
-
-          if (ctx.warnings_.length !== warningsLength) {
-            ctx.warnings_.length = warningsLength
-          }
-          if (
-            type._is_object_ &&
-            errorKeyIndex > 0 &&
-            ctx.unionErrorLimit_ !== Infinity
-          ) {
-            // Preserve useful failures from members that matched earlier keys,
-            // even when they occur after the shallow member reporting limit.
-            deeperErrors ??= []
-            deeperErrors.push(...result.errors)
-          } else {
-            memberErrors.push(result.errors)
-          }
+          ctx.deferredErrorType_ = parentDeferredType
+          ctx.deferredErrorPath_ = parentDeferredPath
+          return result
         }
 
-        // Only inspect error messages after every member has failed. Plain type
-        // mismatches keep the compact union message; custom failures stay visible.
-        if (
-          canUseCompactErrors &&
-          ctx.unionErrorLimit_ !== Infinity &&
-          types.every((type, index) => {
-            const errors = memberErrors[index]!
-            return (
-              errors.length === 1 &&
-              errors[0] ===
-                `$${basePath}|union ${index + 1}|: ${getErrorMsg(type, input)}`
-            )
-          })
-        ) {
-          return false
+        if (ctx.warnings_.length !== warningsLength) {
+          ctx.warnings_.length = warningsLength
         }
-
-        const errors = deeperErrors ?? []
-        for (
-          let index = 0;
-          index < memberErrors.length && index < ctx.unionErrorLimit_;
-          index++
-        ) {
-          errors.push(...memberErrors[index]!)
-        }
-
-        if (memberErrors.length > ctx.unionErrorLimit_) {
-          errors.push(
-            getWarningOrErrorWithPath(
-              ctx,
-              'not matches any other union member',
-            ),
+        if (type._is_object_ && errorKeyIndex > 0 && !reportAll) {
+          // Preserve useful failures from members that matched earlier keys,
+          // even when they occur after the shallow member reporting limit.
+          deeperErrors ??= []
+          deeperErrors.push(...result.errors)
+        } else {
+          memberErrors ??= []
+          memberErrors.push(
+            result.errors === deferredTypeErrors ? i : result.errors,
           )
         }
+      }
 
-        return {
-          errors:
-            ctx.unionErrorLimit_ !== Infinity && errors.length > 1 ?
-              collapseUnionPropertyErrors(errors, basePath)
-            : errors,
-          data: undefined,
+      ctx.objErrShortCircuit_ = parentShortCircuit
+      ctx.deferredErrorType_ = parentDeferredType
+      ctx.deferredErrorPath_ = parentDeferredPath
+
+      // Only inspect error messages after every member has failed. Plain type
+      // mismatches keep the compact union message; custom failures stay visible.
+      if (
+        canUseCompactErrors &&
+        !reportAll &&
+        types.every((type, index) => {
+          const errors = memberErrors![index]!
+          return (
+            typeof errors === 'number' ||
+            (errors.length === 1 &&
+              errors[0] ===
+                `$${basePath}${memberPaths[index]}: ${getErrorMsg(type, input)}`)
+          )
+        })
+      ) {
+        return parseFailure(this, input, ctx, false)
+      }
+
+      const errors = deeperErrors ?? []
+      const memberErrorsCount = memberErrors?.length ?? 0
+      for (
+        let index = 0;
+        index < memberErrorsCount && index < ctx.unionErrorLimit_;
+        index++
+      ) {
+        const memberError = memberErrors![index]!
+        if (typeof memberError === 'number') {
+          errors.push(
+            `$${basePath}${memberPaths[memberError]}: ${getErrorMsg(types[memberError]!, input)}` as ErrorWithPath,
+          )
+        } else {
+          errors.push(...memberError)
         }
+      }
+
+      if (memberErrorsCount > ctx.unionErrorLimit_) {
+        errors.push(
+          getWarningOrErrorWithPath(ctx, 'not matches any other union member'),
+        )
+      }
+
+      return parseFailure(this, input, ctx, {
+        errors:
+          !reportAll && errors.length > 1 ?
+            collapseUnionPropertyErrors(errors, basePath)
+          : errors,
+        data: undefined,
       })
     },
   }
@@ -1271,7 +1343,12 @@ function checkArrayItems(
   types: RcType<any> | readonly RcType<any>[],
   ctx: ParseResultCtx,
   _loose = false,
-  options?: ArrayOptions<RcType<any>>,
+  options?: Omit<ArrayOptions<RcType<any>>, 'filter'> & {
+    filter?: (
+      item: any,
+      ctx: ParseResultCtx,
+    ) => boolean | { errors: ErrorWithPath[] }
+  },
 ): IsValid<any[]> {
   const parentPath = ctx.path_
   const parentDisableLooseArray = ctx.noLooseArray_
@@ -1283,7 +1360,7 @@ function checkArrayItems(
   try {
     const unique = options?.unique
 
-    const looseErrors: [err: ErrorWithPath[], path: string][] = []
+    let looseErrors: [err: ErrorWithPath[], path: string][] | undefined
     const arrayResult: any[] = []
     const uniqueValues = unique ? new Set<any>() : undefined
 
@@ -1302,7 +1379,7 @@ function checkArrayItems(
       ctx.path_ = path
 
       if (options?.filter) {
-        const filterResult = options.filter(_item)
+        const filterResult = options.filter(_item, ctx)
 
         if (typeof filterResult === 'boolean') {
           if (!filterResult) {
@@ -1312,7 +1389,7 @@ function checkArrayItems(
           if (!useLooseMode) {
             return { errors: filterResult.errors, data: undefined }
           } else {
-            looseErrors.push([filterResult.errors, path])
+            ;(looseErrors ??= []).push([filterResult.errors, path])
             continue
           }
         }
@@ -1367,7 +1444,7 @@ function checkArrayItems(
             data: undefined,
           }
         } else {
-          looseErrors.push([parseResult.errors, path])
+          ;(looseErrors ??= []).push([parseResult.errors, path])
           continue
         }
       } else {
@@ -1375,7 +1452,7 @@ function checkArrayItems(
       }
     }
 
-    if (looseErrors.length > 0) {
+    if (looseErrors) {
       const adjustedLooseErrors: ErrorWithPath[] = []
 
       for (const [errors, path] of looseErrors) {
@@ -1567,6 +1644,19 @@ export function rc_array_filter_from_schema<B, T>(
     loose?: boolean
   },
 ): RcType<T[]> {
+  const checkOptions = {
+    ...options,
+    filter(item: unknown, ctx: ParseResultCtx) {
+      const filterResult = filterSchema._parse_(item, ctx)
+
+      if (!filterResult.ok) {
+        return { errors: filterResult.errors }
+      }
+
+      return filterFn(filterResult.data)
+    },
+  }
+
   return {
     ...defaultProps,
     _array_item_type_: type,
@@ -1577,18 +1667,14 @@ export function rc_array_filter_from_schema<B, T>(
 
         if (input.length === 0 && !options?.minLength) return true
 
-        return checkArrayItems.call(this, input, type, ctx, options?.loose, {
-          ...options,
-          filter(item) {
-            const filterResult = filterSchema._parse_(item, ctx)
-
-            if (!filterResult.ok) {
-              return { errors: filterResult.errors }
-            }
-
-            return filterFn(filterResult.data)
-          },
-        })
+        return checkArrayItems.call(
+          this,
+          input,
+          type,
+          ctx,
+          options?.loose,
+          checkOptions,
+        )
       })
     },
   }
@@ -1701,6 +1787,8 @@ export function rc_parse<S>(
     strictObj_: false,
     noLooseArray_: false,
     unionErrorLimit_: unionErrorLimit,
+    deferredErrorType_: undefined,
+    deferredErrorPath_: '',
   }
 
   const parseResult = type._parse_(input, ctx)
@@ -1838,6 +1926,8 @@ export function rc_is_valid<S>(input: any, type: RcType<S>): input is S {
     strictObj_: false,
     noLooseArray_: false,
     unionErrorLimit_: 5,
+    deferredErrorType_: undefined,
+    deferredErrorPath_: '',
   }
 
   return type._parse_(input, ctx).ok

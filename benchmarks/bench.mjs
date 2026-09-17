@@ -8,7 +8,10 @@ let publishedVersion
 try {
   publishedVersion = JSON.parse(
     readFileSync(
-      new URL('./published/node_modules/runcheck/package.json', import.meta.url),
+      new URL(
+        './published/node_modules/runcheck/package.json',
+        import.meta.url,
+      ),
       'utf8',
     ),
   ).version
@@ -58,6 +61,21 @@ function getSchemas(rc) {
   })
 
   return {
+    scalarUnion: rc.rc_union(rc.rc_string, rc.rc_number),
+    scalarUnionArray: rc.rc_array(rc.rc_union(rc.rc_string, rc.rc_number)),
+    objectUnion: rc.rc_union(
+      rc.rc_object({ type: rc.rc_literals('user'), name: rc.rc_string }),
+      rc.rc_object({
+        type: rc.rc_literals('admin'),
+        permissions: rc.rc_array(rc.rc_string),
+      }),
+    ),
+    predicate: rc.rc_number.where((n) => n >= 0),
+    filteredArray: rc.rc_array_filter_from_schema(
+      rc.rc_number,
+      (n) => n % 2 === 0,
+      rc.rc_number,
+    ),
     obj: objSchema,
     stringObj: rc.rc_object({ string: rc.rc_string }),
     largeArray: rc.rc_array(
@@ -240,6 +258,35 @@ group('parse discriminated union', () => {
     )
   })
 })
+
+// Keep schemas and inputs outside the timed callbacks. Successful later-member
+// matches exercise the cost of failures that never reach the caller.
+for (const [name, key, inputs] of [
+  ['scalar union, first member', 'scalarUnion', strings],
+  ['scalar union, second member', 'scalarUnion', numbers],
+  ['scalar union, invalid', 'scalarUnion', booleans],
+  [
+    'mixed scalar union array',
+    'scalarUnionArray',
+    [numbers.map((n, i) => (i % 2 ? n : String(n)))],
+  ],
+  [
+    'object union, invalid discriminator',
+    'objectUnion',
+    strings.map((name) => ({ type: 'guest', name })),
+  ],
+  ['number predicate', 'predicate', numbers],
+  ['schema-filtered array', 'filteredArray', [numbers.map(Math.floor)]],
+]) {
+  group(name, () => {
+    baseline(currentLabel, () => {
+      for (const input of inputs) sink = current.rc_parse(input, cur[key])
+    })
+    bench(publishedLabel, () => {
+      for (const input of inputs) sink = published.rc_parse(input, pub[key])
+    })
+  })
+}
 
 group('schema creation', () => {
   baseline(currentLabel, () => {
