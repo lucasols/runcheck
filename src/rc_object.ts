@@ -181,19 +181,19 @@ export function rc_object<T extends RcObject>(
             let i = 0
             for (const { key, type } of shapeEntries) {
               if (detailedObjShapeDescription.length > 100) {
-                detailedObjShapeDescription += `, ...`
+                detailedObjShapeDescription += ', ...'
                 break
               }
 
               if (i !== 0) {
-                detailedObjShapeDescription += `, `
+                detailedObjShapeDescription += ', '
               }
 
               detailedObjShapeDescription += `${key}: ${type._kind_}`
               i++
             }
 
-            detailedObjShapeDescription += ` }`
+            detailedObjShapeDescription += ' }'
             this._detailed_obj_shape_ = detailedObjShapeDescription
           }
 
@@ -385,7 +385,7 @@ export function rc_obj_extends(
 
     return {
       ...shapeOrSchema,
-      _kind_: `extends_object`,
+      _kind_: 'extends_object',
       _is_extend_obj_: true,
     }
   }
@@ -393,7 +393,7 @@ export function rc_obj_extends(
   // Otherwise, treat it as a shape and create a new object
   return {
     ...rc_object(shapeOrSchema as any, options),
-    _kind_: `extends_object`,
+    _kind_: 'extends_object',
     _is_extend_obj_: true,
   }
 }
@@ -416,7 +416,7 @@ export function rc_get_obj_shape<T extends Record<string, any>>(
   [K in keyof T]: RcType<T[K]>
 } {
   if (!type._obj_shape_) {
-    throw new Error(`type does not have an object shape`)
+    throw new Error('type does not have an object shape')
   }
 
   return type._obj_shape_ as T
@@ -443,7 +443,7 @@ export function rc_obj_strict<T extends RcObject>(
 ): RcObjTypeReturn<T> {
   return {
     ...rc_object(shape, options),
-    _kind_: `strict_obj`,
+    _kind_: 'strict_obj',
     _is_strict_obj_: true,
   }
 }
@@ -472,13 +472,13 @@ export function rc_enable_obj_strict<T extends RcType<any>>(
   if (nonRecursive) {
     if (!type._obj_shape_) {
       throw new Error(
-        `rc_enable_obj_strict: nonRecursive option can only be used on object types`,
+        'rc_enable_obj_strict: nonRecursive option can only be used on object types',
       )
     }
 
     return {
       ...type,
-      _kind_: `strict_obj`,
+      _kind_: 'strict_obj',
       _is_strict_obj_: true,
     }
   }

@@ -28,7 +28,7 @@ describe('rc_union', () => {
 
   test('fail', () => {
     expect(rc_parse(true, shape)).toEqual(
-      errorResult(`Type 'boolean' is not assignable to 'string | number'`),
+      errorResult("Type 'boolean' is not assignable to 'string | number'"),
     )
   })
 
@@ -43,7 +43,7 @@ describe('rc_union', () => {
   })
 })
 
-test('limit object union errors to 1', () => {
+test('limit object union errors to 5', () => {
   const shape = rc_union(
     rc_object({ a: rc_string }),
     rc_object({ b: rc_number }),
@@ -56,12 +56,16 @@ test('limit object union errors to 1', () => {
   expect(rc_parse({ a: 1 }, shape)).toEqual(
     errorResult(
       "$|union 1|.a: Type 'number' is not assignable to 'string'",
+      "$|union 2|.b: Type 'undefined' is not assignable to 'number'",
+      "$|union 3|.c: Type 'undefined' is not assignable to 'number'",
+      "$|union 4|.d: Type 'undefined' is not assignable to 'number'",
+      "$|union 5|.e: Type 'undefined' is not assignable to 'number'",
       'not matches any other union member',
     ),
   )
 })
 
-test('circuit break in obj errors', () => {
+test('circuit break in object errors without summarizing members', () => {
   const shape = rc_union(
     rc_object({ a: rc_string, b: rc_number }),
     rc_object({ b: rc_number, c: rc_number }),
@@ -71,12 +75,13 @@ test('circuit break in obj errors', () => {
   expect(rc_parse({ a: 1 }, shape)).toEqual(
     errorResult(
       "$|union 1|.a: Type 'number' is not assignable to 'string'",
-      'not matches any other union member',
+      "$|union 2|.b: Type 'undefined' is not assignable to 'number'",
+      "$|union 3|.c: Type 'undefined' is not assignable to 'number'",
     ),
   )
 })
 
-test('show errors with more depth', () => {
+test('preserve deeper member errors beyond the shallow error limit', () => {
   const shape = rc_object({
     obj: rc_union(
       rc_object({ a: rc_string }),
@@ -84,17 +89,109 @@ test('show errors with more depth', () => {
       rc_object({ c: rc_number }),
       rc_object({ d: rc_number }),
       rc_object({ e: rc_number }),
-      rc_object({ a: rc_number, b: rc_number }),
+      rc_object({ a: rc_number, deeper: rc_number }),
     ),
   })
 
   expect(rc_parse({ obj: { a: 1 } }, shape)).toEqual(
     errorResult(
-      "$.obj|union 6|.b: Type 'undefined' is not assignable to 'number'",
+      "$.obj|union 6|.deeper: Type 'undefined' is not assignable to 'number'",
       "$.obj|union 1|.a: Type 'number' is not assignable to 'string'",
-      '$.obj: not matches any other union member',
+      "$.obj|union 2|.b: Type 'undefined' is not assignable to 'number'",
+      "$.obj|union 3|.c: Type 'undefined' is not assignable to 'number'",
+      "$.obj|union 4|.d: Type 'undefined' is not assignable to 'number'",
+      "$.obj|union 5|.e: Type 'undefined' is not assignable to 'number'",
     ),
   )
+})
+
+describe('nested union failures at the shallow reporting limit', () => {
+  const shallow = [
+    rc_object({ first: rc_string }),
+    rc_object({ second: rc_string }),
+    rc_object({ third: rc_string }),
+    rc_object({ fourth: rc_string }),
+    rc_object({ fifth: rc_string }),
+  ]
+  const deep = rc_object({ a: rc_number, b: rc_number })
+  const schema = rc_object({
+    filter: rc_union(
+      ...shallow,
+      rc_union(deep, rc_object({ other: rc_string })),
+    ),
+  })
+  const input = { filter: { a: 1 } }
+  const shallowErrors = [
+    "$.filter|union 1|.first: Type 'undefined' is not assignable to 'string'",
+    "$.filter|union 2|.second: Type 'undefined' is not assignable to 'string'",
+    "$.filter|union 3|.third: Type 'undefined' is not assignable to 'string'",
+    "$.filter|union 4|.fourth: Type 'undefined' is not assignable to 'string'",
+    "$.filter|union 5|.fifth: Type 'undefined' is not assignable to 'string'",
+  ]
+  const deepError =
+    "$.filter|union 6||union 1|.b: Type 'undefined' is not assignable to 'number'"
+  const otherError =
+    "$.filter|union 6||union 2|.other: Type 'undefined' is not assignable to 'string'"
+
+  test('preserves deeper failures in a sixth nested member with the default limit', () => {
+    expect(schema.parse(input)).toEqual(
+      errorResult(deepError, otherError, ...shallowErrors),
+    )
+  })
+
+  test('preserves deeper failures with a smaller custom limit', () => {
+    expect(schema.parse(input, { unionErrorLimit: 1 })).toEqual(
+      errorResult(
+        deepError,
+        otherError,
+        shallowErrors[0]!,
+        '$.filter: not matches any other union member',
+      ),
+    )
+  })
+
+  test('keeps schema order when all errors are requested', () => {
+    expect(schema.parse(input, { unionErrorLimit: Infinity })).toEqual(
+      errorResult(...shallowErrors, deepError, otherError),
+    )
+  })
+
+  test('propagates deeper failures through multiple nested unions', () => {
+    const multiple = rc_object({
+      filter: rc_union(...shallow, rc_union(rc_union(deep))),
+    })
+    expect(multiple.parse(input)).toEqual(
+      errorResult(
+        "$.filter|union 6||union 1||union 1|.b: Type 'undefined' is not assignable to 'number'",
+        ...shallowErrors,
+      ),
+    )
+  })
+
+  test('still limits nested unions with only shallow failures', () => {
+    const shallowOnly = rc_object({
+      filter: rc_union(...shallow, rc_union(rc_object({ other: rc_string }))),
+    })
+    expect(shallowOnly.parse(input)).toEqual(
+      errorResult(
+        ...shallowErrors,
+        '$.filter: not matches any other union member',
+      ),
+    )
+  })
+
+  test('a later successful member restores context for sibling properties', () => {
+    const recovered = rc_object({
+      filter: rc_union(...shallow, rc_union(deep, rc_object({ a: rc_number }))),
+      sibling: rc_string,
+    })
+    expect(recovered.parse({ ...input, sibling: 'ok' })).toEqual(
+      successResult({ ...input, sibling: 'ok' }),
+    )
+    expect(recovered.parse({ ...input, sibling: 1 })).toEqual(
+      errorResult("$.sibling: Type 'number' is not assignable to 'string'"),
+    )
+  })
 })
 
 test('show union in error', () => {
@@ -106,14 +203,17 @@ test('show union in error', () => {
 
   expect(rc_parse({ obj: { a: '**' } }, shape)).toEqual(
     errorResult(
-      "$.obj.a: Type 'string' is not assignable to 'undefined | string(*) | object'",
+      "$.obj.a|union 1|: Type 'string' is not assignable to 'undefined'",
+      "$.obj.a|union 2|: Type 'string(**)' is not assignable to 'string(*)'",
+      "$.obj.a|union 3|: Type 'string' is not assignable to 'object'",
     ),
   )
 
   expect(rc_parse({ obj: { a: { b: 2 } } }, shape)).toEqual(
     errorResult(
+      "$.obj.a|union 1|: Type 'object' is not assignable to 'undefined'",
+      "$.obj.a|union 2|: Type 'object' is not assignable to 'string(*)'",
       "$.obj.a|union 3|.a: Type 'undefined' is not assignable to 'string'",
-      '$.obj.a: not matches any other union member',
     ),
   )
 })
@@ -189,7 +289,7 @@ test('nullable union error', () => {
   const shape = rc_union(rc_number, rc_string).orNull()
 
   expect(rc_parse(true, shape)).toEqual(
-    errorResult(`Type 'boolean' is not assignable to 'null | number | string'`),
+    errorResult("Type 'boolean' is not assignable to 'null | number | string'"),
   )
 })
 
@@ -214,7 +314,7 @@ describe('or', () => {
     expect(rc_parse(42, shape)).toEqual(successResult(42))
 
     expect(rc_parse(true, shape)).toEqual(
-      errorResult(`Type 'boolean' is not assignable to 'string | number'`),
+      errorResult("Type 'boolean' is not assignable to 'string | number'"),
     )
   })
 
@@ -230,7 +330,7 @@ describe('or', () => {
     expect(rc_parse({ c: 'invalid' }, shape)).toEqual(
       errorResult(
         "$|union 1|.a: Type 'undefined' is not assignable to 'string'",
-        'not matches any other union member',
+        "$|union 2|.b: Type 'undefined' is not assignable to 'number'",
       ),
     )
   })
@@ -246,7 +346,8 @@ describe('or', () => {
 
     expect(rc_parse(true, shape)).toEqual(
       errorResult(
-        `Type 'boolean' is not assignable to 'string | number | object'`,
+        "$|union 1|: Type 'boolean' is not assignable to 'string | number'",
+        "$|union 2|: Type 'boolean' is not assignable to 'object'",
       ),
     )
   })
@@ -259,7 +360,7 @@ describe('or', () => {
 
     expect(rc_parse('green', shape)).toEqual(
       errorResult(
-        `Type 'string' is not assignable to 'string(red) | string(blue) | string(large) | string(small)'`,
+        "Type 'string' is not assignable to 'string(red) | string(blue) | string(large) | string(small)'",
       ),
     )
   })
@@ -273,7 +374,7 @@ describe('or', () => {
 
     expect(rc_parse(true, shape)).toEqual(
       errorResult(
-        `Type 'boolean' is not assignable to 'null | string | null | number'`,
+        "Type 'boolean' is not assignable to 'null | string | null | number'",
       ),
     )
   })
@@ -287,7 +388,7 @@ describe('or', () => {
 
     expect(rc_parse(true, shape)).toEqual(
       errorResult(
-        `Type 'boolean' is not assignable to 'undefined | string | undefined | number'`,
+        "Type 'boolean' is not assignable to 'undefined | string | undefined | number'",
       ),
     )
   })
@@ -302,7 +403,10 @@ describe('or', () => {
     expect(rc_parse([1, 2, 3], shape)).toEqual(successResult([1, 2, 3]))
 
     expect(rc_parse(['hello', 1], shape)).toEqual(
-      errorResult(`Type 'array' is not assignable to 'string[] | number[]'`),
+      errorResult(
+        "$|union 1|[1]: Type 'number' is not assignable to 'string'",
+        "$|union 2|[0]: Type 'string' is not assignable to 'number'",
+      ),
     )
   })
 
@@ -320,7 +424,7 @@ describe('or', () => {
     expect(rc_parse({ a: 'hello', b: 1 }, shape)).toEqual(
       errorResult(
         "$|union 1|.b: Type 'number' is not assignable to 'string'",
-        'not matches any other union member',
+        "$|union 2|.a: Type 'string' is not assignable to 'number'",
       ),
     )
   })
@@ -361,7 +465,262 @@ describe('or', () => {
 
     expect(rc_parse({ type: 'guest', name: 'John' }, shape)).toEqual(
       errorResult(
+        "$.type: Type 'string(guest)' is not assignable to 'string(user) | string(admin)'",
+      ),
+    )
+  })
+})
+
+describe('union error reporting options', () => {
+  const members = [
+    rc_object({ a: rc_string }),
+    rc_object({ b: rc_number }),
+    rc_object({ c: rc_number }),
+    rc_object({ d: rc_number }),
+    rc_object({ e: rc_number }),
+    rc_object({ f: rc_number }),
+  ]
+
+  test('does not summarize exactly five members', () => {
+    expect(rc_union(...members.slice(0, 5)).parse({})).toEqual(
+      errorResult(
+        "$|union 1|.a: Type 'undefined' is not assignable to 'string'",
+        "$|union 2|.b: Type 'undefined' is not assignable to 'number'",
+        "$|union 3|.c: Type 'undefined' is not assignable to 'number'",
+        "$|union 4|.d: Type 'undefined' is not assignable to 'number'",
+        "$|union 5|.e: Type 'undefined' is not assignable to 'number'",
+      ),
+    )
+  })
+
+  test('Infinity reports members beyond the default limit', () => {
+    expect(
+      rc_union(...members).parse({}, { unionErrorLimit: Infinity }),
+    ).toEqual(
+      errorResult(
+        "$|union 1|.a: Type 'undefined' is not assignable to 'string'",
+        "$|union 2|.b: Type 'undefined' is not assignable to 'number'",
+        "$|union 3|.c: Type 'undefined' is not assignable to 'number'",
+        "$|union 4|.d: Type 'undefined' is not assignable to 'number'",
+        "$|union 5|.e: Type 'undefined' is not assignable to 'number'",
+        "$|union 6|.f: Type 'undefined' is not assignable to 'number'",
+      ),
+    )
+  })
+
+  test('a custom limit affects reporting but not successful matching', () => {
+    const schema = rc_union(...members)
+    expect(schema.parse({}, { unionErrorLimit: 1 })).toEqual(
+      errorResult(
+        "$|union 1|.a: Type 'undefined' is not assignable to 'string'",
+        'not matches any other union member',
+      ),
+    )
+    expect(schema.parse({ f: 1 }, { unionErrorLimit: 1 })).toEqual(
+      successResult({ f: 1 }),
+    )
+  })
+
+  test('a custom limit retains deeper failures ahead of shallow failures', () => {
+    const schema = rc_union(
+      ...members,
+      rc_object({ a: rc_number, missing: rc_string }),
+    )
+    expect(schema.parse({ a: 1 }, { unionErrorLimit: 1 })).toEqual(
+      errorResult(
+        "$|union 7|.missing: Type 'undefined' is not assignable to 'string'",
+        "$|union 1|.a: Type 'number' is not assignable to 'string'",
+        'not matches any other union member',
+      ),
+    )
+  })
+
+  test('Infinity disables property short circuiting in nested unions and JSON parsing', () => {
+    const schema = rc_object({
+      value: rc_union(
+        rc_object({ a: rc_string, b: rc_number }),
+        rc_object({ c: rc_string, d: rc_number }),
+      ),
+    })
+    const expected = errorResult(
+      "$.value|union 1|.a: Type 'undefined' is not assignable to 'string'",
+      "$.value|union 1|.b: Type 'undefined' is not assignable to 'number'",
+      "$.value|union 2|.c: Type 'undefined' is not assignable to 'string'",
+      "$.value|union 2|.d: Type 'undefined' is not assignable to 'number'",
+    )
+    expect(schema.parse({ value: {} }, { unionErrorLimit: Infinity })).toEqual(
+      expected,
+    )
+    expect(
+      schema.parseJson('{"value":{}}', { unionErrorLimit: Infinity }),
+    ).toEqual(expected)
+  })
+
+  test('Infinity expands simple unions without changing the default compact format', () => {
+    const schema = rc_object({ value: rc_string.or(rc_number) })
+    expect(schema.parse({ value: true })).toEqual(
+      errorResult(
+        "$.value: Type 'boolean' is not assignable to 'string | number'",
+      ),
+    )
+    expect(
+      schema.parse({ value: true }, { unionErrorLimit: Infinity }),
+    ).toEqual(
+      errorResult(
+        "$.value|union 1|: Type 'boolean' is not assignable to 'string'",
+        "$.value|union 2|: Type 'boolean' is not assignable to 'number'",
+      ),
+    )
+  })
+
+  test('keeps predicate failures visible and labeled on primitive members', () => {
+    const schema = rc_union(
+      rc_number,
+      rc_string.where(() => ({ error: 'invalid filter' })),
+    )
+    expect(schema.parse('bad')).toEqual(
+      errorResult(
+        "$|union 1|: Type 'string' is not assignable to 'number'",
+        '$|union 2|: Predicate failed: invalid filter',
+      ),
+    )
+  })
+
+  test('discards warnings from failed members and restores paths after success', () => {
+    const schema = rc_union(
+      rc_object({ a: rc_number.withFallback(1), b: rc_string }),
+      rc_object({ valid: rc_string }),
+    )
+    expect(schema.parse({ valid: 'yes' })).toEqual(
+      successResult({ valid: 'yes' }),
+    )
+    expect(
+      schema.where(() => ({ error: 'outer failure' })).parse({ valid: 'yes' }),
+    ).toEqual(errorResult('Predicate failed: outer failure'))
+  })
+})
+
+test('default reporting skips later object property checks while Infinity runs them', () => {
+  let calls = 0
+  const schema = rc_union(
+    rc_object({
+      first: rc_string,
+      second: rc_number.where(() => {
+        calls++
+        return { error: 'second property failure' }
+      }),
+    }),
+    rc_number,
+  )
+  const input = { first: 1, second: 2 }
+  expect(schema.parse(input)).toEqual(
+    errorResult(
+      "$|union 1|.first: Type 'number' is not assignable to 'string'",
+      "$|union 2|: Type 'object' is not assignable to 'number'",
+    ),
+  )
+  expect(calls).toBe(0)
+  expect(schema.parse(input, { unionErrorLimit: Infinity })).toEqual(
+    errorResult(
+      "$|union 1|.first: Type 'number' is not assignable to 'string'",
+      '$|union 1|.second: Predicate failed: second property failure',
+      "$|union 2|: Type 'object' is not assignable to 'number'",
+    ),
+  )
+  expect(calls).toBe(1)
+})
+
+describe('collapsing union property type mismatches', () => {
+  const schema = rc_union(
+    rc_object({ type: rc_literals('user') }),
+    rc_object({ type: rc_literals('admin') }),
+  )
+
+  test('collapses nested object property errors with the full parent path', () => {
+    const nested = rc_object({
+      groups: rc_array(rc_object({ member: schema })),
+    })
+    expect(nested.parse({ groups: [{ member: { type: 'guest' } }] })).toEqual(
+      errorResult(
+        "$.groups[0].member.type: Type 'string(guest)' is not assignable to 'string(user) | string(admin)'",
+      ),
+    )
+  })
+
+  test('collapses missing properties and identical expected types', () => {
+    expect(schema.parse({})).toEqual(
+      errorResult(
+        "$.type: Type 'undefined' is not assignable to 'string(user) | string(admin)'",
+      ),
+    )
+    const duplicate = rc_union(
+      rc_object({ value: rc_number }),
+      rc_object({ value: rc_number }),
+    )
+    expect(duplicate.parse({ value: 'bad' })).toEqual(
+      errorResult("$.value: Type 'string' is not assignable to 'number'"),
+    )
+  })
+
+  test('Infinity preserves every member label instead of collapsing', () => {
+    expect(
+      schema.parse({ type: 'guest' }, { unionErrorLimit: Infinity }),
+    ).toEqual(
+      errorResult(
         "$|union 1|.type: Type 'string(guest)' is not assignable to 'string(user)'",
+        "$|union 2|.type: Type 'string(guest)' is not assignable to 'string(admin)'",
+      ),
+    )
+  })
+
+  test('does not lose custom predicate failures at the same property', () => {
+    const custom = rc_union(
+      rc_object({ value: rc_number }),
+      rc_object({
+        value: rc_string.where(() => ({ error: 'invalid filter' })),
+      }),
+      rc_object({ value: rc_number }),
+    )
+    expect(custom.parse({ value: 'bad' })).toEqual(
+      errorResult(
+        "$.value: Type 'string' is not assignable to 'number'",
+        '$|union 2|.value: Predicate failed: invalid filter',
+      ),
+    )
+  })
+
+  test('does not combine different received types or different property paths', () => {
+    const differentReceived = rc_union(
+      rc_object({ value: rc_number }),
+      rc_object({ value: rc_literals('allowed') }),
+    )
+    expect(differentReceived.parse({ value: 'bad' })).toEqual(
+      errorResult(
+        "$|union 1|.value: Type 'string' is not assignable to 'number'",
+        "$|union 2|.value: Type 'string(bad)' is not assignable to 'string(allowed)'",
+      ),
+    )
+    expect(
+      rc_union(rc_object({ a: rc_number }), rc_object({ b: rc_number })).parse(
+        {},
+      ),
+    ).toEqual(
+      errorResult(
+        "$|union 1|.a: Type 'undefined' is not assignable to 'number'",
+        "$|union 2|.b: Type 'undefined' is not assignable to 'number'",
+      ),
+    )
+  })
+
+  test('collapsing does not hide the summary for members beyond a custom limit', () => {
+    const limited = rc_union(
+      rc_object({ type: rc_literals('user') }),
+      rc_object({ type: rc_literals('admin') }),
+      rc_object({ type: rc_literals('service') }),
+    )
+    expect(limited.parse({ type: 'guest' }, { unionErrorLimit: 2 })).toEqual(
+      errorResult(
+        "$.type: Type 'string(guest)' is not assignable to 'string(user) | string(admin)'",
         'not matches any other union member',
       ),
     )

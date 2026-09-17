@@ -74,6 +74,8 @@ pnpm pre-publish        # Pre-publish checks and build
 
 ## Performance Considerations
 
+- Prioritize parsing performance over schema-creation performance. Move reusable work to schema creation when it reduces repeated parsing overhead. Trust consumer-supplied schema options; do not add runtime option validation or defensive checks for programmer misuse unless explicitly requested.
+- Add only checks and allocations required for the requested behavior. Keep error formatting on failure paths and skip work for unused options.
 - Extensive benchmarking setup in `benchmarks/` directory
 - Performance profiling tools available
 - Optimized for V8 engine with specific patterns

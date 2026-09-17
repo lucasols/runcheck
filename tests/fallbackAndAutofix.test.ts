@@ -146,7 +146,7 @@ describe('autofix', () => {
 
     expect(result).toEqual(
       successResult('1', [
-        `Autofixed from error -> Type 'number' is not assignable to 'string'`,
+        "Autofixed from error -> Type 'number' is not assignable to 'string'",
       ]),
     )
   })
@@ -161,7 +161,7 @@ describe('autofix', () => {
 
     expect(result).toEqual(
       successResult(true, [
-        `Autofixed from error -> Type 'number' is not assignable to 'boolean'`,
+        "Autofixed from error -> Type 'number' is not assignable to 'boolean'",
       ]),
     )
   })
@@ -171,7 +171,7 @@ describe('autofix', () => {
 
     expect(result).toEqual(
       successResult(1, [
-        `Autofixed from error -> Type 'string' is not assignable to 'number'`,
+        "Autofixed from error -> Type 'string' is not assignable to 'number'",
       ]),
     )
   })
@@ -190,7 +190,7 @@ describe('autofix', () => {
           number: 1,
         },
         [
-          `$.number: Autofixed from error -> Type 'string' is not assignable to 'number'`,
+          "$.number: Autofixed from error -> Type 'string' is not assignable to 'number'",
         ],
       ),
     )
@@ -227,7 +227,7 @@ describe('autofix', () => {
           },
         },
         [
-          `$.a.b.number: Autofixed from error -> Type 'string' is not assignable to 'number'`,
+          "$.a.b.number: Autofixed from error -> Type 'string' is not assignable to 'number'",
         ],
       ),
     )
@@ -255,7 +255,7 @@ describe('autofix', () => {
           },
         ],
         [
-          `$[0].number[1]: Autofixed from error -> Type 'string' is not assignable to 'number'`,
+          "$[0].number[1]: Autofixed from error -> Type 'string' is not assignable to 'number'",
         ],
       ),
     )
@@ -269,7 +269,7 @@ describe('autofix', () => {
 
     expect(result.ok).toBe(false)
     expect(result.errors).toEqual([
-      `$.number: Type 'string' is not assignable to 'number'`,
+      "$.number: Type 'string' is not assignable to 'number'",
     ])
   })
 
@@ -299,7 +299,7 @@ describe('autofix', () => {
 
     expect(result).toEqual(
       successResult('number_42', [
-        `Autofixed from error -> Type 'number' is not assignable to 'string'`,
+        "Autofixed from error -> Type 'number' is not assignable to 'string'",
       ]),
     )
   })
@@ -316,7 +316,7 @@ describe('autofix', () => {
 
     expect(result.ok).toBe(false)
     expect(result.errors).toEqual([
-      `Type 'array' is not assignable to 'string'`,
+      "Type 'array' is not assignable to 'string'",
     ])
   })
 
@@ -348,7 +348,7 @@ describe('autofix', () => {
 
     expect(result).toEqual(
       successResult({ data: { value: 'converted_123' } }, [
-        `$.data.value: Autofixed from error -> Type 'number' is not assignable to 'string'`,
+        "$.data.value: Autofixed from error -> Type 'number' is not assignable to 'string'",
       ]),
     )
   })
@@ -379,9 +379,9 @@ describe('autofix', () => {
           { numbers: ['text', 'num_5'] },
         ],
         [
-          `$[0].numbers[0]: Autofixed from error -> Type 'number' is not assignable to 'string'`,
-          `$[0].numbers[2]: Autofixed from error -> Type 'number' is not assignable to 'string'`,
-          `$[1].numbers[1]: Autofixed from error -> Type 'number' is not assignable to 'string'`,
+          "$[0].numbers[0]: Autofixed from error -> Type 'number' is not assignable to 'string'",
+          "$[0].numbers[2]: Autofixed from error -> Type 'number' is not assignable to 'string'",
+          "$[1].numbers[1]: Autofixed from error -> Type 'number' is not assignable to 'string'",
         ],
       ),
     )
@@ -409,8 +409,8 @@ describe('autofix', () => {
 
     expect(result).toEqual(
       successResult({ required: '42', optional: '3.14' }, [
-        `$.required: Autofixed from error -> Type 'number' is not assignable to 'string'`,
-        `$.optional: Autofixed from error -> Type 'number' is not assignable to 'undefined | string'`,
+        "$.required: Autofixed from error -> Type 'number' is not assignable to 'string'",
+        "$.optional: Autofixed from error -> Type 'number' is not assignable to 'undefined | string'",
       ]),
     )
   })
@@ -427,7 +427,7 @@ describe('autofix', () => {
 
     expect(result).toEqual(
       successResult('42', [
-        `Autofixed from error -> Type 'number' is not assignable to 'string'`,
+        "$|union 1|: Autofixed from error -> Type 'number' is not assignable to 'string'",
       ]),
     )
   })
@@ -446,7 +446,7 @@ describe('autofix', () => {
 
     expect(result).toEqual(
       successResult('fallback_value', [
-        `Fallback used, errors -> Type 'array' is not assignable to 'string'`,
+        "Fallback used, errors -> Type 'array' is not assignable to 'string'",
       ]),
     )
   })
@@ -469,14 +469,14 @@ describe('autofix', () => {
 
     expect(result1).toEqual(
       successResult('valid_123', [
-        `Autofixed from error -> Type 'number' is not assignable to 'string'`,
+        "Autofixed from error -> Type 'number' is not assignable to 'string'",
       ]),
     )
 
     expect(result2).toEqual(
       successResult('invalid_42', [
-        `Autofixed from error -> Type 'number' is not assignable to 'string'`,
-        `Autofixed from error -> Predicate failed for type 'string'`,
+        "Autofixed from error -> Type 'number' is not assignable to 'string'",
+        "Autofixed from error -> Predicate failed for type 'string'",
       ]),
     )
   })
@@ -493,7 +493,7 @@ describe('autofix', () => {
 
     expect(result.ok).toBe(false)
     expect(result.errors).toEqual([
-      `Type 'number' is not assignable to 'string'`,
+      "Type 'number' is not assignable to 'string'",
     ])
   })
 
@@ -516,9 +516,9 @@ describe('autofix', () => {
       successResult(
         ['item_1', 'item_2', 'text', 'item_4'],
         [
-          `$[0]: Autofixed from error -> Type 'number' is not assignable to 'string'`,
-          `$[1]: Autofixed from error -> Type 'number' is not assignable to 'string'`,
-          `$[3]: Autofixed from error -> Type 'number' is not assignable to 'string'`,
+          "$[0]: Autofixed from error -> Type 'number' is not assignable to 'string'",
+          "$[1]: Autofixed from error -> Type 'number' is not assignable to 'string'",
+          "$[3]: Autofixed from error -> Type 'number' is not assignable to 'string'",
         ],
       ),
     )
@@ -544,22 +544,22 @@ describe('autofix', () => {
 
     expect(result1).toEqual(
       successResult({ status: 'active' }, [
-        `$.status: Autofixed from error -> Type 'boolean' is not assignable to 'string'`,
+        "$.status: Autofixed from error -> Type 'boolean' is not assignable to 'string'",
       ]),
     )
     expect(result2).toEqual(
       successResult({ status: 'inactive' }, [
-        `$.status: Autofixed from error -> Type 'boolean' is not assignable to 'string'`,
+        "$.status: Autofixed from error -> Type 'boolean' is not assignable to 'string'",
       ]),
     )
     expect(result3).toEqual(
       successResult({ status: 'positive' }, [
-        `$.status: Autofixed from error -> Type 'number' is not assignable to 'string'`,
+        "$.status: Autofixed from error -> Type 'number' is not assignable to 'string'",
       ]),
     )
     expect(result4).toEqual(
       successResult({ status: 'zero_or_negative' }, [
-        `$.status: Autofixed from error -> Type 'number' is not assignable to 'string'`,
+        "$.status: Autofixed from error -> Type 'number' is not assignable to 'string'",
       ]),
     )
   })
@@ -590,7 +590,7 @@ describe('autofix', () => {
 
     expect(result).toEqual(
       successResult('42', [
-        `Autofixed from error -> Type 'number' is not assignable to 'string'`,
+        "Autofixed from error -> Type 'number' is not assignable to 'string'",
       ]),
     )
   })
@@ -607,7 +607,7 @@ describe('autofix', () => {
 
     expect(result).toEqual(
       successResult('42', [
-        `Autofixed from error -> Type 'number' is not assignable to 'string'`,
+        "Autofixed from error -> Type 'number' is not assignable to 'string'",
       ]),
     )
   })
@@ -632,7 +632,7 @@ describe('autofix', () => {
 
     expect(result).toEqual(
       successResult({ safe: 'safe_123', warned: 'warned_456' }, [
-        `$.warned: Autofixed from error -> Type 'number' is not assignable to 'string'`,
+        "$.warned: Autofixed from error -> Type 'number' is not assignable to 'string'",
       ]),
     )
   })
@@ -653,8 +653,8 @@ describe('autofix', () => {
       successResult(
         ['item_1', 'item_2', 'item_3', 'item_4'],
         [
-          `$[0]: Autofixed from error -> Type 'number' is not assignable to 'string'`,
-          `$[2]: Autofixed from error -> Type 'number' is not assignable to 'string'`,
+          "$[0]: Autofixed from error -> Type 'number' is not assignable to 'string'",
+          "$[2]: Autofixed from error -> Type 'number' is not assignable to 'string'",
         ],
       ),
     )
@@ -682,7 +682,7 @@ describe('autofix', () => {
 
     expect(result3.ok).toBe(false)
     expect(result3.errors).toEqual([
-      `Type 'array' is not assignable to 'string'`,
+      "Type 'array' is not assignable to 'string'",
     ])
   })
 
@@ -711,7 +711,7 @@ describe('autofix', () => {
 
     expect(result.ok).toBe(false)
     expect(result.errors).toEqual([
-      `Type 'number' is not assignable to 'string'`,
+      "Type 'number' is not assignable to 'string'",
     ])
   })
 
@@ -733,7 +733,7 @@ describe('autofix', () => {
 
     expect(result2).toEqual(
       successResult('-5', [
-        `Autofixed from error -> Type 'number' is not assignable to 'string'`,
+        "Autofixed from error -> Type 'number' is not assignable to 'string'",
       ]),
     )
   })
@@ -752,8 +752,7 @@ test('withFallback not working sometimes', () => {
         a: undefined,
       },
       [
-        // eslint-disable-next-line no-useless-escape
-        `$.a: Fallback used, errors -> Type 'array' is not assignable to 'undefined | record\<string, string\>'`,
+        "$.a: Fallback used, errors -> Type 'array' is not assignable to 'undefined | record<string, string>'",
       ],
     ),
   )

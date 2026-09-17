@@ -137,7 +137,7 @@ test('recursive with modifiers', () => {
     successResult(
       [{ name: 'hello', childrenOrNull: null, childrenOrFallback: [] }],
       [
-        `$[0].childrenOrFallback: Fallback used, errors -> Type 'null' is not assignable to 'object[]'`,
+        "$[0].childrenOrFallback: Fallback used, errors -> Type 'null' is not assignable to 'object[]'",
       ],
     ),
   )

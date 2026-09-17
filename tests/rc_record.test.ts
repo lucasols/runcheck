@@ -66,13 +66,13 @@ describe('rc_record', () => {
     )
 
     expect(parse({ hello: 1 })).toEqual(
-      errorResult(`$.hello: Type 'number' is not assignable to 'string'`),
+      errorResult("$.hello: Type 'number' is not assignable to 'string'"),
     )
   })
 
   test('multiple keys and one error', () => {
     expect(parse({ hello: 'world', a: 1 })).toEqual(
-      errorResult(`$.a: Type 'number' is not assignable to 'string'`),
+      errorResult("$.a: Type 'number' is not assignable to 'string'"),
     )
   })
 
@@ -103,7 +103,7 @@ describe('rc_record', () => {
     )
 
     expect(parse2({ hello: 'world', a: 'b' })).toEqual(
-      errorResult(`$.a: Key 'a' is not allowed`),
+      errorResult("$.a: Key 'a' is not allowed"),
     )
 
     expect(parse2({ hello: 'world' })).toEqual(
@@ -123,7 +123,7 @@ describe('rc_record', () => {
     )
 
     expect(parse2({ array: [{ hello: 'world', a: 'b' }] })).toEqual(
-      errorResult(`$.array[0].a: Key 'a' is not allowed`),
+      errorResult("$.array[0].a: Key 'a' is not allowed"),
     )
   })
 
@@ -137,8 +137,8 @@ describe('rc_record', () => {
 
     expect(parse2({ hello: 'world', a: 'b', b: 2 })).toEqual(
       successResult({ hello: 'world' }, [
-        `$.a: Key 'a' is not allowed`,
-        `$.b: Type 'number' is not assignable to 'string'`,
+        "$.a: Key 'a' is not allowed",
+        "$.b: Type 'number' is not assignable to 'string'",
       ]),
     )
 
@@ -164,7 +164,7 @@ describe('rc_record', () => {
         {
           array: [{ hello: 'world' }],
         },
-        [`$.array[0].a: Key 'a' is not allowed`],
+        ["$.array[0].a: Key 'a' is not allowed"],
       ),
     )
   })
@@ -173,7 +173,7 @@ describe('rc_record', () => {
     const parse2 = rc_parser(rc_record(rc_any))
 
     expect(parse2([])).toEqual(
-      errorResult(`Type 'array' is not assignable to 'record<string, any>'`),
+      errorResult("Type 'array' is not assignable to 'record<string, any>'"),
     )
 
     expect(parse2({})).toEqual(successResult({}))
@@ -219,9 +219,11 @@ describe('rc_record', () => {
     expect(result).toEqual(
       errorResult(
         "$.test.ops|union 3|.required: Type 'undefined' is not assignable to 'boolean'",
-        '$.test.ops: not matches any other union member',
+        "$.test.ops|union 1|: Type 'object' is not assignable to 'undefined'",
+        "$.test.ops|union 2|: Type 'object' is not assignable to 'string(*)'",
         "$.test.channels|union 3|.required: Type 'undefined' is not assignable to 'boolean'",
-        '$.test.channels: not matches any other union member',
+        "$.test.channels|union 1|: Type 'object' is not assignable to 'undefined'",
+        "$.test.channels|union 2|: Type 'object' is not assignable to 'string(*)'",
       ),
     )
   })

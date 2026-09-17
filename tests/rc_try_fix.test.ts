@@ -31,7 +31,7 @@ describe('rc_try_fix', () => {
 
     expect(result).toEqual(
       successResult('1', [
-        `Fixed error -> Type 'number' is not assignable to 'string'`,
+        "Fixed error -> Type 'number' is not assignable to 'string'",
       ]),
     )
   })
@@ -42,7 +42,7 @@ describe('rc_try_fix', () => {
     const result = rc_parse(1, schema)
 
     expect(result).toEqual(
-      errorResult(`Type 'number' is not assignable to 'string'`),
+      errorResult("Type 'number' is not assignable to 'string'"),
     )
   })
 
@@ -56,7 +56,7 @@ describe('rc_try_fix', () => {
     const result = rc_parse(true, schema)
 
     expect(result).toEqual(
-      errorResult(`Type 'boolean' is not assignable to 'string'`),
+      errorResult("Type 'boolean' is not assignable to 'string'"),
     )
     expect(calls).toBe(1)
   })
@@ -79,10 +79,10 @@ describe('rc_try_fix', () => {
 
     expect(receivedInput).toEqual({ a: '1', b: 'x' })
     expect(receivedErrors).toEqual([
-      `$.b: Type 'string' is not assignable to 'number'`,
+      "$.b: Type 'string' is not assignable to 'number'",
     ])
     expect(receivedWarnings).toEqual([
-      `$.a: Autofixed from error -> Type 'string' is not assignable to 'number'`,
+      "$.a: Autofixed from error -> Type 'string' is not assignable to 'number'",
     ])
   })
 
@@ -101,8 +101,8 @@ describe('rc_try_fix', () => {
 
     expect(result).toEqual(
       successResult({ a: 1, b: 0 }, [
-        `$.b: Fixed error -> Type 'string' is not assignable to 'number'`,
-        `$.a: Autofixed from error -> Type 'string' is not assignable to 'number'`,
+        "$.b: Fixed error -> Type 'string' is not assignable to 'number'",
+        "$.a: Autofixed from error -> Type 'string' is not assignable to 'number'",
       ]),
     )
   })
@@ -116,7 +116,7 @@ describe('rc_try_fix', () => {
 
     expect(result).toEqual(
       successResult({ value: 42 }, [
-        `$.value: Fixed error -> Type 'string' is not assignable to 'number'`,
+        "$.value: Fixed error -> Type 'string' is not assignable to 'number'",
       ]),
     )
   })
@@ -137,7 +137,7 @@ describe('rc_try_fix', () => {
 
     expect(result).toEqual(
       successResult({ name: 'John', age: 30 }, [
-        `Fixed error -> Type 'string' is not assignable to 'object{ name: string, age: number }'`,
+        "Fixed error -> Type 'string' is not assignable to 'object{ name: string, age: number }'",
       ]),
     )
   })
@@ -152,7 +152,7 @@ describe('rc_try_fix', () => {
     const result = rc_parse(1, schema, { noWarnings: true })
 
     expect(result).toEqual(
-      errorResult(`Type 'number' is not assignable to 'string'`),
+      errorResult("Type 'number' is not assignable to 'string'"),
     )
     expect(called).toBe(false)
   })
@@ -164,7 +164,7 @@ describe('rc_try_fix', () => {
 
     expect(result).toEqual(
       successResult('fallback', [
-        `Fallback used, errors -> Type 'number' is not assignable to 'string'`,
+        "Fallback used, errors -> Type 'number' is not assignable to 'string'",
       ]),
     )
   })
@@ -188,7 +188,7 @@ describe('rc_try_fix', () => {
     // invalid input: the fixed member data must be merged
     expect(rc_parse({ a: '1', b: 'x' }, schema)).toEqual(
       successResult({ a: 1, b: 'x' }, [
-        `$.a: Fixed error -> Type 'string' is not assignable to 'number'`,
+        "$.a: Fixed error -> Type 'string' is not assignable to 'number'",
       ]),
     )
   })
