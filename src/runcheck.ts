@@ -1139,6 +1139,9 @@ export function rc_union<T extends RcType<any>[]>(
         )
       }
 
+      // A parent union must preserve this failure beyond its shallow limit.
+      if (deeperErrors) ctx.objErrKeyIndex_ = 1
+
       return parseFailure(this, input, ctx, {
         errors:
           !reportAll && errors.length > 1 ?
@@ -1589,7 +1592,7 @@ export function rc_disable_loose_array<T extends RcType<any>>(
         parentDisableLooseArray === true || !nonRecursive ?
           true
         : 'nonRecursive'
-      const result = type._parse_(input, ctx)
+      const result = type._parse_.call(this, input, ctx)
       ctx.noLooseArray_ = parentDisableLooseArray
 
       return result
