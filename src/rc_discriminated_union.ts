@@ -59,7 +59,7 @@ export function rc_discriminated_union<
 
   return {
     ...defaultProps,
-    _kind_: `discriminated_union`,
+    _kind_: 'discriminated_union',
     _is_object_: true,
     _shape_: {
       kind: 'discriminated_union',

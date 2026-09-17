@@ -12,7 +12,7 @@ import {
   rc_union,
   rc_unknown,
 } from '../src/runcheck'
-import { rc_discriminated_union } from "../src/rc_discriminated_union"
+import { rc_discriminated_union } from '../src/rc_discriminated_union'
 import { errorResult, successResult } from './testUtils'
 
 describe('rc_discriminated_union and rc_object', () => {

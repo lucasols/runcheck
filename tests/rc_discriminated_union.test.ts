@@ -31,11 +31,11 @@ describe('rc_discriminated_union', () => {
 
   test('discriminator fail', () => {
     expect(rc_parse({ type: 1, value: 'hello' }, shape)).toEqual(
-      errorResult(`$.type: Type 'number(1)' is not a valid discriminator`),
+      errorResult("$.type: Type 'number(1)' is not a valid discriminator"),
     )
 
     expect(rc_parse({ type: 'e', value: 'hello' }, shape)).toEqual(
-      errorResult(`$.type: Type 'string(e)' is not a valid discriminator`),
+      errorResult("$.type: Type 'string(e)' is not a valid discriminator"),
     )
   })
 
@@ -84,7 +84,7 @@ describe('rc_discriminated_union', () => {
 
     expect(rc_parse({ type: 'e', value: 'hello' }, shapeInUnion)).toEqual(
       errorResult(
-        `$|union 2|.type: Type 'string(e)' is not a valid discriminator`,
+        "$|union 2|.type: Type 'string(e)' is not a valid discriminator",
         'not matches any other union member',
       ),
     )

@@ -28,7 +28,7 @@ describe('default', () => {
 
   test('invalid inputs', () => {
     expect(parse('1')).toEqual(
-      errorResult(`Type 'string' is not assignable to 'number'`),
+      errorResult("Type 'string' is not assignable to 'number'"),
     )
   })
 
@@ -61,7 +61,7 @@ describe('default obj property', () => {
 
   test('invalid inputs', () => {
     expect(parse({ hello: '1', test: 'test' })).toEqual(
-      errorResult(`$.hello: Type 'string' is not assignable to 'number'`),
+      errorResult("$.hello: Type 'string' is not assignable to 'number'"),
     )
   })
 })
@@ -146,7 +146,7 @@ describe('schema.default() method', () => {
     const schema: RcType<number> = rc_number.default(0)
     const parse = rc_parser(schema)
     expect(parse('1')).toEqual(
-      errorResult(`Type 'string' is not assignable to 'number'`),
+      errorResult("Type 'string' is not assignable to 'number'"),
     )
   })
 
@@ -247,7 +247,7 @@ describe('schema.nullishDefault() method', () => {
     const schema: RcType<number> = rc_number.nullishDefault(0)
     const parse = rc_parser(schema)
     expect(parse('1')).toEqual(
-      errorResult(`Type 'string' is not assignable to 'number'`),
+      errorResult("Type 'string' is not assignable to 'number'"),
     )
   })
 

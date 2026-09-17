@@ -54,6 +54,23 @@ const result = rc_parse(input, shape)
 // result.warnings will return the warnings about the invalid elements
 ```
 
+## Array length bounds
+
+Use `minLength` and `maxLength` with `rc_array`, `rc_loose_array`, or
+`rc_array_filter_from_schema`:
+
+```ts
+const filters = rc_array(rc_string, { minLength: 1, maxLength: 10 })
+
+filters.parse([]) // error: Array length must be at least 1 (got 0)
+filters.optional().parse(undefined) // ok
+```
+
+Bounds are inclusive and apply to the parsed array, after filtering, loose item
+rejection, and duplicate removal in loose arrays. An array outside the bounds
+fails as a whole, including in loose mode. `maxLength: Infinity` means no upper
+bound. Bounds are used as supplied, without validating the configuration.
+
 ## Checking unique values
 
 With the `rc_array` or `rc_loose_array` type you can also use the `unique` option to check if the array has no duplicated values.
@@ -78,6 +95,30 @@ const shape = rc_array(
   },
 )
 ```
+
+# Union errors
+
+Simple unions such as `string | number` and literal unions keep a single compact
+type mismatch message. Unions with structured or custom failures retain property
+paths, member labels, and predicate errors. Deeper object failures (members that
+matched earlier properties) are reported first and never hidden by the default
+limit. Up to five other members are detailed; additional members are summarized.
+Every member is still checked for a match, regardless of this reporting limit.
+
+Set `unionErrorLimit` per parse to change the limit, or use `Infinity` to show all
+members' errors in schema order, including simple type mismatches. The option also
+applies to nested unions and `.or()` schemas:
+
+```ts
+schema.parse(input, { unionErrorLimit: Infinity })
+rc_parse(input, schema, { unionErrorLimit: 10 })
+schema.parseJson(json, { unionErrorLimit: Infinity })
+```
+
+The limit counts shallow union members, not individual error messages. Use a positive
+integer or `Infinity`. By default, object members stop at their first invalid
+property. `Infinity` also disables that shortcut to report all object property
+errors within union members.
 
 # Object types:
 
@@ -388,6 +429,11 @@ const input = 1
 
 const positiveNumberType = rc_number.where((input) => input > 0)
 ```
+
+Modifiers added after `.where()` are respected: for example,
+`rc_array(rc_string).where(items => items.length > 0).optional()` accepts
+`undefined` without running the predicate. The same applies to `.optionalKey()`,
+`.orNull()`, and `.orNullish()` for their accepted missing or null values.
 
 # Infer types from schemas
 

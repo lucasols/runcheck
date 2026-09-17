@@ -28,7 +28,7 @@ describe('rc_union', () => {
 
   test('fail', () => {
     expect(rc_parse(true, shape)).toEqual(
-      errorResult(`Type 'boolean' is not assignable to 'string | number'`),
+      errorResult("Type 'boolean' is not assignable to 'string | number'"),
     )
   })
 
@@ -189,7 +189,7 @@ test('nullable union error', () => {
   const shape = rc_union(rc_number, rc_string).orNull()
 
   expect(rc_parse(true, shape)).toEqual(
-    errorResult(`Type 'boolean' is not assignable to 'null | number | string'`),
+    errorResult("Type 'boolean' is not assignable to 'null | number | string'"),
   )
 })
 
@@ -214,7 +214,7 @@ describe('or', () => {
     expect(rc_parse(42, shape)).toEqual(successResult(42))
 
     expect(rc_parse(true, shape)).toEqual(
-      errorResult(`Type 'boolean' is not assignable to 'string | number'`),
+      errorResult("Type 'boolean' is not assignable to 'string | number'"),
     )
   })
 
@@ -246,7 +246,7 @@ describe('or', () => {
 
     expect(rc_parse(true, shape)).toEqual(
       errorResult(
-        `Type 'boolean' is not assignable to 'string | number | object'`,
+        "Type 'boolean' is not assignable to 'string | number | object'",
       ),
     )
   })
@@ -259,7 +259,7 @@ describe('or', () => {
 
     expect(rc_parse('green', shape)).toEqual(
       errorResult(
-        `Type 'string' is not assignable to 'string(red) | string(blue) | string(large) | string(small)'`,
+        "Type 'string' is not assignable to 'string(red) | string(blue) | string(large) | string(small)'",
       ),
     )
   })
@@ -273,7 +273,7 @@ describe('or', () => {
 
     expect(rc_parse(true, shape)).toEqual(
       errorResult(
-        `Type 'boolean' is not assignable to 'null | string | null | number'`,
+        "Type 'boolean' is not assignable to 'null | string | null | number'",
       ),
     )
   })
@@ -287,7 +287,7 @@ describe('or', () => {
 
     expect(rc_parse(true, shape)).toEqual(
       errorResult(
-        `Type 'boolean' is not assignable to 'undefined | string | undefined | number'`,
+        "Type 'boolean' is not assignable to 'undefined | string | undefined | number'",
       ),
     )
   })
@@ -302,7 +302,7 @@ describe('or', () => {
     expect(rc_parse([1, 2, 3], shape)).toEqual(successResult([1, 2, 3]))
 
     expect(rc_parse(['hello', 1], shape)).toEqual(
-      errorResult(`Type 'array' is not assignable to 'string[] | number[]'`),
+      errorResult("Type 'array' is not assignable to 'string[] | number[]'"),
     )
   })
 

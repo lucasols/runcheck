@@ -34,7 +34,7 @@ describe('rc_string', () => {
     const result = rc_parse(1, rc_string)
 
     expect(result).toEqual(
-      errorResult(`Type 'number' is not assignable to 'string'`),
+      errorResult("Type 'number' is not assignable to 'string'"),
     )
   })
 
@@ -52,7 +52,7 @@ describe('rc_string', () => {
         'hello',
         rc_string.where((input) => input.length === 6),
       ),
-    ).toEqual(errorResult(`Predicate failed for type 'string'`))
+    ).toEqual(errorResult("Predicate failed for type 'string'"))
   })
 })
 
@@ -65,15 +65,15 @@ describe('rc_number', () => {
 
   test('fail', () => {
     expect(rc_parse('1', rc_number)).toEqual(
-      errorResult(`Type 'string' is not assignable to 'number'`),
+      errorResult("Type 'string' is not assignable to 'number'"),
     )
 
     expect(rc_parse(NaN, rc_number)).toEqual(
-      errorResult(`Type 'NaN' is not assignable to 'number'`),
+      errorResult("Type 'NaN' is not assignable to 'number'"),
     )
 
     expect(rc_parse(Number('not a number'), rc_number)).toEqual(
-      errorResult(`Type 'NaN' is not assignable to 'number'`),
+      errorResult("Type 'NaN' is not assignable to 'number'"),
     )
 
     expect(rc_parse(NaN, rc_number.withFallback(5))).toEqual(
@@ -89,7 +89,7 @@ describe('rc_number', () => {
         2,
         rc_number.where((input) => input < 2),
       ),
-    ).toEqual(errorResult(`Predicate failed for type 'number'`))
+    ).toEqual(errorResult("Predicate failed for type 'number'"))
   })
 })
 
@@ -116,41 +116,41 @@ describe('rc_coerce_number', () => {
   test('fail', () => {
     expect(rc_parse('not a number', rc_coerce_number)).toEqual(
       errorResult(
-        `Type 'string' is not assignable to 'number_or_numeric_string'`,
+        "Type 'string' is not assignable to 'number_or_numeric_string'",
       ),
     )
 
     expect(rc_parse('', rc_coerce_number)).toEqual(
       errorResult(
-        `Type 'string' is not assignable to 'number_or_numeric_string'`,
+        "Type 'string' is not assignable to 'number_or_numeric_string'",
       ),
     )
 
     expect(rc_parse('  ', rc_coerce_number)).toEqual(
       errorResult(
-        `Type 'string' is not assignable to 'number_or_numeric_string'`,
+        "Type 'string' is not assignable to 'number_or_numeric_string'",
       ),
     )
 
     expect(rc_parse('Infinity', rc_coerce_number)).toEqual(
       errorResult(
-        `Type 'string' is not assignable to 'number_or_numeric_string'`,
+        "Type 'string' is not assignable to 'number_or_numeric_string'",
       ),
     )
 
     expect(rc_parse('1e999', rc_coerce_number)).toEqual(
       errorResult(
-        `Type 'string' is not assignable to 'number_or_numeric_string'`,
+        "Type 'string' is not assignable to 'number_or_numeric_string'",
       ),
     )
 
     expect(rc_parse(NaN, rc_coerce_number)).toEqual(
-      errorResult(`Type 'NaN' is not assignable to 'number_or_numeric_string'`),
+      errorResult("Type 'NaN' is not assignable to 'number_or_numeric_string'"),
     )
 
     expect(rc_parse(null, rc_coerce_number)).toEqual(
       errorResult(
-        `Type 'null' is not assignable to 'number_or_numeric_string'`,
+        "Type 'null' is not assignable to 'number_or_numeric_string'",
       ),
     )
   })
@@ -173,7 +173,7 @@ describe('rc_coerce_number', () => {
         rc_coerce_number.where((input) => input > 2),
       ),
     ).toEqual(
-      errorResult(`Predicate failed for type 'number_or_numeric_string'`),
+      errorResult("Predicate failed for type 'number_or_numeric_string'"),
     )
   })
 })
@@ -198,15 +198,15 @@ describe('rc_coerce_string', () => {
 
   test('fail', () => {
     expect(rc_parse(NaN, rc_coerce_string)).toEqual(
-      errorResult(`Type 'NaN' is not assignable to 'string_or_number'`),
+      errorResult("Type 'NaN' is not assignable to 'string_or_number'"),
     )
 
     expect(rc_parse(true, rc_coerce_string)).toEqual(
-      errorResult(`Type 'boolean' is not assignable to 'string_or_number'`),
+      errorResult("Type 'boolean' is not assignable to 'string_or_number'"),
     )
 
     expect(rc_parse(null, rc_coerce_string)).toEqual(
-      errorResult(`Type 'null' is not assignable to 'string_or_number'`),
+      errorResult("Type 'null' is not assignable to 'string_or_number'"),
     )
   })
 })
@@ -235,23 +235,23 @@ describe('rc_coerce_boolean', () => {
   test('fail', () => {
     expect(rc_parse(2, rc_coerce_boolean)).toEqual(
       errorResult(
-        `Type 'number' is not assignable to 'boolean_or_boolean_like'`,
+        "Type 'number' is not assignable to 'boolean_or_boolean_like'",
       ),
     )
 
     expect(rc_parse('TRUE', rc_coerce_boolean)).toEqual(
       errorResult(
-        `Type 'string' is not assignable to 'boolean_or_boolean_like'`,
+        "Type 'string' is not assignable to 'boolean_or_boolean_like'",
       ),
     )
 
     expect(rc_parse(null, rc_coerce_boolean)).toEqual(
-      errorResult(`Type 'null' is not assignable to 'boolean_or_boolean_like'`),
+      errorResult("Type 'null' is not assignable to 'boolean_or_boolean_like'"),
     )
 
     expect(rc_parse(undefined, rc_coerce_boolean)).toEqual(
       errorResult(
-        `Type 'undefined' is not assignable to 'boolean_or_boolean_like'`,
+        "Type 'undefined' is not assignable to 'boolean_or_boolean_like'",
       ),
     )
   })
@@ -283,23 +283,23 @@ describe('rc_coerce_date', () => {
 
   test('fail', () => {
     expect(rc_parse('not a date', rc_coerce_date)).toEqual(
-      errorResult(`Type 'string' is not assignable to 'date_or_date_like'`),
+      errorResult("Type 'string' is not assignable to 'date_or_date_like'"),
     )
 
     expect(rc_parse('', rc_coerce_date)).toEqual(
-      errorResult(`Type 'string' is not assignable to 'date_or_date_like'`),
+      errorResult("Type 'string' is not assignable to 'date_or_date_like'"),
     )
 
     expect(rc_parse(NaN, rc_coerce_date)).toEqual(
-      errorResult(`Type 'NaN' is not assignable to 'date_or_date_like'`),
+      errorResult("Type 'NaN' is not assignable to 'date_or_date_like'"),
     )
 
     expect(rc_parse(new Date('invalid'), rc_coerce_date)).toEqual(
-      errorResult(`Type 'object' is not assignable to 'date_or_date_like'`),
+      errorResult("Type 'object' is not assignable to 'date_or_date_like'"),
     )
 
     expect(rc_parse(null, rc_coerce_date)).toEqual(
-      errorResult(`Type 'null' is not assignable to 'date_or_date_like'`),
+      errorResult("Type 'null' is not assignable to 'date_or_date_like'"),
     )
   })
 })
@@ -391,19 +391,19 @@ describe('rc_instanceof', () => {
 
     // Invalid inputs
     expect(validator(true)).toEqual(
-      errorResult(`Type 'boolean' is not assignable to 'instanceof_MyClass'`),
+      errorResult("Type 'boolean' is not assignable to 'instanceof_MyClass'"),
     )
     expect(validator('string')).toEqual(
-      errorResult(`Type 'string' is not assignable to 'instanceof_MyClass'`),
+      errorResult("Type 'string' is not assignable to 'instanceof_MyClass'"),
     )
     expect(validator(123)).toEqual(
-      errorResult(`Type 'number' is not assignable to 'instanceof_MyClass'`),
+      errorResult("Type 'number' is not assignable to 'instanceof_MyClass'"),
     )
     expect(validator({})).toEqual(
-      errorResult(`Type 'object' is not assignable to 'instanceof_MyClass'`),
+      errorResult("Type 'object' is not assignable to 'instanceof_MyClass'"),
     )
     expect(validator([])).toEqual(
-      errorResult(`Type 'array' is not assignable to 'instanceof_MyClass'`),
+      errorResult("Type 'array' is not assignable to 'instanceof_MyClass'"),
     )
   })
 
@@ -411,10 +411,10 @@ describe('rc_instanceof', () => {
     const validator = rc_parser(rc_instanceof(MyClass))
 
     expect(validator(null)).toEqual(
-      errorResult(`Type 'null' is not assignable to 'instanceof_MyClass'`),
+      errorResult("Type 'null' is not assignable to 'instanceof_MyClass'"),
     )
     expect(validator(undefined)).toEqual(
-      errorResult(`Type 'undefined' is not assignable to 'instanceof_MyClass'`),
+      errorResult("Type 'undefined' is not assignable to 'instanceof_MyClass'"),
     )
   })
 
@@ -430,7 +430,7 @@ describe('rc_instanceof', () => {
 
     // Parent is not instance of child class
     expect(childValidator(parent)).toEqual(
-      errorResult(`Type 'object' is not assignable to 'instanceof_ChildClass'`),
+      errorResult("Type 'object' is not assignable to 'instanceof_ChildClass'"),
     )
 
     // Child is instance of child class
@@ -474,7 +474,7 @@ describe('rc_instanceof', () => {
     expect(validator(instance).error).toBeFalsy()
     expect(validator({})).toEqual(
       errorResult(
-        `Type 'object' is not assignable to 'instanceof_AnonymousClass'`,
+        "Type 'object' is not assignable to 'instanceof_AnonymousClass'",
       ),
     )
   })
@@ -490,12 +490,12 @@ describe('rc_instanceof', () => {
     // Invalid cases
     expect(validator(null)).toEqual(
       errorResult(
-        `Type 'null' is not assignable to 'undefined | instanceof_MyClass'`,
+        "Type 'null' is not assignable to 'undefined | instanceof_MyClass'",
       ),
     )
     expect(validator('string')).toEqual(
       errorResult(
-        `Type 'string' is not assignable to 'undefined | instanceof_MyClass'`,
+        "Type 'string' is not assignable to 'undefined | instanceof_MyClass'",
       ),
     )
   })
@@ -512,7 +512,7 @@ describe('rc_instanceof', () => {
     expect(nullableValidator(null).error).toBeFalsy()
     expect(nullableValidator(undefined)).toEqual(
       errorResult(
-        `Type 'undefined' is not assignable to 'null | instanceof_MyClass'`,
+        "Type 'undefined' is not assignable to 'null | instanceof_MyClass'",
       ),
     )
 
@@ -596,7 +596,7 @@ describe('rc_type.where', () => {
       rc_string.where((input) => input.length === 6),
     )
 
-    expect(result).toEqual(errorResult(`Predicate failed for type 'string'`))
+    expect(result).toEqual(errorResult("Predicate failed for type 'string'"))
   })
 
   test('fail with custom msg', () => {
@@ -607,7 +607,7 @@ describe('rc_type.where', () => {
       ),
     )
 
-    expect(result).toEqual(errorResult(`Predicate failed: too short`))
+    expect(result).toEqual(errorResult('Predicate failed: too short'))
   })
 })
 
@@ -622,27 +622,27 @@ test('getSchemaKind', () => {
 test('schema.parse', () => {
   expect(rc_string.parse('hello')).toEqual(successResult('hello'))
   expect(rc_string.parse(1)).toEqual(
-    errorResult(`Type 'number' is not assignable to 'string'`),
+    errorResult("Type 'number' is not assignable to 'string'"),
   )
 
   expect(rc_string.parse(5)).toEqual(
-    errorResult(`Type 'number' is not assignable to 'string'`),
+    errorResult("Type 'number' is not assignable to 'string'"),
   )
 
   expect(
     rc_string.withFallback('world').parse(5, { noWarnings: true }),
-  ).toEqual(errorResult(`Type 'number' is not assignable to 'string'`))
+  ).toEqual(errorResult("Type 'number' is not assignable to 'string'"))
 })
 
 test('schema.parseJson', () => {
   expect(rc_string.parseJson('"hello"')).toEqual(successResult('hello'))
   expect(rc_string.parseJson('1')).toEqual(
-    errorResult(`Type 'number' is not assignable to 'string'`),
+    errorResult("Type 'number' is not assignable to 'string'"),
   )
 
   expect(rc_number.parseJson('42')).toEqual(successResult(42))
   expect(rc_number.parseJson('"hello"')).toEqual(
-    errorResult(`Type 'string' is not assignable to 'number'`),
+    errorResult("Type 'string' is not assignable to 'number'"),
   )
 
   const objSchema = rc_object({
@@ -655,16 +655,62 @@ test('schema.parseJson', () => {
   )
 
   expect(objSchema.parseJson('{"name": "John", "age": "30"}')).toEqual(
-    errorResult(`$.age: Type 'string' is not assignable to 'number'`),
+    errorResult("$.age: Type 'string' is not assignable to 'number'"),
   )
 
   expect(objSchema.parseJson('{"name": "John"}')).toEqual(
-    errorResult(`$.age: Type 'undefined' is not assignable to 'number'`),
+    errorResult("$.age: Type 'undefined' is not assignable to 'number'"),
   )
 
   expect(rc_string.parseJson('invalid json')).toEqual(
     errorResult(
-      `json parsing error: Unexpected token 'i', "invalid json" is not valid JSON`,
+      'json parsing error: Unexpected token \'i\', "invalid json" is not valid JSON',
     ),
   )
+})
+
+describe('modifiers applied after where', () => {
+  test('optional and nullable modifiers skip the predicate without changing the original schema', () => {
+    let calls = 0
+    const schema = rc_string.where((value) => {
+      calls++
+      return value.length > 0 || { error: 'empty value' }
+    })
+
+    expect(schema.optional().parse(undefined)).toEqual(successResult(undefined))
+    expect(schema.orNull().parse(null)).toEqual(successResult(null))
+    expect(schema.orNullish().parse(undefined)).toEqual(
+      successResult(undefined),
+    )
+    expect(schema.orNullish().parse(null)).toEqual(successResult(null))
+    expect(rc_object({ value: schema.optionalKey() }).parse({})).toEqual(
+      successResult({ value: undefined }),
+    )
+    expect(calls).toBe(0)
+    expect(schema.parse(undefined)).toEqual(
+      errorResult("Type 'undefined' is not assignable to 'string'"),
+    )
+    expect(schema.optional().parse('')).toEqual(
+      errorResult('Predicate failed: empty value'),
+    )
+    expect(schema.optional().parse('valid')).toEqual(successResult('valid'))
+    expect(calls).toBe(2)
+  })
+
+  test('fallback and autofix applied after where handle predicate failures', () => {
+    const schema = rc_string.where((value) => value.length > 0)
+    expect(schema.withFallback('fallback').parse('')).toEqual(
+      successResult('fallback', [
+        "Fallback used, errors -> Predicate failed for type 'string'",
+      ]),
+    )
+    expect(schema.withAutofix(() => ({ fixed: 'fixed' })).parse('')).toEqual(
+      successResult('fixed', [
+        "Autofixed from error -> Predicate failed for type 'string'",
+      ]),
+    )
+    expect(
+      schema.withFallback('fallback').parse('', { noWarnings: true }),
+    ).toEqual(errorResult("Predicate failed for type 'string'"))
+  })
 })

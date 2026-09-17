@@ -1,6 +1,7 @@
 // @ts-check
 import eslint from '@eslint/js'
 import { extendedLintPlugin } from '@ls-stack/extended-lint'
+import stylistic from '@stylistic/eslint-plugin'
 import eslintUnicornPlugin from 'eslint-plugin-unicorn'
 import vitest from 'eslint-plugin-vitest'
 import tseslint from 'typescript-eslint'
@@ -31,11 +32,17 @@ export default tseslint.config(
   {
     plugins: {
       '@lucasols/extended-lint': extendedLintPlugin,
+      '@stylistic': stylistic,
       unicorn: eslintUnicornPlugin,
       vitest,
     },
 
     rules: {
+      '@stylistic/quotes': [
+        ERROR_IN_CI,
+        'single',
+        { avoidEscape: true, allowTemplateLiterals: 'never' },
+      ],
       'no-warning-comments': [ERROR_IN_CI, { terms: ['FIX:'] }],
       'no-constant-binary-expression': ERROR_IN_CI,
       'object-shorthand': ERROR_IN_CI,

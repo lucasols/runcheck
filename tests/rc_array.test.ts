@@ -36,14 +36,14 @@ describe('rc_array', () => {
     const result: RcParseResult<string[]> = rc_parse(1, rc_array(rc_string))
 
     expect(result).toMatchInlineSnapshot(
-      errorResult(`Type 'number' is not assignable to 'string[]'`),
+      errorResult("Type 'number' is not assignable to 'string[]'"),
     )
   })
 
   test('array element is wrong', () => {
     expect(
       expectParse({ input: ['ok', 0], type: rc_array(rc_string) }),
-    ).toEqual(errorResult(`$[1]: Type 'number' is not assignable to 'string'`))
+    ).toEqual(errorResult("$[1]: Type 'number' is not assignable to 'string'"))
   })
 })
 
@@ -69,7 +69,7 @@ describe('rc_loose_array', () => {
       successResult(
         ['hello', 'ok'],
         [
-          `$[1]: Rejected, error -> Type 'number' is not assignable to 'string'`,
+          "$[1]: Rejected, error -> Type 'number' is not assignable to 'string'",
         ],
       ),
     )
@@ -99,7 +99,7 @@ describe('rc_loose_array', () => {
       successResult(
         [{ a: { b: { c: 'ok' } } }, { a: { b: { c: 'ok' } } }],
         [
-          `$[1]: Rejected, error -> #.a.b.c: Type 'number' is not assignable to 'string'`,
+          "$[1]: Rejected, error -> #.a.b.c: Type 'number' is not assignable to 'string'",
         ],
       ),
     )
@@ -124,7 +124,7 @@ describe('rc_loose_array', () => {
           ['ok', 'world'],
         ],
         [
-          `$[1]: Rejected, error -> #[1]: Type 'number' is not assignable to 'string'`,
+          "$[1]: Rejected, error -> #[1]: Type 'number' is not assignable to 'string'",
         ],
       ),
     )
@@ -142,7 +142,7 @@ describe('array unique', () => {
       '3',
     ])
 
-    expect(wrongResult).toEqual(errorResult(`$[1]: string value is not unique`))
+    expect(wrongResult).toEqual(errorResult('$[1]: string value is not unique'))
 
     expect(helloParser(['1', '2', '3'])).toMatchInlineSnapshot(
       successResult(['1', '2', '3']),
@@ -162,7 +162,7 @@ describe('array unique', () => {
     expect(wrongResult).toEqual(
       successResult(
         ['1', '2', '3'],
-        [`$[1]: Rejected, error -> string value is not unique`],
+        ['$[1]: Rejected, error -> string value is not unique'],
       ),
     )
 
@@ -194,7 +194,7 @@ describe('array unique', () => {
     ])
 
     expect(wrongResult).toEqual(
-      errorResult(`$[1].id: Type 'number' with value "1" is not unique`),
+      errorResult('$[1].id: Type \'number\' with value "1" is not unique'),
     )
 
     expect(
@@ -223,7 +223,7 @@ describe('array unique', () => {
       successResult(
         [{ id: 1 }, { id: 2 }, { id: 3 }],
         [
-          `$[1]: Rejected, error -> #.id: Type 'number' with value "1" is not unique`,
+          '$[1]: Rejected, error -> #.id: Type \'number\' with value "1" is not unique',
         ],
       ),
     )
@@ -261,7 +261,7 @@ describe('array unique', () => {
 
     expect(error).toMatchInlineSnapshot(
       errorResult(
-        `$[2]: Type 'object' unique fn return with value "4" is not unique`,
+        '$[2]: Type \'object\' unique fn return with value "4" is not unique',
       ),
     )
   })
@@ -276,7 +276,7 @@ describe('rc_tuple', () => {
     expect(result).toEqual(successResult(['hello']))
 
     expect(helloParser(['hello', 'world'])).toEqual(
-      errorResult(`Type 'array' is not assignable to '[string]'`),
+      errorResult("Type 'array' is not assignable to '[string]'"),
     )
   })
 
@@ -284,7 +284,7 @@ describe('rc_tuple', () => {
     const result: RcParseResult<[string]> = rc_parse(1, rc_tuple([rc_string]))
 
     expect(result).toMatchInlineSnapshot(
-      errorResult(`Type 'number' is not assignable to '[string]'`),
+      errorResult("Type 'number' is not assignable to '[string]'"),
     )
   })
 
@@ -294,7 +294,7 @@ describe('rc_tuple', () => {
         input: ['ok', 0],
         type: rc_tuple([rc_string, rc_string]),
       }),
-    ).toEqual(errorResult(`$[1]: Type 'number' is not assignable to 'string'`))
+    ).toEqual(errorResult("$[1]: Type 'number' is not assignable to 'string'"))
   })
 })
 
@@ -318,7 +318,7 @@ test('rc_disable_loose_array', () => {
   const result = rc_parse([1, 'sdf', 3], rc_disable_loose_array(looseArray))
 
   expect(result).toEqual(
-    errorResult(`$[1]: Type 'string' is not assignable to 'number'`),
+    errorResult("$[1]: Type 'string' is not assignable to 'number'"),
   )
 
   const looseArrayInsideObject = rc_object({
@@ -332,7 +332,7 @@ test('rc_disable_loose_array', () => {
   )
 
   expect(result2).toEqual(
-    errorResult(`$.b[1]: Type 'string' is not assignable to 'number'`),
+    errorResult("$.b[1]: Type 'string' is not assignable to 'number'"),
   )
 })
 
@@ -371,7 +371,7 @@ describe('rc_array_filter_from_schema', () => {
     const result = rc_parse(values, schema)
 
     expect(result).toEqual(
-      errorResult(`$[1].deleted: Type 'string' is not assignable to 'boolean'`),
+      errorResult("$[1].deleted: Type 'string' is not assignable to 'boolean'"),
     )
   })
 
@@ -385,7 +385,7 @@ describe('rc_array_filter_from_schema', () => {
     const result = rc_parse(values, schema)
 
     expect(result).toEqual(
-      errorResult(`$[2].value: Type 'number' is not assignable to 'string'`),
+      errorResult("$[2].value: Type 'number' is not assignable to 'string'"),
     )
   })
 
@@ -413,7 +413,7 @@ describe('rc_array_filter_from_schema', () => {
       successResult(
         [{ value: 'hello' }, { value: 'world' }, { value: 'test' }],
         [
-          `$[1].deleted: Fallback used, errors -> Type 'string' is not assignable to 'boolean'`,
+          "$[1].deleted: Fallback used, errors -> Type 'string' is not assignable to 'boolean'",
         ],
       ),
     )
@@ -459,7 +459,7 @@ describe('rc_array_filter_from_schema', () => {
         successResult(
           [{ value: 'hello' }, { value: 'test' }],
           [
-            `$[1]: Rejected, error -> #.deleted: Type 'string' is not assignable to 'boolean'`,
+            "$[1]: Rejected, error -> #.deleted: Type 'string' is not assignable to 'boolean'",
           ],
         ),
       )
@@ -478,7 +478,7 @@ describe('rc_array_filter_from_schema', () => {
         successResult(
           [{ value: 'hello' }],
           [
-            `$[2]: Rejected, error -> #.value: Type 'number' is not assignable to 'string'`,
+            "$[2]: Rejected, error -> #.value: Type 'number' is not assignable to 'string'",
           ],
         ),
       )
@@ -519,7 +519,7 @@ test('reproduce bug in rc_loose_array', () => {
         { type: 'select', options: [] },
       ],
       [
-        `$[1]|type: select|.options[0]: Rejected, error -> #.value: Type 'undefined' is not assignable to 'string'`,
+        "$[1]|type: select|.options[0]: Rejected, error -> #.value: Type 'undefined' is not assignable to 'string'",
       ],
     ),
   )

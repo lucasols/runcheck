@@ -43,7 +43,7 @@ describe('rc_object', () => {
 
     expect(result).toEqual(
       errorResult(
-        `Type 'number' is not assignable to 'object{ hello: string }'`,
+        "Type 'number' is not assignable to 'object{ hello: string }'",
       ),
     )
   })
@@ -56,7 +56,7 @@ describe('rc_object', () => {
 
     expect(result).toEqual(
       successResult({ hello: 'world' }, [
-        `Fallback used, errors -> Type 'number' is not assignable to 'object{ hello: string }'`,
+        "Fallback used, errors -> Type 'number' is not assignable to 'object{ hello: string }'",
       ]),
     )
   })
@@ -68,7 +68,7 @@ describe('rc_object', () => {
     )
 
     expect(result).toEqual(
-      errorResult(`$.hello: Type 'number' is not assignable to 'string'`),
+      errorResult("$.hello: Type 'number' is not assignable to 'string'"),
     )
   })
 
@@ -81,8 +81,8 @@ describe('rc_object', () => {
 
     expect(result).toEqual(
       errorResult(
-        `$.hello: Type 'number' is not assignable to 'string'`,
-        `$.ok: Type 'string' is not assignable to 'number'`,
+        "$.hello: Type 'number' is not assignable to 'string'",
+        "$.ok: Type 'string' is not assignable to 'number'",
       ),
     )
   })
@@ -115,7 +115,7 @@ describe('rc_object', () => {
     }
 
     expect(result).toEqual(
-      errorResult(`$.hello.world: Type 'number' is not assignable to 'string'`),
+      errorResult("$.hello.world: Type 'number' is not assignable to 'string'"),
     )
   })
 
@@ -140,7 +140,7 @@ describe('rc_object', () => {
 
     expect(result).toEqual(
       errorResult(
-        `$.hello.world.value: Type 'string' is not assignable to 'number'`,
+        "$.hello.world.value: Type 'string' is not assignable to 'number'",
       ),
     )
   })
@@ -201,7 +201,7 @@ describe('rc_object', () => {
     )
 
     expect(result).toEqual(
-      errorResult(`$.array[2]: Type 'string' is not assignable to 'number'`),
+      errorResult("$.array[2]: Type 'string' is not assignable to 'number'"),
     )
   })
 
@@ -222,7 +222,7 @@ describe('rc_object', () => {
     )
 
     expect(result).toEqual(
-      errorResult(`$.array[2].id: Type 'string' is not assignable to 'number'`),
+      errorResult("$.array[2].id: Type 'string' is not assignable to 'number'"),
     )
   })
 })
@@ -256,7 +256,7 @@ describe('rc_obj_merges', () => {
     const result = parser(input2)
 
     expect(result).toEqual(
-      errorResult(`$.c: Type 'number' is not assignable to 'string'`),
+      errorResult("$.c: Type 'number' is not assignable to 'string'"),
     )
   })
 })
@@ -306,7 +306,7 @@ describe('rc_get_from_key_as_fallback', () => {
     const result = parse(input)
 
     expect(result).toEqual(
-      errorResult(`$.id: Type 'string' is not assignable to 'number'`),
+      errorResult("$.id: Type 'string' is not assignable to 'number'"),
     )
   })
 
@@ -356,7 +356,7 @@ describe('rc_get_from_key_as_fallback', () => {
       ])
 
       expect(wrongResult).toEqual(
-        errorResult(`$[1].id: Type 'number' with value "1" is not unique`),
+        errorResult('$[1].id: Type \'number\' with value "1" is not unique'),
       )
     })
 
@@ -560,7 +560,7 @@ describe('rc_extends_obj', () => {
     const schema = rc_obj_extends(baseSchema)
 
     expect(rc_parse({ name: 123, id: 1, extra: 'world' }, schema)).toEqual(
-      errorResult(`$.name: Type 'number' is not assignable to 'string'`),
+      errorResult("$.name: Type 'number' is not assignable to 'string'"),
     )
   })
 
@@ -988,7 +988,7 @@ describe('rc_strict_obj', () => {
     )
 
     expect(result).toEqual(
-      errorResult(`Key 'excess' is not defined in the object shape`),
+      errorResult("Key 'excess' is not defined in the object shape"),
     )
   })
 
@@ -1001,7 +1001,7 @@ describe('rc_strict_obj', () => {
     )
 
     expect(result).toEqual(
-      errorResult(`Key 'excess' is not defined in the object shape`),
+      errorResult("Key 'excess' is not defined in the object shape"),
     )
   })
 
@@ -1015,7 +1015,7 @@ describe('rc_strict_obj', () => {
     const result = rc_parse(input, strictObjSchema)
 
     expect(result).toEqual(
-      errorResult(`Key 'excess' is not defined in the object shape`),
+      errorResult("Key 'excess' is not defined in the object shape"),
     )
   })
 
@@ -1040,8 +1040,8 @@ describe('rc_strict_obj', () => {
 
     expect(result).toEqual(
       errorResult(
-        `$.obj: Key 'excess' is not defined in the object shape`,
-        `$.obj2: Key 'excess' is not defined in the object shape`,
+        "$.obj: Key 'excess' is not defined in the object shape",
+        "$.obj2: Key 'excess' is not defined in the object shape",
       ),
     )
   })
@@ -1095,7 +1095,7 @@ describe('rc_strict_obj', () => {
 
     expect(result).toEqual(
       errorResult(
-        `$.array[0]: Key 'excess' is not defined in the object shape`,
+        "$.array[0]: Key 'excess' is not defined in the object shape",
       ),
     )
   })
@@ -1109,7 +1109,7 @@ describe('rc_strict_obj', () => {
     )
 
     expect(result).toEqual(
-      errorResult(`$.user: Type 'undefined' is not assignable to 'string'`),
+      errorResult("$.user: Type 'undefined' is not assignable to 'string'"),
     )
   })
 
@@ -1123,9 +1123,9 @@ describe('rc_strict_obj', () => {
 
     expect(result).toEqual(
       errorResult(
-        `Key 'user' is missing`,
-        `Key 'extra' is not defined in the object shape`,
-        `Key 'extra2' is not defined in the object shape`,
+        "Key 'user' is missing",
+        "Key 'extra' is not defined in the object shape",
+        "Key 'extra2' is not defined in the object shape",
       ),
     )
   })
@@ -1293,7 +1293,7 @@ describe('rc_obj_builder modifiers', () => {
     test('fail', () => {
       expect(rc_parse({ obj: null }, shape)).toEqual(
         errorResult(
-          `$.obj: Type 'null' is not assignable to 'undefined | object{ a: string }'`,
+          "$.obj: Type 'null' is not assignable to 'undefined | object{ a: string }'",
         ),
       )
     })
@@ -1331,7 +1331,7 @@ describe('rc_obj_builder modifiers', () => {
     test('fail', () => {
       expect(rc_parse({ obj: 1 }, shape)).toEqual(
         errorResult(
-          `$.obj: Type 'number' is not assignable to 'null | undefined | object{ a: string, b: number }'`,
+          "$.obj: Type 'number' is not assignable to 'null | undefined | object{ a: string, b: number }'",
         ),
       )
     })
@@ -1359,7 +1359,7 @@ describe('rc_obj_builder modifiers', () => {
     test('fail', () => {
       expect(rc_parse({ obj: undefined }, shape)).toEqual(
         errorResult(
-          `$.obj: Type 'undefined' is not assignable to 'null | object{ a: string }'`,
+          "$.obj: Type 'undefined' is not assignable to 'null | object{ a: string }'",
         ),
       )
     })
@@ -1401,7 +1401,7 @@ describe('detailed shape description in error message', () => {
 
     expect(result).toEqual(
       errorResult(
-        `Type 'number' is not assignable to 'object{ a: string, b: string, c: string, d: string, e: string, f: string, g: string, h: string, i: string, ... }'`,
+        "Type 'number' is not assignable to 'object{ a: string, b: string, c: string, d: string, e: string, f: string, g: string, h: string, i: string, ... }'",
       ),
     )
   })
@@ -1412,7 +1412,7 @@ describe('detailed shape description in error message', () => {
     const result = rc_parse(1, schema)
 
     expect(result).toEqual(
-      errorResult(`Type 'number' is not assignable to 'string | strict_obj'`),
+      errorResult("Type 'number' is not assignable to 'string | strict_obj'"),
     )
   })
 })
@@ -1427,8 +1427,8 @@ test('error in empty string key', () => {
 
   expect(result).toEqual(
     errorResult(
-      `$['']: Type 'number' is not assignable to 'string'`,
-      `$.record['']: Type 'number' is not assignable to 'string'`,
+      "$['']: Type 'number' is not assignable to 'string'",
+      "$.record['']: Type 'number' is not assignable to 'string'",
     ),
   )
 })
