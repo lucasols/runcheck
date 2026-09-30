@@ -10,8 +10,10 @@ import {
   isRcType,
   normalizedTypeOf,
   parse,
+  parseFailure,
   rc_array,
   rc_loose_array,
+  setPath,
   snakeCase,
 } from './runcheck'
 
@@ -154,8 +156,6 @@ export function rc_object<T extends RcObject>(
     return {
       key,
       type,
-      // computed lazily on first parse to keep schema creation cheap
-      subPath: null as string | null,
       snakeCaseKey: normalizeKeysFrom === 'snake_case' ? snakeCase(key) : '',
     }
   })
@@ -168,8 +168,8 @@ export function rc_object<T extends RcObject>(
     _is_object_: true,
     _is_extend_obj_: !!extendsObj,
     _parse_(inputObj, ctx) {
-      return parse<TypeOfObjectType<T>>(this, inputObj, ctx, () => {
-        if (!isObject(inputObj)) {
+      if (!isObject(inputObj)) {
+        return parse<TypeOfObjectType<T>>(this, inputObj, ctx, () => {
           ctx.objErrKeyIndex_ = -1
 
           if (ctx.objErrShortCircuit_ && !this._detailed_obj_shape_) {
@@ -206,144 +206,136 @@ export function rc_object<T extends RcObject>(
               ),
             ],
           }
+        })
+      }
+
+      const isStrict = this._is_strict_obj_ || ctx.strictObj_
+
+      const excessKeys =
+        isStrict ? new Set<string>(Object.keys(inputObj)) : undefined
+
+      if (excessKeys && excessKeys.size > shapeEntries.length) {
+        ctx.objErrKeyIndex_ = -1
+        const errors: ErrorWithPath[] = []
+
+        if (ctx.objErrShortCircuit_) {
+          return parseFailure(this, inputObj, ctx, {
+            data: undefined,
+            errors: [
+              getWarningOrErrorWithPath(
+                ctx,
+                `Expected strict object with ${shapeEntries.length} keys but got ${excessKeys.size}`,
+              ),
+            ],
+          })
         }
 
-        const isStrict = this._is_strict_obj_ || ctx.strictObj_
+        for (const { key } of shapeEntries) {
+          if (!excessKeys.has(key)) {
+            errors.push(
+              getWarningOrErrorWithPath(ctx, `Key '${key}' is missing`),
+            )
+          } else {
+            excessKeys.delete(key)
+          }
+        }
 
-        const excessKeys =
-          isStrict ? new Set<string>(Object.keys(inputObj)) : undefined
+        for (const key of excessKeys) {
+          errors.push(
+            getWarningOrErrorWithPath(
+              ctx,
+              `Key '${key}' is not defined in the object shape`,
+            ),
+          )
+        }
 
-        if (excessKeys && excessKeys.size > shapeEntries.length) {
-          ctx.objErrKeyIndex_ = -1
-          const errors: ErrorWithPath[] = []
+        return parseFailure(this, inputObj, ctx, { data: undefined, errors })
+      }
+
+      const resultObj: Record<any, string> = {} as any
+      const resultErrors: ErrorWithPath[] = []
+
+      const parentLen = ctx.pathLen_
+
+      let i = -1
+      for (const shapeEntry of shapeEntries) {
+        const key = shapeEntry.key
+        const type = shapeEntry.type
+
+        const typekey = key as keyof T
+        i += 1
+
+        setPath(ctx, parentLen, key)
+
+        let input = inputObj[key]
+        let keyToDeleteFromExcessKeys = key
+
+        if (input === undefined && type._alternative_key_) {
+          input = inputObj[type._alternative_key_]
+          keyToDeleteFromExcessKeys = type._alternative_key_
+        }
+
+        if (input === undefined && shapeEntry.snakeCaseKey) {
+          input = inputObj[shapeEntry.snakeCaseKey]
+          keyToDeleteFromExcessKeys = shapeEntry.snakeCaseKey
+        }
+
+        excessKeys?.delete(keyToDeleteFromExcessKeys)
+
+        const parseResult = type._parse_(input, ctx)
+
+        if (parseResult.ok) {
+          resultObj[typekey] = parseResult.data
+        }
+        //
+        else {
+          for (const subError of parseResult.errors) {
+            setPath(ctx, parentLen, key)
+            resultErrors.push(subError)
+          }
 
           if (ctx.objErrShortCircuit_) {
-            return {
-              data: undefined,
-              errors: [
-                getWarningOrErrorWithPath(
-                  ctx,
-                  `Expected strict object with ${shapeEntries.length} keys but got ${excessKeys.size}`,
-                ),
-              ],
-            }
+            ctx.objErrKeyIndex_ = i
+            break
           }
+        }
+      }
 
-          for (const { key } of shapeEntries) {
-            if (!excessKeys.has(key)) {
-              errors.push(
-                getWarningOrErrorWithPath(ctx, `Key '${key}' is missing`),
-              )
-            } else {
-              excessKeys.delete(key)
-            }
-          }
-
+      if (excessKeys) {
+        if (excessKeys.size > 0) {
           for (const key of excessKeys) {
-            errors.push(
+            ctx.pathLen_ = parentLen
+            resultErrors.push(
               getWarningOrErrorWithPath(
                 ctx,
                 `Key '${key}' is not defined in the object shape`,
               ),
             )
           }
-
-          return {
-            data: undefined,
-            errors,
-          }
         }
+      }
 
-        const resultObj: Record<any, string> = {} as any
-        const resultErrors: ErrorWithPath[] = []
+      if (resultErrors.length > 0) {
+        return parseFailure(this, inputObj, ctx, {
+          errors: resultErrors,
+          data: undefined,
+        })
+      }
 
-        const parentPath = ctx.path_
+      ctx.pathLen_ = parentLen
 
-        let i = -1
-        for (const shapeEntry of shapeEntries) {
-          const key = shapeEntry.key
-          const type = shapeEntry.type
-
-          const typekey = key as keyof T
-          i += 1
-
-          let subPath = shapeEntry.subPath
-          if (subPath === null) {
-            subPath = key === '' || key.includes(' ') ? `['${key}']` : `.${key}`
-            shapeEntry.subPath = subPath
-          }
-
-          const path = `${parentPath}${subPath}`
-
-          ctx.path_ = path
-
-          let input = inputObj[key]
-          let keyToDeleteFromExcessKeys = key
-
-          if (input === undefined && type._alternative_key_) {
-            input = inputObj[type._alternative_key_]
-            keyToDeleteFromExcessKeys = type._alternative_key_
-          }
-
-          if (input === undefined && shapeEntry.snakeCaseKey) {
-            input = inputObj[shapeEntry.snakeCaseKey]
-            keyToDeleteFromExcessKeys = shapeEntry.snakeCaseKey
-          }
-
-          excessKeys?.delete(keyToDeleteFromExcessKeys)
-
-          const parseResult = type._parse_(input, ctx)
-
-          if (parseResult.ok) {
-            resultObj[typekey] = parseResult.data
-          }
-          //
-          else {
-            for (const subError of parseResult.errors) {
-              ctx.path_ = path
-              resultErrors.push(subError)
-            }
-
-            if (ctx.objErrShortCircuit_) {
-              ctx.objErrKeyIndex_ = i
-              break
-            }
-          }
+      if (this._is_extend_obj_) {
+        return {
+          ok: true,
+          data: {
+            ...(inputObj as any),
+            ...(resultObj as any),
+          },
+          errors: undefined,
         }
+      }
 
-        if (excessKeys) {
-          if (excessKeys.size > 0) {
-            for (const key of excessKeys) {
-              ctx.path_ = parentPath
-
-              resultErrors.push(
-                getWarningOrErrorWithPath(
-                  ctx,
-                  `Key '${key}' is not defined in the object shape`,
-                ),
-              )
-            }
-          }
-        }
-
-        if (resultErrors.length > 0) {
-          return { errors: resultErrors, data: undefined }
-        }
-
-        ctx.path_ = parentPath
-
-        if (this._is_extend_obj_) {
-          return {
-            errors: false,
-            data: {
-              ...(inputObj as any),
-              ...(resultObj as any),
-            },
-          }
-        }
-
-        return { errors: false, data: resultObj as any }
-      })
+      return { ok: true, data: resultObj as any, errors: undefined }
     },
   }
 }

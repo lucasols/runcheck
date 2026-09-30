@@ -66,7 +66,13 @@ export type RcInferType<T extends RcType<any>> =
 
 type ParseResultCtx = {
   warnings_: string[]
-  path_: string
+  /**
+   * Path segments of the value being parsed. Only the first `pathLen_`
+   * segments are part of the path. Segments are joined lazily by `getPath` so
+   * valid inputs never pay for path strings.
+   */
+  pathSegs_: (PathSegment | undefined)[]
+  pathLen_: number
   objErrShortCircuit_: boolean
   objErrKeyIndex_: number
   strictObj_: boolean
@@ -74,7 +80,94 @@ type ParseResultCtx = {
   noLooseArray_: boolean | 'nonRecursive'
   unionErrorLimit_: number
   deferredErrorType_: RcType<any> | undefined
-  deferredErrorPath_: string
+  deferredErrorPathLen_: number
+}
+
+/**
+ * A path segment that is used as is, e.g. `|union 1|`
+ * @internal
+ */
+export type PathLabel = { label_: string }
+
+/** Object keys are strings, array indexes are numbers */
+type PathSegment = string | number | PathLabel
+
+/** @internal */
+export function pathLabel(label: string): PathLabel {
+  return { label_: label }
+}
+
+const outputPathLabel = pathLabel('|output|')
+
+// Reusing the ctx (and its path segments array) avoids allocating them on every
+// parse. Nested parses (e.g. inside predicates) find the pool empty and create
+// their own ctx, a parse that throws simply doesn't return its ctx to the pool.
+let ctxPool: ParseResultCtx | undefined
+
+function createCtx(noWarnings: boolean, unionErrorLimit: number) {
+  const pooled = ctxPool
+  if (pooled) {
+    ctxPool = undefined
+    pooled.pathLen_ = 0
+    pooled.objErrShortCircuit_ = false
+    pooled.objErrKeyIndex_ = 0
+    pooled.noWarnings_ = noWarnings
+    pooled.strictObj_ = false
+    pooled.noLooseArray_ = false
+    pooled.unionErrorLimit_ = unionErrorLimit
+    pooled.deferredErrorType_ = undefined
+    pooled.deferredErrorPathLen_ = 0
+    return pooled
+  }
+
+  const ctx: ParseResultCtx = {
+    warnings_: [],
+    pathSegs_: [],
+    pathLen_: 0,
+    objErrShortCircuit_: false,
+    objErrKeyIndex_: 0,
+    noWarnings_: noWarnings,
+    strictObj_: false,
+    noLooseArray_: false,
+    unionErrorLimit_: unionErrorLimit,
+    deferredErrorType_: undefined,
+    deferredErrorPathLen_: 0,
+  }
+
+  return ctx
+}
+
+function releaseCtx(ctx: ParseResultCtx) {
+  if (ctx.warnings_.length > 0) ctx.warnings_ = []
+  ctxPool = ctx
+}
+
+/** @internal */
+export function setPath(
+  ctx: ParseResultCtx,
+  parentLen: number,
+  segment: PathSegment | undefined,
+) {
+  ctx.pathSegs_[parentLen] = segment
+  ctx.pathLen_ = parentLen + 1
+}
+
+function getPath(ctx: ParseResultCtx): string {
+  let path = ''
+
+  for (let i = 0; i < ctx.pathLen_; i++) {
+    const segment = ctx.pathSegs_[i]
+
+    path +=
+      typeof segment === 'string' ?
+        segment === '' || segment.includes(' ') ?
+          `['${segment}']`
+        : `.${segment}`
+      : typeof segment === 'number' ? `[${segment}]`
+      : (segment?.label_ ?? '')
+  }
+
+  return path
 }
 
 // A union materializes these errors only if every member fails. Match both the
@@ -258,10 +351,11 @@ export type ErrorWithPath = string & { __withPath: true }
 type ErrorWithoutPath = string & { __withPath?: never }
 
 export function getWarningOrErrorWithPath(
-  ctx: { path_: string },
+  ctx: ParseResultCtx,
   message: ErrorWithoutPath,
 ): ErrorWithPath {
-  return `${ctx.path_ ? `$${ctx.path_}: ` : ''}${message}` as ErrorWithPath
+  const path = getPath(ctx)
+  return `${path ? `$${path}: ` : ''}${message}` as ErrorWithPath
 }
 
 function addWarning(ctx: ParseResultCtx, warning: string) {
@@ -304,7 +398,8 @@ function parseIf<T>(
 }
 
 // Keep fallback, autofix and diagnostic work out of the common success path.
-function parseFailure<T>(
+/** @internal */
+export function parseFailure<T>(
   type: RcType<T>,
   input: unknown,
   ctx: ParseResultCtx,
@@ -367,7 +462,8 @@ function parseFailure<T>(
     errors:
       isValid ? isValid.errors
       : (
-        ctx.deferredErrorType_ === type && ctx.deferredErrorPath_ === ctx.path_
+        ctx.deferredErrorType_ === type &&
+        ctx.deferredErrorPathLen_ === ctx.pathLen_
       ) ?
         deferredTypeErrors
       : [getWarningOrErrorWithPath(ctx, getErrorMsg(type, input))],
@@ -409,9 +505,10 @@ function getResultErrors(
   type: RcType<any>,
   input: unknown,
 ) {
-  return isValid ?
-      isValid.errors.map((err) => err.replace(ctx.path_, '')).join('; ')
-    : getErrorMsg(type, input)
+  if (!isValid) return getErrorMsg(type, input)
+
+  const path = getPath(ctx)
+  return isValid.errors.map((err) => err.replace(path, '')).join('; ')
 }
 
 function withAutofix(
@@ -733,13 +830,14 @@ export const rc_coerce_date: RcType<Date> = {
 export const rc_date: RcType<Date> = {
   ...defaultProps,
   _parse_(input, ctx) {
-    return parse(this, input, ctx, () => {
-      return (
-        typeof input === 'object' &&
+    return parseIf(
+      this,
+      input,
+      ctx,
+      typeof input === 'object' &&
         input instanceof Date &&
-        !Number.isNaN(input.getTime())
-      )
-    })
+        !Number.isNaN(input.getTime()),
+    )
   },
   _kind_: 'date',
   _shape_: 'date',
@@ -760,9 +858,7 @@ export function rc_instanceof<T extends new (...args: any[]) => any>(
   return {
     ...defaultProps,
     _parse_(input, ctx) {
-      return parse(this, input, ctx, () => {
-        return input instanceof classToCheck
-      })
+      return parseIf(this, input, ctx, input instanceof classToCheck)
     },
     _kind_: `instanceof_${classToCheck.name || 'AnonymousClass'}`,
   }
@@ -790,15 +886,16 @@ export function rc_literals(
   return {
     ...defaultProps,
     _parse_(input, ctx) {
-      return parse(this, input, ctx, () => {
-        for (const literal of literals) {
-          if (input === literal) {
-            return true
-          }
-        }
+      let isValid = false
 
-        return false
-      })
+      for (const literal of literals) {
+        if (input === literal) {
+          isValid = true
+          break
+        }
+      }
+
+      return parseIf(this, input, ctx, isValid)
     },
     _show_value_in_error_: true,
     _literal_values_: literals,
@@ -841,11 +938,11 @@ export function rc_string_starts_with<const P extends string>(
   return {
     ...defaultProps,
     _parse_(input, ctx) {
-      return parse(
+      return parseIf(
         this,
         input,
         ctx,
-        () => typeof input === 'string' && input.startsWith(prefix),
+        typeof input === 'string' && input.startsWith(prefix),
       )
     },
     _show_value_in_error_: true,
@@ -872,11 +969,11 @@ export function rc_string_ends_with<const S extends string>(
   return {
     ...defaultProps,
     _parse_(input, ctx) {
-      return parse(
+      return parseIf(
         this,
         input,
         ctx,
-        () => typeof input === 'string' && input.endsWith(suffix),
+        typeof input === 'string' && input.endsWith(suffix),
       )
     },
     _show_value_in_error_: true,
@@ -903,11 +1000,11 @@ export function rc_string_contains<const S extends string>(
   return {
     ...defaultProps,
     _parse_(input, ctx) {
-      return parse(
+      return parseIf(
         this,
         input,
         ctx,
-        () => typeof input === 'string' && input.includes(substring),
+        typeof input === 'string' && input.includes(substring),
       )
     },
     _show_value_in_error_: true,
@@ -1016,7 +1113,7 @@ export function rc_union<T extends RcType<any>[]>(
   let kind = ''
   let allIsObject = false
   let canUseCompactErrors = true
-  const memberPaths = types.map((_, index) => `|union ${index + 1}|`)
+  const memberPaths = types.map((_, index) => pathLabel(`|union ${index + 1}|`))
 
   for (const type of types) {
     if (kind) {
@@ -1047,34 +1144,34 @@ export function rc_union<T extends RcType<any>[]>(
         return { ok: true, data: input, errors: undefined }
       }
 
-      const basePath = ctx.path_
+      const baseLen = ctx.pathLen_
       let memberErrors: (ErrorWithPath[] | number)[] | undefined
       let deeperErrors: ErrorWithPath[] | undefined
       const parentShortCircuit = ctx.objErrShortCircuit_
       const parentKeyIndex = ctx.objErrKeyIndex_
       const warningsLength = ctx.warnings_.length
       const parentDeferredType = ctx.deferredErrorType_
-      const parentDeferredPath = ctx.deferredErrorPath_
+      const parentDeferredPathLen = ctx.deferredErrorPathLen_
       const reportAll = ctx.unionErrorLimit_ === Infinity
       ctx.objErrShortCircuit_ = parentShortCircuit || !reportAll
 
       for (let i = 0; i < types.length; i++) {
         const type = types[i]!
-        ctx.path_ = basePath + memberPaths[i]!
+        setPath(ctx, baseLen, memberPaths[i])
         ctx.deferredErrorType_ = type
-        ctx.deferredErrorPath_ = ctx.path_
+        ctx.deferredErrorPathLen_ = baseLen + 1
         ctx.objErrKeyIndex_ = 0
 
         const result = type._parse_(input, ctx)
         const errorKeyIndex = ctx.objErrKeyIndex_
 
-        ctx.path_ = basePath
+        ctx.pathLen_ = baseLen
         ctx.objErrKeyIndex_ = parentKeyIndex
 
         if (result.ok) {
           ctx.objErrShortCircuit_ = parentShortCircuit
           ctx.deferredErrorType_ = parentDeferredType
-          ctx.deferredErrorPath_ = parentDeferredPath
+          ctx.deferredErrorPathLen_ = parentDeferredPathLen
           return result
         }
 
@@ -1096,7 +1193,9 @@ export function rc_union<T extends RcType<any>[]>(
 
       ctx.objErrShortCircuit_ = parentShortCircuit
       ctx.deferredErrorType_ = parentDeferredType
-      ctx.deferredErrorPath_ = parentDeferredPath
+      ctx.deferredErrorPathLen_ = parentDeferredPathLen
+
+      const basePath = getPath(ctx)
 
       // Only inspect error messages after every member has failed. Plain type
       // mismatches keep the compact union message; custom failures stay visible.
@@ -1109,7 +1208,7 @@ export function rc_union<T extends RcType<any>[]>(
             typeof errors === 'number' ||
             (errors.length === 1 &&
               errors[0] ===
-                `$${basePath}${memberPaths[index]}: ${getErrorMsg(type, input)}`)
+                `$${basePath}${memberPaths[index]?.label_}: ${getErrorMsg(type, input)}`)
           )
         })
       ) {
@@ -1126,7 +1225,7 @@ export function rc_union<T extends RcType<any>[]>(
         const memberError = memberErrors![index]!
         if (typeof memberError === 'number') {
           errors.push(
-            `$${basePath}${memberPaths[memberError]}: ${getErrorMsg(types[memberError]!, input)}` as ErrorWithPath,
+            `$${basePath}${memberPaths[memberError]?.label_}: ${getErrorMsg(types[memberError]!, input)}` as ErrorWithPath,
           )
         } else {
           errors.push(...memberError)
@@ -1280,14 +1379,10 @@ export function rc_record<V>(
         const resultObj: Record<string, V> = {}
         const resultErrors: ErrorWithPath[] = []
 
-        const parentPath = ctx.path_
+        const parentLen = ctx.pathLen_
 
         for (const [key, inputValue] of Object.entries(inputObj)) {
-          const subPath =
-            key === '' || key.includes(' ') ? `['${key}']` : `.${key}`
-
-          const path = `${parentPath}${subPath}`
-          ctx.path_ = path
+          setPath(ctx, parentLen, key)
 
           if (checkKey && !checkKey(key)) {
             resultErrors.push(
@@ -1323,7 +1418,7 @@ export function rc_record<V>(
           }
         }
 
-        ctx.path_ = parentPath
+        ctx.pathLen_ = parentLen
 
         return { errors: false, data: resultObj }
       })
@@ -1340,20 +1435,42 @@ export function rc_loose_record<V>(
   return rc_record(valueType, { checkKey, looseCheck: true })
 }
 
+type ArrayItemsOptions = Omit<ArrayOptions<RcType<any>>, 'filter'> & {
+  filter?: (
+    item: any,
+    ctx: ParseResultCtx,
+  ) => boolean | { errors: ErrorWithPath[] }
+}
+
+function parseArray(
+  type: RcType<any[]>,
+  input: unknown,
+  ctx: ParseResultCtx,
+  itemTypes: RcType<any> | readonly RcType<any>[],
+  loose: boolean | undefined,
+  options: ArrayItemsOptions | undefined,
+): InternalParseResult<any[]> {
+  if (!Array.isArray(input)) return parseIf(type, input, ctx, false)
+
+  if (input.length === 0 && !options?.minLength) {
+    return { ok: true, data: input, errors: undefined }
+  }
+
+  const result = checkArrayItems(input, itemTypes, ctx, loose, options)
+
+  return result.errors ?
+      parseFailure(type, input, ctx, result)
+    : { ok: true, data: result.data, errors: undefined }
+}
+
 function checkArrayItems(
-  this: RcType<any>,
   input: any[],
   types: RcType<any> | readonly RcType<any>[],
   ctx: ParseResultCtx,
   _loose = false,
-  options?: Omit<ArrayOptions<RcType<any>>, 'filter'> & {
-    filter?: (
-      item: any,
-      ctx: ParseResultCtx,
-    ) => boolean | { errors: ErrorWithPath[] }
-  },
-): IsValid<any[]> {
-  const parentPath = ctx.path_
+  options?: ArrayItemsOptions,
+): { data: any; errors: false } | { data: undefined; errors: ErrorWithPath[] } {
+  const parentLen = ctx.pathLen_
   const parentDisableLooseArray = ctx.noLooseArray_
   const useLooseMode = _loose && !ctx.noWarnings_ && !parentDisableLooseArray
   if (parentDisableLooseArray === 'nonRecursive') {
@@ -1369,17 +1486,11 @@ function checkArrayItems(
 
     const isTuple = Array.isArray(types)
 
-    let index = -1
-    for (const _item of input) {
-      index++
-
+    for (let index = 0; index < input.length; index++) {
+      const _item = input[index]
       const type: RcType<any> = isTuple ? types[index] : types
 
-      const subPath = `[${index}]`
-
-      const path = `${parentPath}${subPath}`
-
-      ctx.path_ = path
+      setPath(ctx, parentLen, index)
 
       if (options?.filter) {
         const filterResult = options.filter(_item, ctx)
@@ -1392,17 +1503,18 @@ function checkArrayItems(
           if (!useLooseMode) {
             return { errors: filterResult.errors, data: undefined }
           } else {
-            ;(looseErrors ??= []).push([filterResult.errors, path])
+            setPath(ctx, parentLen, index)
+            ;(looseErrors ??= []).push([filterResult.errors, getPath(ctx)])
             continue
           }
         }
 
-        ctx.path_ = path
+        setPath(ctx, parentLen, index)
       }
 
       let parseResult = type._parse_(_item, ctx)
 
-      ctx.path_ = path
+      setPath(ctx, parentLen, index)
 
       if (parseResult.ok && uniqueValues) {
         let uniqueValueToCheck = parseResult.data
@@ -1418,7 +1530,7 @@ function checkArrayItems(
 
         if (uniqueValues.has(uniqueValueToCheck)) {
           if (isUniqueKey) {
-            ctx.path_ = `${parentPath}${subPath}.${unique}`
+            setPath(ctx, parentLen + 1, pathLabel(`.${unique}`))
           }
 
           parseResult = {
@@ -1447,7 +1559,8 @@ function checkArrayItems(
             data: undefined,
           }
         } else {
-          ;(looseErrors ??= []).push([parseResult.errors, path])
+          setPath(ctx, parentLen, index)
+          ;(looseErrors ??= []).push([parseResult.errors, getPath(ctx)])
           continue
         }
       } else {
@@ -1478,7 +1591,7 @@ function checkArrayItems(
       addWarnings(ctx, adjustedLooseErrors)
     }
 
-    ctx.path_ = parentPath
+    ctx.pathLen_ = parentLen
 
     const minLength = options?.minLength
     const maxLength = options?.maxLength
@@ -1507,7 +1620,7 @@ function checkArrayItems(
 
     return { errors: false, data: arrayResult }
   } finally {
-    ctx.path_ = parentPath
+    ctx.pathLen_ = parentLen
     ctx.noLooseArray_ = parentDisableLooseArray
   }
 }
@@ -1533,13 +1646,7 @@ export function rc_array<T extends RcType<any>>(
     _kind_: `${type._kind_}[]`,
     _array_item_type_: type,
     _parse_(input, ctx) {
-      return parse(this, input, ctx, () => {
-        if (!Array.isArray(input)) return false
-
-        if (input.length === 0 && !options?.minLength) return true
-
-        return checkArrayItems.call(this, input, type, ctx, false, options)
-      })
+      return parseArray(this, input, ctx, type, false, options)
     },
   }
 }
@@ -1611,13 +1718,7 @@ export function rc_loose_array<T extends RcType<any>>(
     _array_item_type_: type,
     _kind_: `${type._kind_}[]`,
     _parse_(input, ctx) {
-      return parse(this, input, ctx, () => {
-        if (!Array.isArray(input)) return false
-
-        if (input.length === 0 && !options?.minLength) return true
-
-        return checkArrayItems.call(this, input, type, ctx, true, options)
-      })
+      return parseArray(this, input, ctx, type, true, options)
     },
   }
 }
@@ -1665,20 +1766,7 @@ export function rc_array_filter_from_schema<B, T>(
     _array_item_type_: type,
     _kind_: `${type._kind_}[]`,
     _parse_(input, ctx) {
-      return parse(this, input, ctx, () => {
-        if (!Array.isArray(input)) return false
-
-        if (input.length === 0 && !options?.minLength) return true
-
-        return checkArrayItems.call(
-          this,
-          input,
-          type,
-          ctx,
-          options?.loose,
-          checkOptions,
-        )
-      })
+      return parseArray(this, input, ctx, type, options?.loose, checkOptions)
     },
   }
 }
@@ -1706,7 +1794,7 @@ export function rc_tuple<const T extends readonly RcType<any>[]>(
 
         if (input.length !== types.length) return false
 
-        return checkArrayItems.call(this, input, types, ctx) as boolean
+        return checkArrayItems(input, types, ctx)
       })
     },
   }
@@ -1781,20 +1869,11 @@ export function rc_parse<S>(
   type: RcType<S>,
   { noWarnings = false, unionErrorLimit = 5 }: ParseOptions = {},
 ): RcParseResult<S> {
-  const ctx: ParseResultCtx = {
-    warnings_: [],
-    path_: '',
-    objErrShortCircuit_: false,
-    objErrKeyIndex_: 0,
-    noWarnings_: noWarnings,
-    strictObj_: false,
-    noLooseArray_: false,
-    unionErrorLimit_: unionErrorLimit,
-    deferredErrorType_: undefined,
-    deferredErrorPath_: '',
-  }
+  const ctx = createCtx(noWarnings, unionErrorLimit)
 
   const parseResult = type._parse_(input, ctx)
+  const warnings = ctx.warnings_
+  releaseCtx(ctx)
 
   if (parseResult.ok) {
     return {
@@ -1803,7 +1882,7 @@ export function rc_parse<S>(
       ok: true,
       data: parseResult.data,
       value: parseResult.data,
-      warnings: ctx.warnings_.length > 0 ? ctx.warnings_ : false,
+      warnings: warnings.length > 0 ? warnings : false,
       unwrap,
       unwrapOr,
       unwrapOrNull,
@@ -1920,20 +1999,11 @@ export function rc_unwrap<R>(result: RcParseResult<R>): {
  * ```
  */
 export function rc_is_valid<S>(input: any, type: RcType<S>): input is S {
-  const ctx: ParseResultCtx = {
-    warnings_: [],
-    path_: '',
-    objErrShortCircuit_: false,
-    objErrKeyIndex_: 0,
-    noWarnings_: false,
-    strictObj_: false,
-    noLooseArray_: false,
-    unionErrorLimit_: 5,
-    deferredErrorType_: undefined,
-    deferredErrorPath_: '',
-  }
+  const ctx = createCtx(false, 5)
+  const isValid = type._parse_(input, ctx).ok
+  releaseCtx(ctx)
 
-  return type._parse_(input, ctx).ok
+  return isValid
 }
 
 /**
@@ -2035,13 +2105,13 @@ function validateTransformOutput<T>(
   input: any,
   disableStrictOutputSchema: boolean | undefined,
 ): InternalParseResult<T> {
-  const parentPath = ctx.path_
+  const parentLen = ctx.pathLen_
   const parentObjErrShortCircuit = ctx.objErrShortCircuit_
   const parentStrictObj = ctx.strictObj_
   const parentNoWarnings = ctx.noWarnings_
 
   ctx.objErrShortCircuit_ = true
-  ctx.path_ = `${parentPath}|output|`
+  setPath(ctx, parentLen, outputPathLabel)
 
   if (!disableStrictOutputSchema) {
     ctx.strictObj_ = true
@@ -2052,7 +2122,7 @@ function validateTransformOutput<T>(
 
   ctx.strictObj_ = parentStrictObj
   ctx.noWarnings_ = parentNoWarnings
-  ctx.path_ = parentPath
+  ctx.pathLen_ = parentLen
   ctx.objErrShortCircuit_ = parentObjErrShortCircuit
 
   return result
@@ -2290,7 +2360,7 @@ export function rc_try_fix<T>(
       return parse(this, input, ctx, (): IsValid<T> => {
         // failed parses can leave child path/short-circuit state in ctx, so
         // it needs to be restored before reusing the ctx in a new parse
-        const parentPath = ctx.path_
+        const parentLen = ctx.pathLen_
         const parentObjErrShortCircuit = ctx.objErrShortCircuit_
         const parentObjErrKeyIndex = ctx.objErrKeyIndex_
         const warningsStart = ctx.warnings_.length
@@ -2307,7 +2377,7 @@ export function rc_try_fix<T>(
 
         const attemptWarnings = ctx.warnings_.splice(warningsStart)
 
-        ctx.path_ = parentPath
+        ctx.pathLen_ = parentLen
         ctx.objErrShortCircuit_ = parentObjErrShortCircuit
         ctx.objErrKeyIndex_ = parentObjErrKeyIndex
 
@@ -2348,7 +2418,7 @@ export function rc_try_fix<T>(
           }
 
           ctx.warnings_.length = warningsStart
-          ctx.path_ = parentPath
+          ctx.pathLen_ = parentLen
           ctx.objErrShortCircuit_ = parentObjErrShortCircuit
           ctx.objErrKeyIndex_ = parentObjErrKeyIndex
         }

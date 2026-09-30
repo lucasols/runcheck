@@ -5,6 +5,7 @@ import {
   rc_object,
 } from './rc_object'
 import {
+  PathLabel,
   Prettify,
   RcBase,
   RcType,
@@ -14,6 +15,9 @@ import {
   isRcType,
   normalizedTypeOf,
   parse,
+  parseFailure,
+  pathLabel,
+  setPath,
 } from './runcheck'
 
 /**
@@ -52,9 +56,12 @@ export function rc_discriminated_union<
   >
 > {
   const preComputedTypesShape = {} as Record<string, RcType<any>>
+  const discriminatorPaths: Record<string, PathLabel> = {}
+  const discriminatorKeyPath = pathLabel(`.${discriminatorKey}`)
 
   for (const [key, type] of Object.entries(types)) {
     preComputedTypesShape[key] = isRcType(type) ? type : rc_object(type as any)
+    discriminatorPaths[key] = pathLabel(`|${discriminatorKey}: ${key}|`)
   }
 
   return {
@@ -67,47 +74,52 @@ export function rc_discriminated_union<
       types: preComputedTypesShape,
     },
     _parse_(input, ctx) {
-      return parse<any>(this, input, ctx, () => {
-        if (!isObject(input)) {
+      if (!isObject(input)) {
+        return parse<any>(this, input, ctx, () => {
           ctx.objErrKeyIndex_ = -1
           return false
-        }
+        })
+      }
 
-        const discriminator = input[discriminatorKey]
+      const discriminator = input[discriminatorKey]
 
-        const parentPath = ctx.path_
+      const parentLen = ctx.pathLen_
 
-        const type = preComputedTypesShape[discriminator]
+      const type = preComputedTypesShape[discriminator]
 
-        if (!type) {
-          const invalidValueType = normalizedTypeOf(discriminator, true)
+      if (!type) {
+        const invalidValueType = normalizedTypeOf(discriminator, true)
 
-          return {
-            errors: [
-              getWarningOrErrorWithPath(
-                { path_: `${parentPath}.${discriminatorKey}` },
-                `Type '${invalidValueType}' is not a valid discriminator`,
-              ),
-            ],
-            data: undefined,
-          }
-        }
+        setPath(ctx, parentLen, discriminatorKeyPath)
+        const error = getWarningOrErrorWithPath(
+          ctx,
+          `Type '${invalidValueType}' is not a valid discriminator`,
+        )
+        ctx.pathLen_ = parentLen
 
-        ctx.path_ = `${parentPath}|${discriminatorKey}: ${discriminator}|`
+        return parseFailure(this, input, ctx, {
+          errors: [error],
+          data: undefined,
+        })
+      }
 
-        const parseResult = type._parse_(input, ctx)
+      setPath(ctx, parentLen, discriminatorPaths[discriminator])
 
-        ctx.path_ = parentPath
+      const parseResult = type._parse_(input, ctx)
 
-        if (!parseResult.ok) {
-          return { errors: parseResult.errors, data: undefined }
-        }
+      ctx.pathLen_ = parentLen
 
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-        parseResult.data[discriminatorKey] = discriminator
+      if (!parseResult.ok) {
+        return parseFailure(this, input, ctx, {
+          errors: parseResult.errors,
+          data: undefined,
+        })
+      }
 
-        return { errors: false, data: parseResult.data }
-      })
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      parseResult.data[discriminatorKey] = discriminator
+
+      return parseResult
     },
   }
 }
