@@ -1377,19 +1377,30 @@ export function rc_record<V>(
         if (!isObject(inputObj)) return false
 
         const resultObj: Record<string, V> = {}
-        const resultErrors: ErrorWithPath[] = []
+        let resultErrors: ErrorWithPath[] | undefined
 
         const parentLen = ctx.pathLen_
+        const primitiveParserKind = getPrimitiveParserKind(valueType)
 
         for (const [key, inputValue] of Object.entries(inputObj)) {
-          setPath(ctx, parentLen, key)
-
           if (checkKey && !checkKey(key)) {
+            setPath(ctx, parentLen, key)
+            resultErrors ??= []
             resultErrors.push(
               getWarningOrErrorWithPath(ctx, `Key '${key}' is not allowed`),
             )
             continue
           }
+
+          if (
+            primitiveParserKind !== 0 &&
+            isPrimitiveParseSuccess(primitiveParserKind, inputValue)
+          ) {
+            resultObj[key] = inputValue
+            continue
+          }
+
+          setPath(ctx, parentLen, key)
 
           const parseResult = valueType._parse_(inputValue, ctx)
 
@@ -1399,6 +1410,7 @@ export function rc_record<V>(
           //
           else {
             const errors = parseResult.errors
+            resultErrors ??= []
 
             for (const subError of errors) {
               resultErrors.push(subError)
@@ -1410,7 +1422,7 @@ export function rc_record<V>(
           }
         }
 
-        if (resultErrors.length > 0) {
+        if (resultErrors) {
           if (looseCheck) {
             addWarnings(ctx, resultErrors)
           } else {
@@ -1625,6 +1637,91 @@ function checkArrayItems(
   }
 }
 
+function checkArrayItemsFast(
+  input: any[],
+  type: RcType<any>,
+  primitiveParserKind: number,
+  ctx: ParseResultCtx,
+):
+  | { data: any[]; errors: false }
+  | { data: undefined; errors: ErrorWithPath[] } {
+  const arrayResult = new Array<any>(input.length)
+  const parentLen = ctx.pathLen_
+
+  for (let index = 0; index < input.length; index++) {
+    const item = input[index]
+
+    if (isPrimitiveParseSuccess(primitiveParserKind, item)) {
+      arrayResult[index] = item
+      continue
+    }
+
+    setPath(ctx, parentLen, index)
+
+    const parseResult = type._parse_(item, ctx)
+
+    if (!parseResult.ok) {
+      ctx.pathLen_ = parentLen
+
+      return { errors: parseResult.errors, data: undefined }
+    }
+
+    arrayResult[index] = parseResult.data
+  }
+
+  ctx.pathLen_ = parentLen
+
+  return { errors: false, data: arrayResult }
+}
+
+// Numeric tags keep the hot array/record loops compact and let them skip both
+// path construction and a generic parser call for canonical primitive success.
+function getPrimitiveParserKind(type: RcType<any>): number {
+  const parseFn = type._parse_
+
+  switch (type._shape_) {
+    case 'string':
+      return parseFn === rc_string._parse_ ? 1 : 0
+    case 'number':
+      return parseFn === rc_number._parse_ ? 2 : 0
+    case 'boolean':
+      return parseFn === rc_boolean._parse_ ? 3 : 0
+    case 'any':
+      return parseFn === rc_any._parse_ ? 4 : 0
+    case 'unknown':
+      return parseFn === rc_unknown._parse_ ? 4 : 0
+    case 'null':
+      return parseFn === rc_null._parse_ ? 5 : 0
+    case 'undefined':
+      return parseFn === rc_undefined._parse_ ? 6 : 0
+    case 'date':
+      return parseFn === rc_date._parse_ ? 7 : 0
+    default:
+      return 0
+  }
+}
+
+function isPrimitiveParseSuccess(kind: number, input: any): boolean {
+  switch (kind) {
+    case 1:
+      return typeof input === 'string'
+    case 2:
+      return typeof input === 'number' && !Number.isNaN(input)
+    case 3:
+      return typeof input === 'boolean'
+    case 4:
+      return true
+    case 5:
+      return input === null
+    case 6:
+      return input === undefined
+    case 7:
+      return input instanceof Date && !Number.isNaN(input.getTime())
+    default:
+      return false
+  }
+}
+
 type ArrayOptions<T extends RcType<any>> = {
   /** Minimum length of the parsed array, after filtering and loose validation. */
   minLength?: number
@@ -1646,6 +1743,23 @@ export function rc_array<T extends RcType<any>>(
     _kind_: `${type._kind_}[]`,
     _array_item_type_: type,
     _parse_(input, ctx) {
+      if (!options && Array.isArray(input) && input.length > 0) {
+        const primitiveParserKind = getPrimitiveParserKind(type)
+
+        if (primitiveParserKind !== 0) {
+          const result = checkArrayItemsFast(
+            input,
+            type,
+            primitiveParserKind,
+            ctx,
+          )
+
+          return result.errors ?
+              parseFailure(this, input, ctx, result)
+            : { ok: true, data: result.data, errors: undefined }
+        }
+      }
+
       return parseArray(this, input, ctx, type, false, options)
     },
   }
