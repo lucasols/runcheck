@@ -1422,6 +1422,10 @@ export function rc_record<V>(
           }
         }
 
+        // Restore the record's own path before failing too, otherwise fallback
+        // and autofix warnings are reported at the last visited key.
+        ctx.pathLen_ = parentLen
+
         if (resultErrors) {
           if (looseCheck) {
             addWarnings(ctx, resultErrors)
@@ -1429,8 +1433,6 @@ export function rc_record<V>(
             return { errors: resultErrors, data: undefined }
           }
         }
-
-        ctx.pathLen_ = parentLen
 
         return { errors: false, data: resultObj }
       })
