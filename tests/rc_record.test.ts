@@ -179,6 +179,30 @@ describe('rc_record', () => {
     expect(parse2({})).toEqual(successResult({}))
   })
 
+  test('fallback warning is reported at the record path', () => {
+    const fallback = { fallback: 'used' }
+    const schema = rc_record(rc_string).withFallback(fallback)
+
+    expect(
+      rc_parse({ invalid: 1, valid: 'a', 'last key': 'b' }, schema),
+    ).toEqual(
+      successResult(fallback, [
+        "Fallback used, errors -> $.invalid: Type 'number' is not assignable to 'string'",
+      ]),
+    )
+
+    expect(
+      rc_parse(
+        { nested: { valid: 'a', invalid: 1, last: 'b' } },
+        rc_object({ nested: schema }),
+      ),
+    ).toEqual(
+      successResult({ nested: fallback }, [
+        "$.nested: Fallback used, errors -> $.invalid: Type 'number' is not assignable to 'string'",
+      ]),
+    )
+  })
+
   test('error msg bug', () => {
     const valueToParse = {
       test: {
