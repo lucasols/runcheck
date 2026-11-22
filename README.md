@@ -36,6 +36,22 @@ pnpm add runcheck
 | `rc_record<T>(type: T)`          | `Record<string, T>`                               |
 | `rc_loose_record<T>(type: T)`    | `Record<string, T>` (filters invalid values)      |
 | `rc_intersection(...types: T[])` | Intersection types like `{a:string} & {b:string}` |
+| `rc_readonly<T>(type: T)`        | `Readonly<T>`, e.g. `readonly T[]`                |
+
+## `rc_readonly`
+
+Marks the inferred type of a schema as `Readonly`, so it matches readonly arrays, tuples and objects without a transform. It is type-only: parsing is unchanged and the result is not frozen.
+
+```ts
+type RecordsSort = readonly [string, 'asc' | 'desc']
+
+const recordsSortSchema: RcType<RecordsSort> = rc_readonly(
+  rc_tuple([rc_string, rc_literals('asc', 'desc')]),
+)
+
+rc_readonly(rc_array(rc_string)) // RcType<readonly string[]>
+rc_readonly(rc_object({ a: rc_string })) // RcType<{ readonly a: string }>
+```
 
 # Array types:
 
