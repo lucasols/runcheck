@@ -2340,6 +2340,22 @@ export function rc_narrow<Input, Narrowed extends Input>(
   return rc_transform(type, narrow)
 }
 
+/**
+ * Marks the inferred type of a schema as `Readonly`, e.g. `readonly T[]` for
+ * arrays, `readonly [A, B]` for tuples and `{ readonly a: A }` for objects.
+ * Type-only: the parsed value is not frozen and parsing is unchanged.
+ * @example
+ * ```typescript
+ * const sort: RcType<readonly [string, 'asc' | 'desc']> = rc_readonly(
+ *   rc_tuple([rc_string, rc_literals('asc', 'desc')]),
+ * )
+ * ```
+ */
+export function rc_readonly<T>(schema: RcType<T>): RcType<Readonly<T>>
+export function rc_readonly<T>(schema: RcType<T>): RcType<T> {
+  return schema
+}
+
 /** Allows the transform function to return a error if transformation is invalid */
 /**
  * Creates a transformation that can fail with custom error messages.
